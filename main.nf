@@ -6,20 +6,26 @@
 // params.
 
 nextflow.preview.dsl=2
-params.publish_dir="gs://temp-testing/nf_testing/${params.runs}/"
-params.uniref="uniref50_diamond"
+params.publish_dir="gs://temp-testing/nf_testing/${params.runs}"
+params.store_dir="gs://temp-testing/nf_testing/resources"
+// params.store_dir="/bigdb/"
+// params.uniref="uniref50_diamond"
+params.uniref="uniref90_diamond"
 params.chocophlan="full"
 
 process fasterq_dump {
+    cpus 8
     publishDir "${params.publish_dir}"
 
     tag "$srr"
     
     input:
       val srr
+
     output:
     path "*.fastq", emit: fastq_files
-    path "*_fastqc/fastqc_data.txt", emit: fastqc_data
+    // path "*_fastqc/fastqc_data.txt", emit: fastqc_data
+
     script:
       """
       fasterq-dump \
@@ -27,12 +33,14 @@ process fasterq_dump {
           --force \
           --threads ${task.cpus} \
           --split-files ${srr} 
-      fastqc --extract *.fastq
+      #fastqc --extract *.fastq
       """
 }
 
 
 process concat_fastq {
+    cpus 1
+
     input:
       path x
     output:
@@ -47,14 +55,17 @@ process concat_fastq {
 
 
 process install_metaphlan_db {
-    storeDir "$HOME/bigdb/metaphlan/"
+    cpus 8
+    memory '32g'
+    
+    storeDir "${params.store_dir}"
 
     output:
-    path 'mpa_v30_CHOCOPhlAn_201901.*', emit: metaphlan_db
+    path 'metaphlan', emit: metaphlan_db, type: 'dir'
     
     script:
       """
-      metaphlan --install --index latest --bowtie2db .
+      metaphlan --install --index latest --bowtie2db metaphlan 
       """
 }
 
@@ -62,12 +73,14 @@ process metaphlan_bugs_list {
     publishDir "${params.publish_dir}/metaphlan"
 
     cpus 8
+    memory "32g"
     
 //    input:
 //    path metaphlan_db
     
     input:
     path fastq
+    path metaphlan_db
 
     
     output:
@@ -77,14 +90,16 @@ process metaphlan_bugs_list {
     
     script:
     """
+    find .
     metaphlan --input_type fastq \
         --index ${params.metaphlan_index} \
-        --bowtie2db /Users/sdavis2/bigdb/metaphlan/ \
+        --bowtie2db metaphlan \
         --samout sam.bz2 \
         --bowtie2out bowtie2.out \
         --nproc ${task.cpus} \
         -o metaphlan_bugs_list.tsv \
         ${fastq}
+
     """
 }
 
@@ -93,12 +108,9 @@ process metaphlan_markers {
 
     cpus 8
     
-//    input:
-//    path metaphlan_db
-    
     input:
     path metaphlan_bt2
-
+    path metaphlan_db
     
     output:
     path "marker_abundance.tsv", emit: marker_abundance
@@ -108,13 +120,13 @@ process metaphlan_markers {
     """
     metaphlan --input_type bowtie2out \
         --index ${params.metaphlan_index} \
-        --bowtie2db /Users/sdavis2/bigdb/metaphlan/ \
+        --bowtie2db metaphlan \
         -t marker_pres_table \
         -o marker_presence.tsv \
         ${metaphlan_bt2}
     metaphlan --input_type bowtie2out \
         --index ${params.metaphlan_index} \
-        --bowtie2db /Users/sdavis2/bigdb/metaphlan/ \
+        --bowtie2db metaphlan \
         -t marker_ab_table \
         -o marker_abundance.tsv \
         ${metaphlan_bt2}
@@ -123,10 +135,10 @@ process metaphlan_markers {
 
 
 process chocophlan_db {
-    storeDir "$HOME/bigdb/"
+    storeDir "${params.store_dir}"
 
     output:
-    path "chocophlan/*", emit: chocophlan_db
+    path "chocophlan", emit: chocophlan_db, type: 'dir'
 
     script:
     """
@@ -136,10 +148,10 @@ process chocophlan_db {
 
 
 process uniref_db {
-    storeDir "$HOME/bigdb/"
+    storeDir "${params.store_dir}"
 
     output:
-    path "${params.uniref}/*", emit: uniref_db
+    path "${params.uniref}", emit: uniref_db, type: 'dir'
 
     script:
     """
@@ -149,13 +161,15 @@ process uniref_db {
 
 
 process humann {
-    publishDir 'humann'
+    publishDir '${params.publish_dir}/humann'
     cpus 8
 
     input:
     path fastq
     path metaphlan_bugs_list // metaphlan_bugs_list.tsv
-
+    path chocophlan_db
+    path uniref_db
+    
     output:
     "humann/**"
 
@@ -163,10 +177,11 @@ process humann {
     """
     humann -i ${fastq} \
         -o 'humann' \
-        --nucleotide-database /Users/sdavis2/bigdb/chocophlan/chocophlan/ \
+        --verbose \
+        --metaphlan-options "-t rel_ab --index latest" \
+        --nucleotide-database ${chocophlan_db} \
         --taxonomic-profile ${metaphlan_bugs_list} \
-        --protein-database /Users/sdavis2/bigdb/${params.uniref} \
-        --metaphlan-options "--bowtie2db /Users/sdavis2/bigdb/metaphlan" \
+        --protein-database ${uniref_db} \
         --threads ${task.cpus}
     """
 }
@@ -178,8 +193,7 @@ workflow {
     install_metaphlan_db()
     uniref_db()
     chocophlan_db()
-    metaphlan_bugs_list(concat_fastq.out.fastq) 
-    metaphlan_markers(metaphlan_bugs_list.out.metaphlan_bt2)
-    humann(concat_fastq.out.fastq, metaphlan_bugs_list.out.metaphlan_bugs_list)
-    // concat_fastq(fasterq_dump.out.collect()) | wc_fastq | view
+    metaphlan_bugs_list(concat_fastq.out.fastq,install_metaphlan_db.out.metaphlan_db.collect()) 
+    metaphlan_markers(metaphlan_bugs_list.out.metaphlan_bt2, install_metaphlan_db.out.metaphlan_db.collect())
+    humann(concat_fastq.out.fastq, metaphlan_bugs_list.out.metaphlan_bugs_list, chocophlan_db.out.chocophlan_db, uniref_db.out.uniref_db)
 }

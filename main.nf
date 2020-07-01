@@ -15,7 +15,7 @@ params.chocophlan="full"
 
 process fasterq_dump {
     cpus 8
-    publishDir "${params.publish_dir}"
+    memory "16g"
 
     tag "$srr"
     
@@ -151,18 +151,19 @@ process uniref_db {
     storeDir "${params.store_dir}"
 
     output:
-    path "${params.uniref}", emit: uniref_db, type: 'dir'
+    path "uniref", emit: uniref_db, type: 'dir'
 
     script:
     """
-    humann_databases --download uniref ${params.uniref} ${params.uniref}
+    humann_databases --download uniref ${params.uniref} .
     """
 }
 
 
 process humann {
-    publishDir '${params.publish_dir}/humann'
+    publishDir "${params.publish_dir}/humann"
     cpus 8
+    memory "32g"
 
     input:
     path fastq
@@ -171,18 +172,20 @@ process humann {
     path uniref_db
     
     output:
-    "humann/**"
+    path "out*.tsv"
+    path "files.txt"
 
     script:
     """
     humann -i ${fastq} \
-        -o 'humann' \
+        -o '.' \
         --verbose \
         --metaphlan-options "-t rel_ab --index latest" \
         --nucleotide-database ${chocophlan_db} \
         --taxonomic-profile ${metaphlan_bugs_list} \
         --protein-database ${uniref_db} \
         --threads ${task.cpus}
+    find . > files.txt
     """
 }
 

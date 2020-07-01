@@ -14,6 +14,7 @@ RUN conda config --add channels conda-forge
 RUN conda update conda
 RUN conda install -c bioconda metaphlan=3
 RUN conda install -c biobakery humann=3
+RUN conda install bowtie2=2.3.5.1
 
 ## install sratoolkit
 RUN mkdir /tmp/sra

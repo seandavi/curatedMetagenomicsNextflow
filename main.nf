@@ -40,6 +40,7 @@ process fasterq_dump {
 
 process concat_fastq {
     cpus 1
+    memory "1g"
 
     input:
       path x
@@ -48,14 +49,16 @@ process concat_fastq {
       path 'wordcount.fastq'
     script:
       """
-      cat $x >> out.fastq
-      wc ${x} > wordcount.fastq
+      ls -lah .
+      echo ${x}
+      cat ${x} >> out.fastq
+      wc out.fastq > wordcount.fastq
       """
 }
 
 
 process install_metaphlan_db {
-    cpus 8
+    cpus 1
     memory '32g'
     
     storeDir "${params.store_dir}"
@@ -107,6 +110,7 @@ process metaphlan_markers {
     publishDir "${params.publish_dir}/metaphlan"
 
     cpus 8
+    memory "32g"
     
     input:
     path metaphlan_bt2
@@ -135,6 +139,9 @@ process metaphlan_markers {
 
 
 process chocophlan_db {
+    cpus 1
+    memory "1g"
+
     storeDir "${params.store_dir}"
 
     output:
@@ -148,6 +155,9 @@ process chocophlan_db {
 
 
 process uniref_db {
+    cpus 1
+    memory "1g"
+
     storeDir "${params.store_dir}"
 
     output:
@@ -192,7 +202,7 @@ process humann {
 
 workflow {
     fasterq_dump(Channel.from(params.runs))
-    concat_fastq(fasterq_dump.out.fastq_files.collect())
+    concat_fastq(fasterq_dump.out.fastq_files)
     install_metaphlan_db()
     uniref_db()
     chocophlan_db()

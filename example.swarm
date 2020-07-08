@@ -1,0 +1,3 @@
+nextflow run -profile slurm main.nf --runs SRR000237
+nextflow run -profile slurm main.nf --runs SRR000236
+nextflow run -profile slurm main.nf --runs SRR000235

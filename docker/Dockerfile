@@ -20,7 +20,7 @@ RUN conda install bowtie2=2.3.5.1
 RUN mkdir /tmp/sra
 WORKDIR /tmp/sra
 
-RUN curl -O https://ftp-trace.ncbi.nlm.nih.gov/sra/sdk/2.10.5/setup-apt.sh
+RUN curl -O https://ftp-trace.ncbi.nlm.nih.gov/sra/sdk/2.10.8/setup-apt.sh
 RUN /bin/bash setup-apt.sh
 ENV PATH=/usr/local/ncbi/sra-tools/bin:$PATH
 

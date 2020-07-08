@@ -1,2 +1,5 @@
 nextflow
 isb-cgc-01-0006-cef2fa3903c4.json
+.nextflow*
+__pycache__
+.venv/

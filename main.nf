@@ -75,6 +75,7 @@ process install_metaphlan_db {
 process metaphlan_bugs_list {
     publishDir "${params.publish_dir}/metaphlan"
 
+    time "1d"
     cpus 8
     memory "32g"
     
@@ -141,6 +142,7 @@ process metaphlan_markers {
 process chocophlan_db {
     cpus 1
     memory "1g"
+    time "1d"
 
     storeDir "${params.store_dir}"
 
@@ -149,7 +151,7 @@ process chocophlan_db {
 
     script:
     """
-    humann_databases --download chocophlan ${params.chocophlan} .
+    humann_databases --update-config no --download chocophlan ${params.chocophlan} .
     """
 }
 
@@ -157,6 +159,7 @@ process chocophlan_db {
 process uniref_db {
     cpus 1
     memory "1g"
+    time "1d"
 
     storeDir "${params.store_dir}"
 
@@ -165,7 +168,7 @@ process uniref_db {
 
     script:
     """
-    humann_databases --download uniref ${params.uniref} .
+    humann_databases --update-config no --download uniref ${params.uniref} .
     """
 }
 
@@ -173,6 +176,7 @@ process uniref_db {
 process humann {
     publishDir "${params.publish_dir}/humann"
     cpus 8
+    time "7d"
     memory "32g"
 
     input:

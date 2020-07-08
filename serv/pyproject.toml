@@ -7,6 +7,7 @@ authors = ["Sean Davis <seandavi@gmail.com>"]
 [tool.poetry.dependencies]
 python = "^3.7"
 fastapi = "^0.58.0"
+uvicorn = "^0.11.5"
 
 [tool.poetry.dev-dependencies]
 uvicorn = "^0.11.5"

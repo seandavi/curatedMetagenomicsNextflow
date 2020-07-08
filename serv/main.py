@@ -32,7 +32,7 @@ def read_root():
 @app.post("/webhook")
 async def read_root2(request: Request):
     j = await request.json()
-    logging.info(json.dumps(j, indent=2))
+    logging.info(json.dumps(j))
     print(json.dumps(j))
     return {'msg': 'OK'}
 

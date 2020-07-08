@@ -42,6 +42,9 @@ RUN apt-get install -y unzip
 RUN unzip bowtie2-linux-x86_64.zip
 ENV PATH=/usr/local/bowtie2-2.4.1-linux-x86_64:$PATH
 
+# install ps for nextflow task monitoring
+RUN apt-get update && apt-get install -y procps
+
 ## root directory for databases
 ENV mpa_dir=/usr/local/miniconda3/lib/python3.7/site-packages/metaphlan
 ENV hnn_dir=/usr/local/miniconda3/lib/python3.7/site-packages/humann

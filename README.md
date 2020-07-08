@@ -54,3 +54,19 @@ SRR_concat ->
 
 ```
 fasterq-dump -t $output_path --force --threads $ncores --split-files $srr 
+
+
+## Humann databases
+
+```
+(base) root@51780a3ca543:~# humann_databases
+HUMANnN2 Databases ( database : build = location )
+chocophlan : full = http://huttenhower.sph.harvard.edu/humann2_data/chocophlan/full_chocophlan.v296_201901.tar.gz
+chocophlan : DEMO = http://huttenhower.sph.harvard.edu/humann2_data/chocophlan/DEMO_chocophlan.v296_201901.tar.gz
+uniref : uniref50_diamond = http://huttenhower.sph.harvard.edu/humann2_data/uniprot/uniref_annotated/uniref50_annotated_v201901.tar.gz
+uniref : uniref90_diamond = http://huttenhower.sph.harvard.edu/humann2_data/uniprot/uniref_annotated/uniref90_annotated_v201901.tar.gz
+uniref : uniref50_ec_filtered_diamond = http://huttenhower.sph.harvard.edu/humann2_data/uniprot/uniref_ec_filtered/uniref50_ec_filtered_201901.tar.gz
+uniref : uniref90_ec_filtered_diamond = http://huttenhower.sph.harvard.edu/humann2_data/uniprot/uniref_ec_filtered/uniref90_ec_filtered_201901.tar.gz
+uniref : DEMO_diamond = http://huttenhower.sph.harvard.edu/humann2_data/uniprot/uniref_annotated/uniref90_DEMO_diamond_v201901.tar.gz
+utility_mapping : full = http://huttenhower.sph.harvard.edu/humann2_data/full_mapping_v201901.tar.gz
+```

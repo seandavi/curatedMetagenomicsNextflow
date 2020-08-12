@@ -1,5 +1,6 @@
 # README
 
+
 ## Install
 
 ```sh
@@ -69,4 +70,16 @@ uniref : uniref50_ec_filtered_diamond = http://huttenhower.sph.harvard.edu/human
 uniref : uniref90_ec_filtered_diamond = http://huttenhower.sph.harvard.edu/humann2_data/uniprot/uniref_ec_filtered/uniref90_ec_filtered_201901.tar.gz
 uniref : DEMO_diamond = http://huttenhower.sph.harvard.edu/humann2_data/uniprot/uniref_annotated/uniref90_DEMO_diamond_v201901.tar.gz
 utility_mapping : full = http://huttenhower.sph.harvard.edu/humann2_data/full_mapping_v201901.tar.gz
+```
+
+# Examples
+
+## Google
+
+```sh
+./nextflow run \
+    -with-weblog https://cmgd-telemetry-whnnxetv4q-uc.a.run.app/webhook \
+    -w gs://temp-testing/nf_testing/ \ 
+    -profile google main.nf \
+    --runs SRR000235
 ```

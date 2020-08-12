@@ -1,17 +1,6 @@
 #!/usr/bin/env nextflow
-// params.runs
-// params.metaphlan_index="latest"
-// params.chocophlan_db
-// params.uniref_db
-// params.
 
 nextflow.preview.dsl=2
-params.publish_dir="gs://temp-testing/nf_testing/${params.runs}"
-params.store_dir="gs://temp-testing/nf_testing/resources"
-// params.store_dir="/bigdb/"
-// params.uniref="uniref50_diamond"
-params.uniref="uniref90_diamond"
-params.chocophlan="full"
 
 process fasterq_dump {
     cpus 8

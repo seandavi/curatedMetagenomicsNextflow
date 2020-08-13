@@ -77,7 +77,6 @@ process metaphlan_bugs_list {
 
     
     output:
-    path 'sam.bz2', emit: metaphlan_sam
     path 'bowtie2.out', emit: metaphlan_bt2
     path 'metaphlan_bugs_list.tsv', emit: metaphlan_bugs_list
     

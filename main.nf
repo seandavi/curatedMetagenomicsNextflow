@@ -193,12 +193,15 @@ process humann {
 
 
 workflow {
-    fasterq_dump(Channel.from(params.runs))
-    concat_fastq(fasterq_dump.out.fastq_files)
+    data = Channel.fromPath(params.csv_file)
+       .splitCsv(header: true, sep: "\t")
+       .map { tuple(it.sampleID, it.NCBI_accession.tokenize(';')) }
+       .transpose()
+    fasterq_dump(data) | groupTuple() | map{ it -> it[1] } | concat_fastq
     install_metaphlan_db()
     uniref_db()
     chocophlan_db()
-    metaphlan_bugs_list(concat_fastq.out.fastq,install_metaphlan_db.out.metaphlan_db.collect()) 
+    metaphlan_bugs_list(concat_fastq.out.fastq,install_metaphlan_db.out.metaphlan_db.collect())
     metaphlan_markers(metaphlan_bugs_list.out.metaphlan_bt2, install_metaphlan_db.out.metaphlan_db.collect())
     humann(concat_fastq.out.fastq, metaphlan_bugs_list.out.metaphlan_bugs_list, chocophlan_db.out.chocophlan_db, uniref_db.out.uniref_db)
 }

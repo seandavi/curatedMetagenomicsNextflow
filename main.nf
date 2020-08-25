@@ -18,8 +18,7 @@ process fasterq_dump {
 
 
     output:
-    path "out.fastq", emit: fastq
-    val(samp), emit: samp
+    tuple val(samp), path("out.fastq")
     // path "*_fastqc/fastqc_data.txt", emit: fastqc_data
 
     script:
@@ -42,7 +41,8 @@ process concat_fastq {
     input:
       tuple samp, path(x)
     output:
-    path 'out.fastq', emit: fastq
+      val samp, emit: samp 
+      path 'out.fastq', emit: fastq
       path 'wordcount.fastq'
     script:
       """
@@ -80,6 +80,7 @@ process metaphlan_bugs_list {
 //    path metaphlan_db
 
     input:
+    val samp
     path fastq
     path metaphlan_db
 
@@ -110,9 +111,9 @@ process metaphlan_markers {
     memory "16g"
 
     input:
+    val samp
     path metaphlan_bt2
     path metaphlan_db
-    val samp
 
     output:
     path "marker_abundance.tsv", emit: marker_abundance
@@ -226,16 +227,16 @@ workflow {
     uniref_db()
     chocophlan_db()
     metaphlan_bugs_list(
-        fasterq_dump.out.samp,
-        fasterq_dump.out.fastq,
+        concat_fastq.out.samp,
+        concat_fastq.out.fastq,
         install_metaphlan_db.out.metaphlan_db.collect())
     metaphlan_markers(
-        fasterq_dump.out.samp,
+        concat_fastq.out.samp,
         metaphlan_bugs_list.out.metaphlan_bt2,
         install_metaphlan_db.out.metaphlan_db.collect())
     humann(
-        fasterq_dump.out.samp,
-        fasterq_dump.out.fastq,
+        concat_fastq.out.samp,
+        concat_fastq.out.fastq,
         metaphlan_bugs_list.out.metaphlan_bugs_list,
         chocophlan_db.out.chocophlan_db,
         uniref_db.out.uniref_db)

@@ -6,13 +6,17 @@ process fasterq_dump {
     cpus 8
     memory "16g"
 
+    errorStrategy 'retry'
+    maxRetries 3
+
     tag "$srr"
     
     input:
-      val srr
+      tuple val(samp), val(srr)
+
 
     output:
-    path "*.fastq", emit: fastq_files
+      tuple( val(samp), path("*.fastq"))
     // path "*_fastqc/fastqc_data.txt", emit: fastqc_data
 
     script:
@@ -21,7 +25,7 @@ process fasterq_dump {
           --skip-technical \
           --force \
           --threads ${task.cpus} \
-          --split-files ${srr} 
+          --split-files ${srr}
       #fastqc --extract *.fastq
       """
 }
@@ -32,7 +36,7 @@ process concat_fastq {
     memory "1g"
 
     input:
-      path x
+      tuple samp, path(x)
     output:
     path 'out.fastq', emit: fastq
       path 'wordcount.fastq'
@@ -191,13 +195,28 @@ process humann {
     """
 }
 
+process check {
+    input:
+      tuple val(samp), val(srr)
+    output:
+      tuple( val(samp), path('*.txt'))
+
+    script:
+    """
+    echo ${samp} >> ${srr}_samp.txt
+    echo ${srr} >> ${srr}_samp.txt
+    """
+}
+
+
 
 workflow {
     data = Channel.fromPath(params.csv_file)
        .splitCsv(header: true, sep: "\t")
-       .map { tuple(it.sampleID, it.NCBI_accession.tokenize(';')) }
+       .map { tuple( it.sampleID, it.NCBI_accession.tokenize(';')) }
        .transpose()
-    fasterq_dump(data) | groupTuple() | map{ it -> it[1] } | concat_fastq
+    // data | check | groupTuple | concat_fastq
+    fasterq_dump(data) | transpose | groupTuple | concat_fastq
     install_metaphlan_db()
     uniref_db()
     chocophlan_db()

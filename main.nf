@@ -5,18 +5,21 @@ nextflow.preview.dsl=2
 process fasterq_dump {
     cpus 8
     memory "16g"
+    errorStrategy 'retry'
+    maxRetries 3    
 
     errorStrategy 'retry'
     maxRetries 3
 
     tag "$srr"
-    
+
     input:
       tuple val(samp), val(srr)
 
 
     output:
-      tuple( val(samp), path("*.fastq"))
+    path "out.fastq", emit: fastq
+    val(samp)
     // path "*_fastqc/fastqc_data.txt", emit: fastqc_data
 
     script:
@@ -25,7 +28,8 @@ process fasterq_dump {
           --skip-technical \
           --force \
           --threads ${task.cpus} \
-          --split-files ${srr}
+          --split-files ${srr.join(' ')}
+      cat *.fastq > out.fastq
       #fastqc --extract *.fastq
       """
 }
@@ -53,15 +57,15 @@ process concat_fastq {
 process install_metaphlan_db {
     cpus 1
     memory '32g'
-    
+
     storeDir "${params.store_dir}"
 
     output:
     path 'metaphlan', emit: metaphlan_db, type: 'dir'
-    
+
     script:
       """
-      metaphlan --install --index latest --bowtie2db metaphlan 
+      metaphlan --install --index latest --bowtie2db metaphlan
       """
 }
 
@@ -69,21 +73,21 @@ process metaphlan_bugs_list {
     publishDir "${params.publish_dir}/metaphlan"
 
     time "1d"
-    cpus 8
+    cpus 32
     memory "32g"
-    
+
 //    input:
 //    path metaphlan_db
-    
+
     input:
     path fastq
     path metaphlan_db
 
-    
+
     output:
     path 'bowtie2.out', emit: metaphlan_bt2
     path 'metaphlan_bugs_list.tsv', emit: metaphlan_bugs_list
-    
+
     script:
     """
     find .
@@ -102,13 +106,13 @@ process metaphlan_bugs_list {
 process metaphlan_markers {
     publishDir "${params.publish_dir}/metaphlan"
 
-    cpus 8
-    memory "32g"
-    
+    cpus 4
+    memory "16g"
+
     input:
     path metaphlan_bt2
     path metaphlan_db
-    
+
     output:
     path "marker_abundance.tsv", emit: marker_abundance
     path "marker_presence.tsv", emit: marker_presence
@@ -167,7 +171,7 @@ process uniref_db {
 
 process humann {
     publishDir "${params.publish_dir}/humann"
-    cpus 8
+    cpus 32
     time "7d"
     memory "32g"
 
@@ -176,7 +180,7 @@ process humann {
     path metaphlan_bugs_list // metaphlan_bugs_list.tsv
     path chocophlan_db
     path uniref_db
-    
+
     output:
     path "out*.tsv"
     path "files.txt"
@@ -220,7 +224,7 @@ workflow {
     install_metaphlan_db()
     uniref_db()
     chocophlan_db()
-    metaphlan_bugs_list(concat_fastq.out.fastq,install_metaphlan_db.out.metaphlan_db.collect())
+    metaphlan_bugs_list(fasterq_dump.out.fastq,install_metaphlan_db.out.metaphlan_db.collect())
     metaphlan_markers(metaphlan_bugs_list.out.metaphlan_bt2, install_metaphlan_db.out.metaphlan_db.collect())
-    humann(concat_fastq.out.fastq, metaphlan_bugs_list.out.metaphlan_bugs_list, chocophlan_db.out.chocophlan_db, uniref_db.out.uniref_db)
+    humann(fasterq_dump.out.fastq, metaphlan_bugs_list.out.metaphlan_bugs_list, chocophlan_db.out.chocophlan_db, uniref_db.out.uniref_db)
 }

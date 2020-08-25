@@ -19,7 +19,7 @@ process fasterq_dump {
 
     output:
     path "out.fastq", emit: fastq
-    val(samp)
+    val(samp), emit: samp
     // path "*_fastqc/fastqc_data.txt", emit: fastqc_data
 
     script:
@@ -70,7 +70,7 @@ process install_metaphlan_db {
 }
 
 process metaphlan_bugs_list {
-    publishDir "${params.publish_dir}/metaphlan"
+    publishDir "${params.publish_dir}/${samp}/metaphlan"
 
     time "1d"
     cpus 32
@@ -104,7 +104,7 @@ process metaphlan_bugs_list {
 }
 
 process metaphlan_markers {
-    publishDir "${params.publish_dir}/metaphlan"
+    publishDir "${params.publish_dir}/${samp}/metaphlan"
 
     cpus 4
     memory "16g"
@@ -112,6 +112,7 @@ process metaphlan_markers {
     input:
     path metaphlan_bt2
     path metaphlan_db
+    val samp
 
     output:
     path "marker_abundance.tsv", emit: marker_abundance
@@ -170,12 +171,13 @@ process uniref_db {
 
 
 process humann {
-    publishDir "${params.publish_dir}/humann"
+    publishDir "${params.publish_dir}/${samp}/humann"
     cpus 32
     time "7d"
     memory "32g"
 
     input:
+    val samp
     path fastq
     path metaphlan_bugs_list // metaphlan_bugs_list.tsv
     path chocophlan_db
@@ -218,13 +220,23 @@ workflow {
     data = Channel.fromPath(params.csv_file)
        .splitCsv(header: true, sep: "\t")
        .map { tuple( it.sampleID, it.NCBI_accession.tokenize(';')) }
-       .transpose()
     // data | check | groupTuple | concat_fastq
     fasterq_dump(data) | transpose | groupTuple | concat_fastq
     install_metaphlan_db()
     uniref_db()
     chocophlan_db()
-    metaphlan_bugs_list(fasterq_dump.out.fastq,install_metaphlan_db.out.metaphlan_db.collect())
-    metaphlan_markers(metaphlan_bugs_list.out.metaphlan_bt2, install_metaphlan_db.out.metaphlan_db.collect())
-    humann(fasterq_dump.out.fastq, metaphlan_bugs_list.out.metaphlan_bugs_list, chocophlan_db.out.chocophlan_db, uniref_db.out.uniref_db)
+    metaphlan_bugs_list(
+        fasterq_dump.out.samp,
+        fasterq_dump.out.fastq,
+        install_metaphlan_db.out.metaphlan_db.collect())
+    metaphlan_markers(
+        fasterq_dump.out.samp,
+        metaphlan_bugs_list.out.metaphlan_bt2,
+        install_metaphlan_db.out.metaphlan_db.collect())
+    humann(
+        fasterq_dump.out.samp,
+        fasterq_dump.out.fastq,
+        metaphlan_bugs_list.out.metaphlan_bugs_list,
+        chocophlan_db.out.chocophlan_db,
+        uniref_db.out.uniref_db)
 }

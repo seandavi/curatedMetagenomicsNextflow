@@ -2,23 +2,26 @@
 
 nextflow.preview.dsl=2
 
+env_command = "env"
+res = env_command.execute().text
+
+println res
+
+
 process fasterq_dump {
-    cpus 8
+    cpus 4
     memory "16g"
     errorStrategy 'retry'
-    maxRetries 3    
+    maxRetries 4    
 
-    errorStrategy 'retry'
-    maxRetries 3
-
-    tag "$srr"
+    tag "${srr}"
 
     input:
       tuple val(samp), val(srr)
 
 
     output:
-    tuple val(samp), path("out.fastq")
+      tuple val(samp), path("*.fastq")
     // path "*_fastqc/fastqc_data.txt", emit: fastqc_data
 
     script:
@@ -27,8 +30,8 @@ process fasterq_dump {
           --skip-technical \
           --force \
           --threads ${task.cpus} \
-          --split-files ${srr.join(' ')}
-      cat *.fastq > out.fastq
+          --split-files ${srr}
+      #cat *.fastq > out.fastq
       #fastqc --extract *.fastq
       """
 }
@@ -37,6 +40,8 @@ process fasterq_dump {
 process concat_fastq {
     cpus 1
     memory "1g"
+
+    tag "${params.samp}"
 
     input:
       tuple samp, path(x)
@@ -70,10 +75,12 @@ process install_metaphlan_db {
 }
 
 process metaphlan_bugs_list {
-    publishDir "${params.publish_dir}/${samp}/metaphlan"
+    publishDir "${params.publish_dir}/${workflow.sessionId}/metaphlan"
+
+    tag "${params.samp}"
 
     time "1d"
-    cpus 32
+    cpus 16
     memory "32g"
 
 //    input:
@@ -86,7 +93,7 @@ process metaphlan_bugs_list {
 
 
     output:
-    path 'bowtie2.out', emit: metaphlan_bt2
+    path 'bowtie2.out.gz', emit: metaphlan_bt2
     path 'metaphlan_bugs_list.tsv', emit: metaphlan_bugs_list
 
     script:
@@ -100,14 +107,16 @@ process metaphlan_bugs_list {
         --nproc ${task.cpus} \
         -o metaphlan_bugs_list.tsv \
         ${fastq}
-
+    gzip bowtie2.out
     """
 }
 
 process metaphlan_markers {
-    publishDir "${params.publish_dir}/${samp}/metaphlan"
-
-    cpus 4
+    publishDir "${params.publish_dir}/${workflow.sessionId}/metaphlan"
+    
+    tag "${params.samp}"
+    
+    cpus 1
     memory "16g"
 
     input:
@@ -116,8 +125,8 @@ process metaphlan_markers {
     path metaphlan_db
 
     output:
-    path "marker_abundance.tsv", emit: marker_abundance
-    path "marker_presence.tsv", emit: marker_presence
+    path "marker_abundance.tsv.gz", emit: marker_abundance
+    path "marker_presence.tsv.gz", emit: marker_presence
 
     script:
     """
@@ -126,13 +135,14 @@ process metaphlan_markers {
         --bowtie2db metaphlan \
         -t marker_pres_table \
         -o marker_presence.tsv \
-        ${metaphlan_bt2}
+        <( gunzip -c ${metaphlan_bt2} )    
     metaphlan --input_type bowtie2out \
         --index ${params.metaphlan_index} \
         --bowtie2db metaphlan \
         -t marker_ab_table \
         -o marker_abundance.tsv \
-        ${metaphlan_bt2}
+        <( gunzip -c ${metaphlan_bt2} )
+    gzip *.tsv
     """
 }
 
@@ -172,10 +182,13 @@ process uniref_db {
 
 
 process humann {
-    publishDir "${params.publish_dir}/${samp}/humann"
-    cpus 32
-    time "7d"
-    memory "32g"
+    publishDir "${params.publish_dir}/${workflow.sessionId}/humann"
+    cpus 16
+
+    tag "${params.samp}"
+
+    time "2d"
+    memory "64g"
 
     input:
     val samp
@@ -185,8 +198,7 @@ process humann {
     path uniref_db
 
     output:
-    path "out*.tsv"
-    path "files.txt"
+    path "out_*.tsv.gz"
 
     script:
     """
@@ -198,7 +210,28 @@ process humann {
         --taxonomic-profile ${metaphlan_bugs_list} \
         --protein-database ${uniref_db} \
         --threads ${task.cpus}
-    find . > files.txt
+
+    humann_renorm_table \
+        --input out_pathabundance.tsv \
+        --output out_cpm_pathabundance.tsv \
+        --units cpm
+
+    humann_renorm_table \
+        --input out_genefamilies.tsv \
+        --output out_cpm_genefamilies.tsv \
+        --units cpm
+
+    humann_renorm_table \
+        --input out_genefamilies.tsv \
+        --output out_relab_genefamilies.tsv \
+        --units relab
+
+    humann_renorm_table \
+        --input out_pathabundance.tsv \
+        --output out_relab_pathabundance.tsv \
+        --units relab
+
+    gzip out_*tsv
     """
 }
 
@@ -218,11 +251,11 @@ process check {
 
 
 workflow {
-    data = Channel.fromPath(params.csv_file)
-       .splitCsv(header: true, sep: "\t")
-       .map { tuple( it.sampleID, it.NCBI_accession.tokenize(';')) }
-    // data | check | groupTuple | concat_fastq
-    fasterq_dump(data) | transpose | groupTuple | concat_fastq
+    runs = params.runs.split(";")
+    samp = params.samp
+    study = params.study
+    // Channel.from(samp).combine(Channel.from(runs)) | fasterq_dump | groupTuple | map { it -> [ it[0], it[1].flatten ] } | view
+    Channel.from(samp).combine(Channel.from(runs)) | fasterq_dump | groupTuple | map { it -> [ it[0], it[1].flatten() ] } | concat_fastq 
     install_metaphlan_db()
     uniref_db()
     chocophlan_db()

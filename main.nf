@@ -231,6 +231,13 @@ process humann {
         --output out_relab_pathabundance.tsv \
         --units relab
 
+    humann_split_stratified_table -i out_pathabundance.tsv -o .
+    humann_split_stratified_table -i out_cpm_pathabundance.tsv -o .
+    humann_split_stratified_table -i out_relab_pathabundance.tsv -o .
+    humann_split_stratified_table -i out_pathcoverage.tsv -o .
+    humann_split_stratified_table -i out_genefamilies.tsv -o
+    humann_split_stratified_table -i out_cpm_genefamilies.tsv -o
+    humann_split_stratified_table -i out_relab_genefamilies.tsv -o
     gzip out_*tsv
     """
 }

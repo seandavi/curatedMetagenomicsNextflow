@@ -39,7 +39,7 @@ process fasterq_dump {
       cat *.fastq | gzip > out.fastq.gz
       gunzip -c out.fastq.gz | wc -l > fastq_line_count.txt
       rm *.fastq
-      seqtk sample -s100 out.fastq.gz 0.05 > out_sample.fastq
+      seqtk sample -s100 out.fastq.gz 50000 > out_sample.fastq
       fastqc --extract out_sample.fastq
       rm out_sample.fastq
       """

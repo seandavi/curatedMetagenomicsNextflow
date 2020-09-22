@@ -1,42 +1,41 @@
 #!/usr/bin/env nextflow
 
-nextflow.preview.dsl=2
+nextflow.enable.dsl=2
 
-env_command = "env"
-res = env_command.execute().text
+//env_command = "env"
+//res = env_command.execute().text
 
-println res
+//println res
 
 
 process fasterq_dump {
-    publishDir "${params.publish_dir}/${workflow.sessionId}/${rowhash}/fasterq_dump",
-        pattern "fastq_line_count.txt|*_fastqc/fastqc_data.txt"
+    publishDir "${params.publish_dir}/${workflow.sessionId}/${rowhash}/fasterq_dump", pattern: "{fastq_line_count.txt,*_fastqc/fastqc_data.txt,sampleinfo.txt}"
     
     cpus 4
     memory "16g"
     errorStrategy 'retry'
-    maxRetries 4    
+    maxRetries 4
 
     tag "${rowhash}"
 
     input:
     tuple val(samp), val(srr), val(rowhash)
 
-
     output:
-    val(rowhash), emit: rowhash
-    path("out.fastq.gz"), emit: fastq
-    path ("*_fastqc/fastqc_data.txt"), emit: fastqc_data
-    path ("fastq_line_count.txt")
+    val(rowhash)
+    path "out.fastq.gz", emit: fastq
+    path "*_fastqc/fastqc_data.txt", emit: fastqc_data
+    path "fastq_line_count.txt"
 
 
     script:
       """
+      echo "sample: ${samp}\naccessions: ${srr}\nrowhash: ${rowhash}" > sampleinfo.txt
       fasterq-dump \
           --skip-technical \
           --force \
           --threads ${task.cpus} \
-          --split-files ${srr}
+          --split-files ${srr.join(" ")}
       cat *.fastq | gzip > out.fastq.gz
       gunzip -c out.fastq.gz | wc -l > fastq_line_count.txt
       rm *.fastq
@@ -64,26 +63,24 @@ process install_metaphlan_db {
 }
 
 process metaphlan_bugs_list {
-    publishDir "${params.publish_dir}/${workflow.sessionId}/${rowhash}/metaphlan_bugs_list", pattern "*tsv.gz"
+    publishDir "${params.publish_dir}/${workflow.sessionId}/${rowhash}/metaphlan_bugs_list", pattern: "*tsv.gz"
 
-    tag "${samp}"
+    tag "${rowhash}"
 
     time "1d"
     cpus 16
     memory "32g"
 
-//    input:
-//    path metaphlan_db
 
     input:
-    val samp
+    val rowhash
     path fastq
     path metaphlan_db
 
 
     output:
     path 'bowtie2.out.gz', emit: metaphlan_bt2
-    path 'metaphlan_bugs_list.tsv.gz', emit: metaphlan_bugs_list
+    path 'metaphlan_bugs_list.tsv', emit: metaphlan_bugs_list
 
     script:
     """
@@ -96,7 +93,8 @@ process metaphlan_bugs_list {
         --nproc ${task.cpus} \
         -o metaphlan_bugs_list.tsv \
         ${fastq}
-    gzip metaphlan_bugs_list.tsv
+
+    # gzip metaphlan_bugs_list.tsv
     gzip bowtie2.out
     """
 }
@@ -268,7 +266,7 @@ process check {
 
 def generate_row_tuple(row) {
     sampleID=row.sampleID;
-    accessions=row.NCBI_accessions.split(';');
+    accessions=row.NCBI_accession.split(';');
     // Create a hash of sampleID and joined accessions for
     // use as a unique id.
     rowhash = "${sampleID} ${accessions.sort().join(' ')}".md5().toString()
@@ -279,23 +277,24 @@ workflow {
     // Channel.from(samp).combine(Channel.from(runs)) | fasterq_dump | groupTuple | map { it -> [ it[0], it[1].flatten ] } | view
     samples = Channel.fromPath(params.metadata_tsv)
         .splitCsv(header: true, sep: "\t")
-        .map { row -> generate_row_tuple(row) }
-    
+        .map { row -> generate_row_tuple(row) }    
+
+    fasterq_dump(samples)
+
     install_metaphlan_db()
     uniref_db()
     chocophlan_db()
     
     metaphlan_bugs_list(
-        fasterq_dump.out.rowhash,
+        fasterq_dump.out[0],
         fasterq_dump.out.fastq,
         install_metaphlan_db.out.metaphlan_db.collect())
     metaphlan_markers(
-        fasterq_dump.out.rowhash,
-        fasterq_dump.out.fastq,
+        fasterq_dump.out[0],
         metaphlan_bugs_list.out.metaphlan_bt2,
         install_metaphlan_db.out.metaphlan_db.collect())
     humann(
-        fasterq_dump.out.rowhash,
+        fasterq_dump.out[0],
         fasterq_dump.out.fastq,
         metaphlan_bugs_list.out.metaphlan_bugs_list,
         chocophlan_db.out.chocophlan_db,

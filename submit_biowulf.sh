@@ -8,6 +8,7 @@ echo "using WORKDIR $WORKDIR"
 
 mkdir $WORKDIR
 cd $WORKDIR
+cp ../$1 .
 cp ../main.nf .
 cp ../nextflow.config .
 export NXF_MODE=google

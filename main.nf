@@ -9,20 +9,26 @@ println res
 
 
 process fasterq_dump {
+    publishDir "${params.publish_dir}/${workflow.sessionId}/${rowhash}/fasterq_dump",
+        pattern "fastq_line_count.txt|*_fastqc/fastqc_data.txt"
+    
     cpus 4
     memory "16g"
     errorStrategy 'retry'
     maxRetries 4    
 
-    tag "${srr}"
+    tag "${rowhash}"
 
     input:
-      tuple val(samp), val(srr)
+    tuple val(samp), val(srr), val(rowhash)
 
 
     output:
-      tuple val(samp), path("*.fastq")
-    // path "*_fastqc/fastqc_data.txt", emit: fastqc_data
+    val(rowhash), emit: rowhash
+    path("out.fastq.gz"), emit: fastq
+    path ("*_fastqc/fastqc_data.txt"), emit: fastqc_data
+    path ("fastq_line_count.txt")
+
 
     script:
       """
@@ -31,32 +37,15 @@ process fasterq_dump {
           --force \
           --threads ${task.cpus} \
           --split-files ${srr}
-      #cat *.fastq > out.fastq
-      #fastqc --extract *.fastq
+      cat *.fastq | gzip > out.fastq.gz
+      gunzip -c out.fastq.gz | wc -l > fastq_line_count.txt
+      rm *.fastq
+      seqtk sample -s100 out.fastq.gz 0.05 > out_sample.fastq
+      fastqc --extract out_sample.fastq
+      rm out_sample.fastq
       """
 }
 
-
-process concat_fastq {
-    cpus 1
-    memory "1g"
-
-    tag "${params.samp}"
-
-    input:
-      tuple samp, path(x)
-    output:
-      val samp, emit: samp 
-      path 'out.fastq', emit: fastq
-      path 'wordcount.fastq'
-    script:
-      """
-      ls -lah .
-      echo ${x}
-      cat ${x} >> out.fastq
-      wc out.fastq > wordcount.fastq
-      """
-}
 
 
 process install_metaphlan_db {
@@ -75,9 +64,9 @@ process install_metaphlan_db {
 }
 
 process metaphlan_bugs_list {
-    publishDir "${params.publish_dir}/${workflow.sessionId}/metaphlan"
+    publishDir "${params.publish_dir}/${workflow.sessionId}/${rowhash}/metaphlan_bugs_list", pattern "*tsv.gz"
 
-    tag "${params.samp}"
+    tag "${samp}"
 
     time "1d"
     cpus 16
@@ -94,7 +83,7 @@ process metaphlan_bugs_list {
 
     output:
     path 'bowtie2.out.gz', emit: metaphlan_bt2
-    path 'metaphlan_bugs_list.tsv', emit: metaphlan_bugs_list
+    path 'metaphlan_bugs_list.tsv.gz', emit: metaphlan_bugs_list
 
     script:
     """
@@ -107,20 +96,21 @@ process metaphlan_bugs_list {
         --nproc ${task.cpus} \
         -o metaphlan_bugs_list.tsv \
         ${fastq}
+    gzip metaphlan_bugs_list.tsv
     gzip bowtie2.out
     """
 }
 
 process metaphlan_markers {
-    publishDir "${params.publish_dir}/${workflow.sessionId}/metaphlan"
+    publishDir "${params.publish_dir}/${workflow.sessionId}/${rowhash}/metaphlan_markers"
     
-    tag "${params.samp}"
+    tag "${rowhash}"
     
     cpus 1
     memory "16g"
 
     input:
-    val samp
+    val rowhash
     path metaphlan_bt2
     path metaphlan_db
 
@@ -182,23 +172,44 @@ process uniref_db {
 
 
 process humann {
-    publishDir "${params.publish_dir}/${workflow.sessionId}/humann"
+    publishDir "${params.publish_dir}/${workflow.sessionId}/${rowhash}/humann"
     cpus 16
 
-    tag "${params.samp}"
+    tag "${rowhash}"
 
     time "2d"
     memory "64g"
 
     input:
-    val samp
+    val rowhash
     path fastq
     path metaphlan_bugs_list // metaphlan_bugs_list.tsv
     path chocophlan_db
     path uniref_db
 
     output:
-    path "out_*.tsv.gz"
+    // lots of files....
+    path("out_genefamilies.tsv.gz")
+    path("out_genefamilies_cpm.tsv.gz")
+    path("out_genefamilies_relab.tsv.gz")
+    path("out_genefamilies_stratified.tsv.gz")
+    path("out_genefamilies_unstratified.tsv.gz")
+    path("out_genefamilies_cpm_stratified.tsv.gz")
+    path("out_genefamilies_relab_stratified.tsv.gz")
+    path("out_genefamilies_cpm_unstratified.tsv.gz")
+    path("out_genefamilies_relab_unstratified.tsv.gz")
+    path("out_pathabundance.tsv.gz")
+    path("out_pathabundance_cpm.tsv.gz")
+    path("out_pathabundance_relab.tsv.gz")
+    path("out_pathabundance_stratified.tsv.gz")
+    path("out_pathabundance_unstratified.tsv.gz")
+    path("out_pathabundance_cpm_stratified.tsv.gz")
+    path("out_pathabundance_relab_stratified.tsv.gz")
+    path("out_pathabundance_cpm_unstratified.tsv.gz")
+    path("out_pathabundance_relab_unstratified.tsv.gz")
+    path("out_pathcoverage_unstratified.tsv.gz")
+    path("out_pathcoverage_stratified.tsv.gz")
+    path("out_pathcoverage.tsv.gz")
 
     script:
     """
@@ -213,31 +224,31 @@ process humann {
 
     humann_renorm_table \
         --input out_pathabundance.tsv \
-        --output out_cpm_pathabundance.tsv \
+        --output out_pathabundance_cpm.tsv \
         --units cpm
 
     humann_renorm_table \
         --input out_genefamilies.tsv \
-        --output out_cpm_genefamilies.tsv \
+        --output out_genefamilies_cpm.tsv \
         --units cpm
 
     humann_renorm_table \
         --input out_genefamilies.tsv \
-        --output out_relab_genefamilies.tsv \
+        --output out_genefamilies_relab.tsv \
         --units relab
 
     humann_renorm_table \
         --input out_pathabundance.tsv \
-        --output out_relab_pathabundance.tsv \
+        --output out_pathabundance_relab.tsv \
         --units relab
 
     humann_split_stratified_table -i out_pathabundance.tsv -o .
-    humann_split_stratified_table -i out_cpm_pathabundance.tsv -o .
-    humann_split_stratified_table -i out_relab_pathabundance.tsv -o .
+    humann_split_stratified_table -i out_pathabundance_cpm.tsv -o .
+    humann_split_stratified_table -i out_pathabundance_relab.tsv -o .
     humann_split_stratified_table -i out_pathcoverage.tsv -o .
-    humann_split_stratified_table -i out_genefamilies.tsv -o
-    humann_split_stratified_table -i out_cpm_genefamilies.tsv -o
-    humann_split_stratified_table -i out_relab_genefamilies.tsv -o
+    humann_split_stratified_table -i out_genefamilies.tsv -o .
+    humann_split_stratified_table -i out_genefamilies_cpm.tsv -o .
+    humann_split_stratified_table -i out_genefamilies_relab.tsv -o .
     gzip out_*tsv
     """
 }
@@ -255,28 +266,37 @@ process check {
     """
 }
 
-
+def generate_row_tuple(row) {
+    sampleID=row.sampleID;
+    accessions=row.NCBI_accessions.split(';');
+    // Create a hash of sampleID and joined accessions for
+    // use as a unique id.
+    rowhash = "${sampleID} ${accessions.sort().join(' ')}".md5().toString()
+    return tuple(sampleID, accessions, rowhash)
+}
 
 workflow {
-    runs = params.runs.split(";")
-    samp = params.samp
-    study = params.study
     // Channel.from(samp).combine(Channel.from(runs)) | fasterq_dump | groupTuple | map { it -> [ it[0], it[1].flatten ] } | view
-    Channel.from(samp).combine(Channel.from(runs)) | fasterq_dump | groupTuple | map { it -> [ it[0], it[1].flatten() ] } | concat_fastq 
+    samples = Channel.fromPath(params.metadata_tsv)
+        .splitCsv(header: true, sep: "\t")
+        .map { row -> generate_row_tuple(row) }
+    
     install_metaphlan_db()
     uniref_db()
     chocophlan_db()
+    
     metaphlan_bugs_list(
-        concat_fastq.out.samp,
-        concat_fastq.out.fastq,
+        fasterq_dump.out.rowhash,
+        fasterq_dump.out.fastq,
         install_metaphlan_db.out.metaphlan_db.collect())
     metaphlan_markers(
-        concat_fastq.out.samp,
+        fasterq_dump.out.rowhash,
+        fasterq_dump.out.fastq,
         metaphlan_bugs_list.out.metaphlan_bt2,
         install_metaphlan_db.out.metaphlan_db.collect())
     humann(
-        concat_fastq.out.samp,
-        concat_fastq.out.fastq,
+        fasterq_dump.out.rowhash,
+        fasterq_dump.out.fastq,
         metaphlan_bugs_list.out.metaphlan_bugs_list,
         chocophlan_db.out.chocophlan_db,
         uniref_db.out.uniref_db)

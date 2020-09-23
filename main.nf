@@ -69,7 +69,7 @@ process metaphlan_bugs_list {
 
     time "1d"
     cpus 16
-    memory "32g"
+    memory "64g"
 
 
     input:

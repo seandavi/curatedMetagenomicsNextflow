@@ -9,7 +9,7 @@ nextflow.enable.dsl=2
 
 
 process fasterq_dump {
-    publishDir "${params.publish_dir}/${workflow.sessionId}/${rowhash}/fasterq_dump", pattern: "{fastq_line_count.txt,*_fastqc/fastqc_data.txt,sampleinfo.txt}"
+    publishDir "${params.publish_dir}/${workflow.sessionId}/${rowhash}/fasterq_dump", pattern: "{fastq_line_count.txt,*_fastqc/fastqc_data.txt,sampleinfo.txt,.command*}"
     
     cpus 4
     memory "16g"
@@ -26,7 +26,8 @@ process fasterq_dump {
     path "out.fastq.gz", emit: fastq
     path "*_fastqc/fastqc_data.txt", emit: fastqc_data
     path "fastq_line_count.txt"
-
+    path ".command*"
+    path "sampleinfo.txt"
 
     script:
       """
@@ -55,6 +56,7 @@ process install_metaphlan_db {
 
     output:
     path 'metaphlan', emit: metaphlan_db, type: 'dir'
+    path ".command*"
 
     script:
       """
@@ -63,13 +65,16 @@ process install_metaphlan_db {
 }
 
 process metaphlan_bugs_list {
-    publishDir "${params.publish_dir}/${workflow.sessionId}/${rowhash}/metaphlan_bugs_list", pattern: "*tsv.gz"
+    publishDir "${params.publish_dir}/${workflow.sessionId}/${rowhash}/metaphlan_bugs_list", pattern: "{*tsv.gz,.command*}"
 
     tag "${rowhash}"
 
     time "1d"
     cpus 16
-    memory "64g"
+    memory { 32.GB * task.attempt }
+    
+    errorStrategy 'retry'
+    maxRetries 2
 
 
     input:
@@ -81,6 +86,7 @@ process metaphlan_bugs_list {
     output:
     path 'bowtie2.out.gz', emit: metaphlan_bt2
     path 'metaphlan_bugs_list.tsv', emit: metaphlan_bugs_list
+    path ".command*"
 
     script:
     """
@@ -115,6 +121,7 @@ process metaphlan_markers {
     output:
     path "marker_abundance.tsv.gz", emit: marker_abundance
     path "marker_presence.tsv.gz", emit: marker_presence
+    path ".command*"
 
     script:
     """
@@ -144,6 +151,7 @@ process chocophlan_db {
 
     output:
     path "chocophlan", emit: chocophlan_db, type: 'dir'
+    path ".command*"
 
     script:
     """
@@ -161,6 +169,7 @@ process uniref_db {
 
     output:
     path "uniref", emit: uniref_db, type: 'dir'
+    path ".command*"
 
     script:
     """
@@ -208,6 +217,7 @@ process humann {
     path("out_pathcoverage_unstratified.tsv.gz")
     path("out_pathcoverage_stratified.tsv.gz")
     path("out_pathcoverage.tsv.gz")
+    path ".command*"
 
     script:
     """
@@ -248,19 +258,6 @@ process humann {
     humann_split_stratified_table -i out_genefamilies_cpm.tsv -o .
     humann_split_stratified_table -i out_genefamilies_relab.tsv -o .
     gzip out_*tsv
-    """
-}
-
-process check {
-    input:
-      tuple val(samp), val(srr)
-    output:
-      tuple( val(samp), path('*.txt'))
-
-    script:
-    """
-    echo ${samp} >> ${srr}_samp.txt
-    echo ${srr} >> ${srr}_samp.txt
     """
 }
 

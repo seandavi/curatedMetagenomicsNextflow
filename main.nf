@@ -19,7 +19,7 @@ process fasterq_dump {
     tag "${rowhash}"
 
     input:
-    tuple val(samp), val(srr), val(rowhash)
+    tuple val(srr), val(rowhash)
 
     output:
     val(rowhash)
@@ -31,7 +31,7 @@ process fasterq_dump {
 
     script:
       """
-      echo "sample: ${samp}\naccessions: ${srr}\nrowhash: ${rowhash}" > sampleinfo.txt
+      echo "accessions: ${srr}\nrowhash: ${rowhash}" > sampleinfo.txt
       fasterq-dump \
           --skip-technical \
           --force \
@@ -262,12 +262,11 @@ process humann {
 }
 
 def generate_row_tuple(row) {
-    sampleID=row.sampleID;
     accessions=row.NCBI_accession.split(';');
     // Create a hash of sampleID and joined accessions for
     // use as a unique id.
-    rowhash = "${sampleID} ${accessions.sort().join(' ')}".md5().toString()
-    return tuple(sampleID, accessions, rowhash)
+    rowhash = "${accessions.sort().join(' ')}".md5().toString()
+    return tuple(accessions, rowhash)
 }
 
 workflow {

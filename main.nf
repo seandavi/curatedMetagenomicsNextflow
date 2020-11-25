@@ -2,18 +2,28 @@
 
 nextflow.enable.dsl=2
 
-//env_command = "env"
-//res = env_command.execute().text
+import groovy.json.JsonSlurper
 
-//println res
+def jsonSlurper = new JsonSlurper()
+def slu = new File(params.metadata_tsv)
+def recs = []
+slu.eachLine { line -> recs << jsonSlurper.parseText(line)}
+
+def abc(row) {
+    return tuple(row.NCBI_accession.split(';'), row.uuid)
+}
+
+items = Channel.from(recs).map { row -> abc(row) }
+
 
 
 process fasterq_dump {
     publishDir "${params.publish_dir}/${workflow.sessionId}/${rowhash}/fasterq_dump", pattern: "{fastq_line_count.txt,*_fastqc/fastqc_data.txt,sampleinfo.txt,.command*}"
     
+    maxForks 80
     cpus 4
     memory "16g"
-    errorStrategy 'retry'
+    errorStrategy  { task.attempt <= maxRetries  ? 'retry' : 'finish' }
     maxRetries 4
 
     tag "${rowhash}"
@@ -66,17 +76,14 @@ process install_metaphlan_db {
 
 process metaphlan_bugs_list {
     publishDir "${params.publish_dir}/${workflow.sessionId}/${rowhash}/metaphlan_bugs_list", pattern: "{*tsv.gz,.command*}"
-
+    errorStrategy 'ignore'
+    
     tag "${rowhash}"
 
     time "1d"
     cpus 16
     memory { 32.GB * task.attempt }
     
-    errorStrategy 'retry'
-    maxRetries 2
-
-
     input:
     val rowhash
     path fastq
@@ -182,6 +189,8 @@ process humann {
     publishDir "${params.publish_dir}/${workflow.sessionId}/${rowhash}/humann"
     cpus 16
 
+    errorStrategy 'ignore'
+
     tag "${rowhash}"
 
     time "2d"
@@ -263,17 +272,19 @@ process humann {
 
 def generate_row_tuple(row) {
     accessions=row.NCBI_accession.split(';');
+    uuid = row.uuid;
     // Create a hash of sampleID and joined accessions for
     // use as a unique id.
-    rowhash = "${accessions.sort().join(' ')}".md5().toString()
-    return tuple(accessions, rowhash)
+    // rowhash = "${accessions.sort().join(' ')}".md5().toString()
+    return tuple(accessions, uuid)
 }
 
 workflow {
     // Channel.from(samp).combine(Channel.from(runs)) | fasterq_dump | groupTuple | map { it -> [ it[0], it[1].flatten ] } | view
-    samples = Channel.fromPath(params.metadata_tsv)
-        .splitCsv(header: true, sep: "\t")
-        .map { row -> generate_row_tuple(row) }    
+    // samples = Channel.fromPath(params.metadata_tsv)
+    //    .splitCsv(header: true, quote: '"') 
+    //   .map { row -> generate_row_tuple(row) }    
+    samples = items
 
     fasterq_dump(samples)
 

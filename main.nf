@@ -93,6 +93,7 @@ process metaphlan_bugs_list {
     output:
     path 'bowtie2.out.gz', emit: metaphlan_bt2
     path 'metaphlan_bugs_list.tsv', emit: metaphlan_bugs_list
+    path 'metaphlan_bugs_list.tsv.gz', emit: metaphlan_bugs_list_gz
     path ".command*"
 
     script:
@@ -107,7 +108,7 @@ process metaphlan_bugs_list {
         -o metaphlan_bugs_list.tsv \
         ${fastq}
 
-    # gzip metaphlan_bugs_list.tsv
+    gzip -c metaphlan_bugs_list.tsv > metaphlan_bugs_list.tsv.gz
     gzip bowtie2.out
     """
 }
@@ -193,7 +194,7 @@ process humann {
 
     tag "${rowhash}"
 
-    time "2d"
+    time "3d"
     memory "64g"
 
     input:

@@ -12,6 +12,4 @@ cp ../$1 .
 cp ../main.nf .
 cp ../nextflow.config .
 export NXF_MODE=google
-NXF_MODE=google nextflow run main.nf -with-weblog https://cmgd-telemetry-whnnxetv4q-uc.a.run.app/nextflow/events -profile nih_slurm --metadata_tsv $1
-cd ..
-rm -rf $WORKDIR
+NXF_MODE=google nextflow run main.nf -with-weblog https://cmgd-telemetry-whnnxetv4q-uc.a.run.app/nextflow/events -profile nih_slurm --metadata_tsv $1 && cd .. && rm -rf $WORKDIR

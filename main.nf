@@ -2,18 +2,22 @@
 
 nextflow.enable.dsl=2
 
-import groovy.json.JsonSlurper
+/* import groovy.json.JsonSlurper
 
 def jsonSlurper = new JsonSlurper()
 def slu = new File(params.metadata_tsv)
 def recs = []
 slu.eachLine { line -> recs << jsonSlurper.parseText(line)}
+*/
+
+params.srr=''
+params.uuid=''
 
 def abc(row) {
     return tuple(row.NCBI_accession.split(';'), row.uuid)
 }
 
-items = Channel.from(recs).map { row -> abc(row) }
+// items = Channel.from(recs).map { row -> abc(row) }
 
 
 
@@ -285,8 +289,8 @@ workflow {
     // samples = Channel.fromPath(params.metadata_tsv)
     //    .splitCsv(header: true, quote: '"') 
     //   .map { row -> generate_row_tuple(row) }    
-    samples = items
-
+    // samples = items
+    samples = tuple(params.srr.split(';'), params.uuid)
     fasterq_dump(samples)
 
     install_metaphlan_db()

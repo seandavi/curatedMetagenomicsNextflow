@@ -122,7 +122,7 @@ process metaphlan_markers {
     
     tag "${rowhash}"
     
-    cpus 1
+    cpus 4
     memory "16g"
 
     input:

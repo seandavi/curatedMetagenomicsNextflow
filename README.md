@@ -41,9 +41,9 @@ export GOOGLE_APPLICATION_CREDENTIALS=/path/your/file/creds.json
 ## Google
 
 ```sh
-./nextflow run \
+nextflow run \
     -with-weblog https://cmgd-telemetry-whnnxetv4q-uc.a.run.app/webhook \
-    -w gs://temp-testing/nf_testing/ \ 
-    -profile google main.nf \
-    --runs SRR000235
+    -w gs://temp-testing/nf_testing/ \
+    -resume -profile google main.nf  \
+    --srr 'SRR000237' --publish_dir gs://temp-testing/publish/ --store_dir gs://temp-testing/store/
 ```

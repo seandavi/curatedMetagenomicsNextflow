@@ -103,3 +103,13 @@ nextflow run seandavi/curatedMetagenomicsNextflow \
 ```sh
 gsutil ls -lahr gs://$GOOGLE_BUCKET_NAME/results
 ```
+
+## nf-core tools integration
+
+```sh
+pip install nf-core
+```
+
+```sh
+nf-core launch seandavi/curatedMetagenomicsNextflow
+```

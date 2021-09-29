@@ -7,7 +7,7 @@ curl https://get.nextflow.io | bash
 # pip install gsutil
 
 # setup google access -- YOU NEED TO EDIT
-export GOOGLE_APPLICATION_CREDENTIALS=/Users/seandavis/Documents/git/curatedMetagenomicsNextflow/curatedmetagenomicdata-0ca253fe73b7.json
+export GOOGLE_APPLICATION_CREDENTIALS=~/Downloads/curatedmetagenomicdata-f7fc1489b036.json
 
 # where to put stuff -- YOU NEED TO EDIT
 export GOOGLE_BUCKET_NAME=temp-testing-cmgd

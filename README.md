@@ -91,7 +91,7 @@ You can now run test data.
 ```sh
 nextflow run seandavi/curatedMetagenomicsNextflow \
   -profile google \
-  -work-dir gs://$GOOGLE_BUCKET_NAME/nf_testing/ \
+  -work-dir gs://$GOOGLE_BUCKET_NAME/work \
   --publish_dir=gs://$GOOGLE_BUCKET_NAME/results \
   --store_dir=gs://$GOOGLE_BUCKET_NAME/store \
   -resume \

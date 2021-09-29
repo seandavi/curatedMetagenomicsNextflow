@@ -22,7 +22,7 @@ def abc(row) {
 
 
 process fasterq_dump {
-    publishDir "${params.publish_dir}/${workflow.sessionId}/${rowhash}/fasterq_dump", pattern: "{fastq_line_count.txt,*_fastqc/fastqc_data.txt,sampleinfo.txt,.command*}"
+    publishDir "${params.publish_dir}/${workflow.sessionId}/fasterq_dump", pattern: "{fastq_line_count.txt,*_fastqc/fastqc_data.txt,sampleinfo.txt,.command*}"
     
     maxForks 80
     cpus 4
@@ -30,13 +30,13 @@ process fasterq_dump {
     errorStrategy  { task.attempt <= maxRetries  ? 'retry' : 'finish' }
     maxRetries 4
 
-    tag "${rowhash}"
+    tag "${srr}"
 
     input:
-    tuple val(srr), val(rowhash)
+    val srr
 
     output:
-    val(rowhash)
+    val(srr)
     path "out.fastq.gz", emit: fastq
     path "*_fastqc/fastqc_data.txt", emit: fastqc_data
     path "fastq_line_count.txt"
@@ -45,7 +45,7 @@ process fasterq_dump {
 
     script:
       """
-      echo "accessions: ${srr}\nrowhash: ${rowhash}" > sampleinfo.txt
+      echo "accessions: ${srr}" > sampleinfo.txt
       fasterq-dump \
           --skip-technical \
           --force \
@@ -63,7 +63,7 @@ process fasterq_dump {
 
 
 process install_metaphlan_db {
-    cpus 1
+    cpus 8
     memory '32g'
 
     storeDir "${params.store_dir}"
@@ -79,17 +79,16 @@ process install_metaphlan_db {
 }
 
 process metaphlan_bugs_list {
-    publishDir "${params.publish_dir}/${workflow.sessionId}/${rowhash}/metaphlan_bugs_list", pattern: "{*tsv.gz,.command*}"
+    publishDir "${params.publish_dir}/${workflow.sessionId}/metaphlan_bugs_list", pattern: "{*tsv.gz,.command*}"
     errorStrategy 'ignore'
     
-    tag "${rowhash}"
+    // tag "${rowhash}"
 
     time "1d"
     cpus 16
     memory { 32.GB * task.attempt }
     
     input:
-    val rowhash
     path fastq
     path metaphlan_db
 
@@ -118,15 +117,12 @@ process metaphlan_bugs_list {
 }
 
 process metaphlan_markers {
-    publishDir "${params.publish_dir}/${workflow.sessionId}/${rowhash}/metaphlan_markers"
-    
-    tag "${rowhash}"
+    publishDir "${params.publish_dir}/${workflow.sessionId}/metaphlan_markers"
     
     cpus 4
     memory "16g"
 
     input:
-    val rowhash
     path metaphlan_bt2
     path metaphlan_db
 
@@ -191,18 +187,15 @@ process uniref_db {
 
 
 process humann {
-    publishDir "${params.publish_dir}/${workflow.sessionId}/${rowhash}/humann"
+    publishDir "${params.publish_dir}/${workflow.sessionId}/humann"
     cpus 16
 
     errorStrategy 'ignore'
-
-    tag "${rowhash}"
 
     time "3d"
     memory "64g"
 
     input:
-    val rowhash
     path fastq
     path metaphlan_bugs_list // metaphlan_bugs_list.tsv
     path chocophlan_db
@@ -290,7 +283,7 @@ workflow {
     //    .splitCsv(header: true, quote: '"') 
     //   .map { row -> generate_row_tuple(row) }    
     // samples = items
-    samples = tuple(params.srr.split(';'), params.uuid)
+    samples = params.srr.split(';')
     fasterq_dump(samples)
 
     install_metaphlan_db()
@@ -298,15 +291,12 @@ workflow {
     chocophlan_db()
     
     metaphlan_bugs_list(
-        fasterq_dump.out[0],
         fasterq_dump.out.fastq,
         install_metaphlan_db.out.metaphlan_db.collect())
     metaphlan_markers(
-        fasterq_dump.out[0],
         metaphlan_bugs_list.out.metaphlan_bt2,
         install_metaphlan_db.out.metaphlan_db.collect())
     humann(
-        fasterq_dump.out[0],
         fasterq_dump.out.fastq,
         metaphlan_bugs_list.out.metaphlan_bugs_list,
         chocophlan_db.out.chocophlan_db,

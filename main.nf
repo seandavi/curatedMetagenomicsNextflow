@@ -4,13 +4,14 @@ nextflow.enable.dsl=2
 
 
 process fasterq_dump {
-    publishDir "${params.publish_dir}/${workflow.sessionId}/fasterq_dump", pattern: "{fastq_line_count.txt,*_fastqc/fastqc_data.txt,sampleinfo.txt,.command*}"
+    publishDir "${params.publish_dir}/${meta.sample}/fasterq_dump", pattern: "{fastq_line_count.txt,*_fastqc/fastqc_data.txt,sampleinfo.txt,.command*}"
     
     maxForks 80
     cpus 4
     memory "16g"
     errorStrategy  { task.attempt <= maxRetries  ? 'retry' : 'finish' }
     maxRetries 3
+    disk "500 GB"
 
     tag "${meta.sample}"
 
@@ -47,6 +48,7 @@ process fasterq_dump {
 process install_metaphlan_db {
     cpus 8
     memory '32g'
+    disk '200 GB'
 
     storeDir "${params.store_dir}"
 
@@ -61,14 +63,14 @@ process install_metaphlan_db {
 }
 
 process metaphlan_bugs_list {
-    publishDir "${params.publish_dir}/${workflow.sessionId}/metaphlan_bugs_list", pattern: "{*tsv.gz,.command*}"
-    errorStrategy 'ignore'
+    publishDir "${params.publish_dir}/${meta.sample}/metaphlan_bugs_list", pattern: "{*tsv.gz,.command*}"
 
     tag "${meta.sample}"
     
     time "1d"
     cpus 16
     memory { 32.GB * task.attempt }
+    disk "200 GB"
     
     input:
     val meta
@@ -101,12 +103,13 @@ process metaphlan_bugs_list {
 }
 
 process metaphlan_markers {
-    publishDir "${params.publish_dir}/${workflow.sessionId}/metaphlan_markers"
+    publishDir "${params.publish_dir}/${meta.sample}/metaphlan_markers/"
     
     tag "${meta.sample}"
 
     cpus 4
     memory "16g"
+    disk "200 GB"
 
     input:
     val meta
@@ -175,16 +178,13 @@ process uniref_db {
 
 
 process humann {
-    publishDir "${params.publish_dir}/${workflow.sessionId}/humann"
+    publishDir "${params.publish_dir}/${meta.sample}/humann"
     cpus 16
     disk '200 GB'
-
-    tag "${meta.sample}"
-
-    errorStrategy 'ignore'
-
     time "3d"
     memory "64g"
+
+    tag "${meta.sample}"
 
     input:
     val meta
@@ -275,7 +275,6 @@ import groovy.json.JsonOutput
 jsonOutput = new JsonOutput()
 
 workflow {
-    // Channel.from(samp).combine(Channel.from(runs)) | fasterq_dump | groupTuple | map { it -> [ it[0], it[1].flatten ] } | view
     samples = Channel
         .fromPath(params.metadata_tsv)
         .splitCsv(header: true, quote: '"', sep:'\t')

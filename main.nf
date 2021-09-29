@@ -2,24 +2,6 @@
 
 nextflow.enable.dsl=2
 
-/* import groovy.json.JsonSlurper
-
-def jsonSlurper = new JsonSlurper()
-def slu = new File(params.metadata_tsv)
-def recs = []
-slu.eachLine { line -> recs << jsonSlurper.parseText(line)}
-*/
-
-params.srr=''
-params.uuid=''
-
-def abc(row) {
-    return tuple(row.NCBI_accession.split(';'), row.uuid)
-}
-
-// items = Channel.from(recs).map { row -> abc(row) }
-
-
 
 process fasterq_dump {
     publishDir "${params.publish_dir}/${workflow.sessionId}/fasterq_dump", pattern: "{fastq_line_count.txt,*_fastqc/fastqc_data.txt,sampleinfo.txt,.command*}"
@@ -28,15 +10,15 @@ process fasterq_dump {
     cpus 4
     memory "16g"
     errorStrategy  { task.attempt <= maxRetries  ? 'retry' : 'finish' }
-    maxRetries 4
+    maxRetries 3
 
-    tag "${srr}"
+    tag "${meta.sample}"
 
     input:
-    val srr
+    val meta
 
     output:
-    val(srr)
+    val(meta), emit: meta
     path "out.fastq.gz", emit: fastq
     path "*_fastqc/fastqc_data.txt", emit: fastqc_data
     path "fastq_line_count.txt"
@@ -45,12 +27,12 @@ process fasterq_dump {
 
     script:
       """
-      echo "accessions: ${srr}" > sampleinfo.txt
+      echo "accessions: ${meta.accessions}" > sampleinfo.txt
       fasterq-dump \
           --skip-technical \
           --force \
           --threads ${task.cpus} \
-          --split-files ${srr.join(" ")}
+          --split-files ${meta.accessions.join(" ")}
       cat *.fastq | gzip > out.fastq.gz
       gunzip -c out.fastq.gz | wc -l > fastq_line_count.txt
       rm *.fastq
@@ -81,19 +63,21 @@ process install_metaphlan_db {
 process metaphlan_bugs_list {
     publishDir "${params.publish_dir}/${workflow.sessionId}/metaphlan_bugs_list", pattern: "{*tsv.gz,.command*}"
     errorStrategy 'ignore'
-    
-    // tag "${rowhash}"
 
+    tag "${meta.sample}"
+    
     time "1d"
     cpus 16
     memory { 32.GB * task.attempt }
     
     input:
+    val meta
     path fastq
     path metaphlan_db
 
 
     output:
+    val(meta), emit: meta
     path 'bowtie2.out.gz', emit: metaphlan_bt2
     path 'metaphlan_bugs_list.tsv', emit: metaphlan_bugs_list
     path 'metaphlan_bugs_list.tsv.gz', emit: metaphlan_bugs_list_gz
@@ -119,14 +103,18 @@ process metaphlan_bugs_list {
 process metaphlan_markers {
     publishDir "${params.publish_dir}/${workflow.sessionId}/metaphlan_markers"
     
+    tag "${meta.sample}"
+
     cpus 4
     memory "16g"
 
     input:
+    val meta
     path metaphlan_bt2
     path metaphlan_db
 
     output:
+    val meta, emit: meta
     path "marker_abundance.tsv.gz", emit: marker_abundance
     path "marker_presence.tsv.gz", emit: marker_presence
     path ".command*"
@@ -189,6 +177,9 @@ process uniref_db {
 process humann {
     publishDir "${params.publish_dir}/${workflow.sessionId}/humann"
     cpus 16
+    disk '200 GB'
+
+    tag "${meta.sample}"
 
     errorStrategy 'ignore'
 
@@ -196,6 +187,7 @@ process humann {
     memory "64g"
 
     input:
+    val meta
     path fastq
     path metaphlan_bugs_list // metaphlan_bugs_list.tsv
     path chocophlan_db
@@ -270,20 +262,27 @@ process humann {
 
 def generate_row_tuple(row) {
     accessions=row.NCBI_accession.split(';');
-    uuid = row.uuid;
+    study_id = row.study_name;
+    sample_id = row.sample_id;
+    sample_encoded = "${study_id}::${sample_id}".bytes.encodeBase64().toString()
     // Create a hash of sampleID and joined accessions for
     // use as a unique id.
     // rowhash = "${accessions.sort().join(' ')}".md5().toString()
-    return tuple(accessions, uuid)
+    return [sample: sample_encoded, accessions: accessions, meta: row]
 }
+
+import groovy.json.JsonOutput
+jsonOutput = new JsonOutput()
 
 workflow {
     // Channel.from(samp).combine(Channel.from(runs)) | fasterq_dump | groupTuple | map { it -> [ it[0], it[1].flatten ] } | view
-    // samples = Channel.fromPath(params.metadata_tsv)
-    //    .splitCsv(header: true, quote: '"') 
-    //   .map { row -> generate_row_tuple(row) }    
-    // samples = items
-    samples = params.srr.split(';')
+    samples = Channel
+        .fromPath(params.metadata_tsv)
+        .splitCsv(header: true, quote: '"', sep:'\t')
+        .map { row -> generate_row_tuple(row) }
+    // for debugging: 
+    // samples.view()
+
     fasterq_dump(samples)
 
     install_metaphlan_db()
@@ -291,12 +290,15 @@ workflow {
     chocophlan_db()
     
     metaphlan_bugs_list(
+        fasterq_dump.out.meta,
         fasterq_dump.out.fastq,
         install_metaphlan_db.out.metaphlan_db.collect())
     metaphlan_markers(
+        metaphlan_bugs_list.out.meta,
         metaphlan_bugs_list.out.metaphlan_bt2,
         install_metaphlan_db.out.metaphlan_db.collect())
     humann(
+        fasterq_dump.out.meta,
         fasterq_dump.out.fastq,
         metaphlan_bugs_list.out.metaphlan_bugs_list,
         chocophlan_db.out.chocophlan_db,

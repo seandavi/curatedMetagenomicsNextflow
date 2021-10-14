@@ -22,6 +22,8 @@ The `metadata_tsv` file must be:
   - `NCBI_accessions`, a semicolon-separated list of SRRs
 - Can be a file or a web url
 
+If using a Google Bucket, the name bucket must not have underscores.
+
 ## On sample ids
 
 We use a simple approach to create sample ids. The `study_name` and `sample_id` are
@@ -95,6 +97,7 @@ nextflow run seandavi/curatedMetagenomicsNextflow \
   --publish_dir=gs://$GOOGLE_BUCKET_NAME/results \
   --store_dir=gs://$GOOGLE_BUCKET_NAME/store \
   -resume \
+  -r main \
   --metadata_tsv https://raw.githubusercontent.com/seandavi/curatedMetagenomicsNextflow/main/samplesheet.test.tsv
 ```
 

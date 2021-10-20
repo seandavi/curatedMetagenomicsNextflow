@@ -80,11 +80,14 @@ export GOOGLE_APPLICATION_CREDENTIALS=/path/to/keyfile/keyfile-name.json
 ## Execution
 
 This assumes that you are running on Google, that credentials are set up correctly,
-and that you have a Google Storage Bucket already created.
+and that you have a Google Storage Bucket already created. Note that bucket names
+must NOT contain the `_` or other special characters. 
 
 ```sh
-export GOOGLE_BUCKET_NAME="YOUR_GOOGLE_BUCKET"
-# optional
+# No 
+export GOOGLE_BUCKET_NAME="YOUR-GOOGLE-BUCKET"
+
+# if bucket does not exist:
 gsutil mb gs://$GOOGLE_BUCKET_NAME
 ```
 

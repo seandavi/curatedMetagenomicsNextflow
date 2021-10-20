@@ -84,14 +84,15 @@ and that you have a Google Storage Bucket already created. Note that bucket name
 must NOT contain the `_` or other special characters. 
 
 ```sh
-# No 
+# No special characters in bucket names
 export GOOGLE_BUCKET_NAME="YOUR-GOOGLE-BUCKET"
 
 # if bucket does not exist:
 gsutil mb gs://$GOOGLE_BUCKET_NAME
 ```
 
-You can now run test data. 
+You can now run test data. This will take a few hours the first time, so run on a system that will remain on 
+during that time (laptops are not a good choice if you are going to close it and go home, for example). 
 
 ```sh
 nextflow run seandavi/curatedMetagenomicsNextflow \
@@ -104,11 +105,24 @@ nextflow run seandavi/curatedMetagenomicsNextflow \
   --metadata_tsv https://raw.githubusercontent.com/seandavi/curatedMetagenomicsNextflow/main/samplesheet.test.tsv
 ```
 
-## Viewing results
+To view results:
 
 ```sh
-gsutil ls -lahr gs://$GOOGLE_BUCKET_NAME/results
+gsutil ls -larh $GOOGLE_BUCKET_NAME/results
 ```
+
+To view an individual file:
+
+```sh
+gsutil cat PATH_TO_GOOGLE_OBJECT
+```
+
+To cleanup:
+
+```sh
+gsutil -m rm -r $GOOGLE_BUCKET_NAME
+```
+
 
 ## nf-core tools integration
 

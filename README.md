@@ -71,10 +71,17 @@ the person who owns the Google Project you'll be using.
 
 ### Keyfile setup
 
-Once you get a keyfile (which is a json file), set the environment variable:
+Once you get a keyfile (which is a json file), run the following:
 
 ```sh
-export GOOGLE_APPLICATION_CREDENTIALS=/path/to/keyfile/keyfile-name.json
+# just examples:
+export SVC_ACCOUNT='nextflow-service-account@curatedmetagenomicdata.iam.gserviceaccount.com' #example name
+export GOOGLE_APPLICATION_CREDENTIALS=/data/curatedmetagenomicdata-f7fc1489b036.json
+export GCP_PROJECT=curatedmetagenomicdata
+gcloud auth activate-service-account \
+   $SVC_ACCOUNT \
+   --key-file=$GOOGLE_APPLICATION_CREDENTIALS \
+   --project=$GCP_PROJECT
 ```
 
 ## Execution
@@ -84,8 +91,8 @@ and that you have a Google Storage Bucket already created. Note that bucket name
 must NOT contain the `_` or other special characters. 
 
 ```sh
-# No special characters in bucket names
-export GOOGLE_BUCKET_NAME="YOUR-GOOGLE-BUCKET"
+# No '_' or other non-url-safe characters in bucket names
+export GOOGLE_BUCKET_NAME='your-bucket-name'
 
 # if bucket does not exist:
 gsutil mb gs://$GOOGLE_BUCKET_NAME
@@ -95,7 +102,7 @@ You can now run test data. This will take a few hours the first time, so run on 
 during that time (laptops are not a good choice if you are going to close it and go home, for example). 
 
 ```sh
-nextflow run seandavi/curatedMetagenomicsNextflow \
+./nextflow run seandavi/curatedMetagenomicsNextflow \
   -profile google \
   -work-dir gs://$GOOGLE_BUCKET_NAME/work \
   --publish_dir=gs://$GOOGLE_BUCKET_NAME/results \
@@ -108,19 +115,19 @@ nextflow run seandavi/curatedMetagenomicsNextflow \
 To view results:
 
 ```sh
-gsutil ls -larh $GOOGLE_BUCKET_NAME/results
+gsutil ls -larh gs://$GOOGLE_BUCKET_NAME/results
 ```
 
 To view an individual file:
 
 ```sh
-gsutil cat PATH_TO_GOOGLE_OBJECT
+gsutil cat PATH_TO_GOOGLE_OBJECT # from above list
 ```
 
 To cleanup:
 
 ```sh
-gsutil -m rm -r $GOOGLE_BUCKET_NAME
+gsutil -m rm -r gs://$GOOGLE_BUCKET_NAME
 ```
 
 

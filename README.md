@@ -19,7 +19,7 @@ The `metadata_tsv` file must be:
 - must contain columns
   - `sample_id`
   - `study_name`
-  - `NCBI_accessions`, a semicolon-separated list of SRRs
+  - `NCBI_accession`, a semicolon-separated list of SRRs
 - Can be a file or a web url
 
 If using a Google Bucket, the name bucket must not have underscores.

@@ -34,6 +34,7 @@ process fasterq_dump {
           --force \
           --threads ${task.cpus} \
           --split-files ${meta.accessions.join(" ")}
+          --tmpdir ${meta.tmp_dir}
       cat *.fastq | gzip > out.fastq.gz
       gunzip -c out.fastq.gz | wc -l > fastq_line_count.txt
       rm *.fastq

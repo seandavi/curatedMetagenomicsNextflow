@@ -1,0 +1,5 @@
+study_name	sample_id	subject_id	body_site	antibiotics_current_use	study_condition	disease	age	age_category	gender	BMI	country	non_westernized	sequencing_platform	DNA_extraction_kit	PMID	number_reads	number_bases	minimum_read_length	median_read_length	NCBI_accession	curator
+AsnicarF_2021	SAMEA7041133	predict1_MTG_0001	stool	no	control	healthy	36	adult	female	37.268492756803106	USA	no	IlluminaNovaSeq	PowerSoilPro	33432175	27999010	4227850510	151	151	ERR4330026	Francesco_Asnicar;Paolo_Manghi
+AsnicarF_2021	SAMEA7041134	predict1_MTG_0002	stool	no	control	healthy	24	adult	male	23.268585963695198	GBR	no	IlluminaNovaSeq	PowerSoilPro	33432175	28573197	4314552747	151	151	ERR4330027	Francesco_Asnicar;Paolo_Manghi
+AsnicarF_2021	SAMEA7041135	predict1_MTG_0003	stool	no	control	healthy	63	adult	female	21.9017094017094	USA	no	IlluminaNovaSeq	PowerSoilPro	33432175	27479829	4149454179	151	151	ERR4330028	Francesco_Asnicar;Paolo_Manghi
+AsnicarF_2021	SAMEA7041136	predict1_MTG_0004	stool	no	control	healthy	53	adult	male	27.8236047912462	GBR	no	IlluminaNovaSeq	PowerSoilPro	33432175	34018706	5136824606	151	151	ERR4330029	Francesco_Asnicar;Paolo_Manghi

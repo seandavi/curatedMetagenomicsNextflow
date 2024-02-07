@@ -22,7 +22,6 @@ process fasterq_dump {
     path "fastq_line_count.txt"
     path ".command*"
     path "sampleinfo.txt"
-    path "fastq-scan.json"
     path "versions.yml"
 
     script:
@@ -53,16 +52,11 @@ process fasterq_dump {
     echo "running fastqc"
     fastqc --extract out_sample.fastq
 
-    echo "running fastq-scan"
-    pigz -p ${task.cpus} -dc out.fastq.gz | fastq-scan > fastq-scan.json
-
 
     echo "collecting version info"
     cat <<-END_VERSIONS > versions.yml
     versions:
         awscli: \$(aws --version)
-        fastq-scan: \$( echo \$(fastq-scan -v 2>&1) | sed 's/^.*fastq-scan //' )
-        pigz: \$( echo \$(pigz --version 2>&1 ) | sed 's/^.*pigz //' )
         fastqc: \$( echo \$(fastqc --version 2>&1 ) | sed 's/^.*FastQC //' )
         fasterq-dump: \$( echo \$(fasterq-dump --version 2>&1 ) | head -2 | tail -1 | awk '{print \$3}')
     END_VERSIONS
@@ -72,6 +66,38 @@ process fasterq_dump {
     """
 }
 
+process kneaddata {
+    publishDir "${params.publish_dir}/${meta.sample}/kneaddata", pattern: "{kneaddata_output/kneaddata_fastq_linecounts.txt,kneaddata_output/out_kneaddata.log,.command*}"
+
+    tag "${meta.sample}"
+
+    cpus 1
+    memory "32g"
+
+    input:
+    val meta
+    path fastq
+    path kd_genome
+    path kd_ribo_rna 
+
+    output:
+    val(meta), emit: meta
+    path "kneaddata_output/out_kneaddata.fastq", emit: fastq
+    path "kneaddata_output/kneaddata_fastq_linecounts.txt"
+
+    script:
+    """
+    kneaddata --unpaired ${fastq} \
+        --reference-db human_genome \
+        --reference-db ribosomal_RNA \
+        --output kneaddata_output  \
+        --trimmomatic /installed/Trimmomatic-0.39 \
+        --bypass-trf
+
+    cd kneaddata_output
+    wc -l * | grep fastq > kneaddata_fastq_linecounts.txt
+    """  
+}
 
 
 process install_metaphlan_db {
@@ -233,11 +259,60 @@ process uniref_db {
     """
 }
 
+process kneaddata_human_database {
+    cpus 1
+    memory "4g"
+
+    storeDir "${params.store_dir}"
+
+    output:
+    path "human_genome", emit: kd_genome, type: "dir"
+    path ".command*"
+    // path "hg37dec_v0.1.1.bt2"
+    // path "hg37dec_v0.1.2.bt2"
+    // path "hg37dec_v0.1.3.bt2"
+    // path "hg37dec_v0.1.4.bt2"
+    // path "hg37dec_v0.1.rev.1.bt2"
+    // path "hg37dec_v0.1.rev.2.bt2"
+    
+    script:
+    """
+    mkdir -p human_genome
+    kneaddata_database --download human_genome bowtie2 human_genome
+    """
+}
+
+process kneaddata_ribo_rna_database {
+    cpus 1
+    memory "4g"
+
+    storeDir "${params.store_dir}"
+
+    output:
+    path "ribosomal_RNA", emit: kd_ribo_rna, type: "dir"
+    path ".command*"
+    // path "SILVA_128_LSUParc_SSUParc_ribosomal_RNA.1.bt2l"
+    // path "SILVA_128_LSUParc_SSUParc_ribosomal_RNA.2.bt2l"
+    // path "SILVA_128_LSUParc_SSUParc_ribosomal_RNA.3.bt2l"
+    // path "SILVA_128_LSUParc_SSUParc_ribosomal_RNA.4.bt2l"
+    // path "SILVA_128_LSUParc_SSUParc_ribosomal_RNA.rev.1.bt2l"
+    // path "SILVA_128_LSUParc_SSUParc_ribosomal_RNA.rev.1.bt2l"
+    
+    script:
+    """
+    mkdir -p ribosomal_RNA
+    kneaddata_database --download ribosomal_RNA bowtie2 ribosomal_RNA
+    """
+
+
+
+
+}
 
 process humann {
     publishDir "${params.publish_dir}/${meta.sample}/humann"
-    cpus 32
-    memory { 32.GB + 16.GB * task.attempt }
+    cpus 16
+    memory { 32.GB + 16.GB * task.attempt } // 48.GB on first run
 
     tag "${meta.sample}"
 
@@ -334,30 +409,44 @@ def generate_row_tuple(row) {
 
 
 workflow {
-    samples = Channel
-        .fromPath(params.metadata_tsv)
-        .splitCsv(header: true, quote: '"', sep:'\t')
-        .map { row -> generate_row_tuple(row) }
+    // samples = Channel
+    //    .fromPath(params.metadata_tsv)
+    //    .splitCsv(header: true, quote: '"', sep:'\t')
+    //    .map { row -> generate_row_tuple(row) }
     // for debugging: 
     // samples.view()
+
+    samples = [
+        sample: params.sample_id,
+        accessions: params.run_ids.split(';')
+    ]
 
     fasterq_dump(samples)
 
     install_metaphlan_db()
     uniref_db()
     chocophlan_db()
+    kneaddata_human_database()
+    kneaddata_ribo_rna_database()
     
-    metaphlan_bugs_list(
+    kneaddata(
         fasterq_dump.out.meta,
         fasterq_dump.out.fastq,
+        kneaddata_human_database.out.kd_genome.collect(),
+        kneaddata_ribo_rna_database.out.kd_ribo_rna.collect()
+    )
+
+    metaphlan_bugs_list(
+        kneaddata.out.meta,
+        kneaddata.out.fastq,
         install_metaphlan_db.out.metaphlan_db.collect())
     metaphlan_markers(
         metaphlan_bugs_list.out.meta,
         metaphlan_bugs_list.out.metaphlan_bt2,
         install_metaphlan_db.out.metaphlan_db.collect())
     humann(
-        fasterq_dump.out.meta,
-        fasterq_dump.out.fastq,
+        kneaddata.out.meta,
+        kneaddata.out.fastq,
         metaphlan_bugs_list.out.metaphlan_bugs_list,
         chocophlan_db.out.chocophlan_db,
         uniref_db.out.uniref_db)

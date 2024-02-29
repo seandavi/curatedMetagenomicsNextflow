@@ -94,13 +94,13 @@ process kneaddata {
 
     output:
     val(meta), emit: meta
-    path "kneaddata_output/out_kneaddata.fastq", emit: fastq
+    path "kneaddata_output/out.fastq", emit: fastq
     path "kneaddata_output/kneaddata_fastq_linecounts.txt"
 
     stub:
     """
     mkdir -p kneaddata_output
-    touch kneaddata_output/out_kneaddata.fastq
+    touch kneaddata_output/out.fastq
     touch kneaddata_output/kneaddata_fastq_linecounts.txt
     """
 
@@ -114,6 +114,8 @@ process kneaddata {
         --bypass-trf
 
     cd kneaddata_output
+    cat out_kneaddata.fastq | sed 's/^+.RR.*/+/g' > out.fastq
+    rm out_kneaddata.fastq
     wc -l * | grep fastq > kneaddata_fastq_linecounts.txt
     """  
 }

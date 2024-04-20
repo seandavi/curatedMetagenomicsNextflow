@@ -16,4 +16,4 @@ module load nextflow
 
 cd $SLURM_SCRATCH
 export NXF_MODE=google
-nextflow run main.nf --run_ids=$1 --sample_id=$2
+nextflow run main.nf --run_ids=$1 --sample_id=$2 -profile alpine

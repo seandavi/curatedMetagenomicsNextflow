@@ -112,9 +112,8 @@ process kneaddata {
         --output kneaddata_output  \
         --trimmomatic /installed/Trimmomatic-0.39 \
         --bypass-trf \
-	--bowtie2-options="--very-fast" \
-	--bowtie2-options="-p 16" \
-	--trimmomatic-options="-threads 16"
+	--bowtie2-options='--very-fast' \
+	-t 16 -p 8
 
     cd kneaddata_output
     cat out_kneaddata.fastq | sed 's/^+.RR.*/+/g' > out.fastq

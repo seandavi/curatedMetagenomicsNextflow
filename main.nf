@@ -83,7 +83,7 @@ process kneaddata {
 
     tag "${meta.sample}"
 
-    cpus 1
+    cpus 16
     memory "32g"
 
     input:
@@ -111,7 +111,9 @@ process kneaddata {
         --reference-db ribosomal_RNA \
         --output kneaddata_output  \
         --trimmomatic /installed/Trimmomatic-0.39 \
-        --bypass-trf
+        --bypass-trf \
+	--bowtie2-options="--very-fast" \
+	--bowtie2-options="-p 16"
 
     cd kneaddata_output
     cat out_kneaddata.fastq | sed 's/^+.RR.*/+/g' > out.fastq

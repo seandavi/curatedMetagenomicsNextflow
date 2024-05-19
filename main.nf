@@ -96,6 +96,8 @@ process kneaddata {
     val(meta), emit: meta
     path "kneaddata_output/out.fastq", emit: fastq
     path "kneaddata_output/kneaddata_fastq_linecounts.txt"
+    path "kneaddata_output/out_kneaddata.log"
+    path ".command*"
 
     stub:
     """

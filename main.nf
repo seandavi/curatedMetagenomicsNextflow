@@ -43,7 +43,8 @@ process fasterq_dump {
     for accession in ${meta.accessions.join(" ")}; do
         echo "downloading \$accession"
         aws s3 cp s3://sra-pub-run-odp/sra/\$accession/\$accession . \
-            --no-sign-request
+            --no-sign-request \
+            --no-progress
         mv \$accession \$accession.sra
         fasterq-dump --threads ${task.cpus} \
             --skip-technical \

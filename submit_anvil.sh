@@ -2,6 +2,7 @@
 #SBATCH --mem=48G
 #SBATCH --cpus-per-task=16
 #SBATCH --time=24:00:00
+#SBATCH --account=bio240036
 set -x
 
 NXF_SINGULARITY_CACHEDIR=$SCRATCH/singularity_cache
@@ -23,6 +24,7 @@ module load nextflow
 cd $WORKDIR
 export NXF_MODE=google
 nextflow run seandavi/curatedMetagenomicsNextflow --run_ids=$1 --sample_id=$2 -profile anvil
+nextflow clean
 
 cd $HOME
 

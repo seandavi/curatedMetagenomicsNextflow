@@ -25,8 +25,3 @@ cd $WORKDIR
 export NXF_MODE=google
 nextflow run seandavi/curatedMetagenomicsNextflow --run_ids=$1 --sample_id=$2 -profile anvil
 nextflow clean
-
-cd $HOME
-
-cleanup
-rm -r $WORKDIR

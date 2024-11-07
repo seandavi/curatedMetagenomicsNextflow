@@ -85,7 +85,7 @@ process kneaddata {
     tag "${meta.sample}"
 
     cpus 16
-    memory "32g"
+    memory "64g"
 
     input:
     val meta
@@ -165,7 +165,7 @@ process metaphlan_bugs_list {
     tag "${meta.sample}"
     
     cpus 16
-    memory { 16.GB * task.attempt }
+    memory '64g'
     
     input:
     val meta
@@ -407,7 +407,7 @@ process kneaddata_ribo_rna_database {
 process humann {
     publishDir "${params.publish_dir}/${meta.sample}/humann"
     cpus 16
-    memory { 32.GB + 16.GB * task.attempt } // 48.GB on first run
+    memory '64g'
 
     tag "${meta.sample}"
 

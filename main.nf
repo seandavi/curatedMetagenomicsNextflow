@@ -567,10 +567,10 @@ workflow {
         metaphlan_bugs_list.out.meta,
         metaphlan_bugs_list.out.metaphlan_bt2,
         install_metaphlan_db.out.metaphlan_db.collect())
-    humann(
-        kneaddata.out.meta,
-        kneaddata.out.fastq,
-        metaphlan_bugs_list.out.metaphlan_bugs_list,
-        chocophlan_db.out.chocophlan_db,
-        uniref_db.out.uniref_db)
+    // humann(
+    //    kneaddata.out.meta,
+    //    kneaddata.out.fastq,
+    //    metaphlan_bugs_list.out.metaphlan_bugs_list,
+    //    chocophlan_db.out.chocophlan_db,
+    //    uniref_db.out.uniref_db)
 }

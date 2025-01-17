@@ -85,7 +85,7 @@ process kneaddata {
     tag "${meta.sample}"
 
     cpus 16
-    memory "32g"
+    memory "64g"
 
     input:
     val meta
@@ -165,7 +165,7 @@ process metaphlan_bugs_list {
     tag "${meta.sample}"
     
     cpus 16
-    memory { 16.GB * task.attempt }
+    memory '64g'
     
     input:
     val meta
@@ -407,7 +407,7 @@ process kneaddata_ribo_rna_database {
 process humann {
     publishDir "${params.publish_dir}/${meta.sample}/humann"
     cpus 16
-    memory { 32.GB + 16.GB * task.attempt } // 48.GB on first run
+    memory '64g'
 
     tag "${meta.sample}"
 
@@ -532,17 +532,17 @@ def generate_row_tuple(row) {
 
 
 workflow {
-    samples = Channel
-       .fromPath(params.metadata_tsv)
-       .splitCsv(header: true, quote: '"', sep:'\t')
-       .map { row -> generate_row_tuple(row) }
+    // samples = Channel
+    //    .fromPath(params.metadata_tsv)
+    //    .splitCsv(header: true, quote: '"', sep:'\t')
+    //    .map { row -> generate_row_tuple(row) }
     // for debugging: 
-    samples.view()
+    // samples.view()
 
-    // samples = [
-    //     sample: params.sample_id,
-    //     accessions: params.run_ids.split(';')
-    // ]
+    samples = [
+        sample: params.sample_id,
+        accessions: params.run_ids.split(';')
+    ]
 
     fasterq_dump(samples)
 
@@ -567,10 +567,10 @@ workflow {
         metaphlan_bugs_list.out.meta,
         metaphlan_bugs_list.out.metaphlan_bt2,
         install_metaphlan_db.out.metaphlan_db.collect())
-    humann(
-        kneaddata.out.meta,
-        kneaddata.out.fastq,
-        metaphlan_bugs_list.out.metaphlan_bugs_list,
-        chocophlan_db.out.chocophlan_db,
-        uniref_db.out.uniref_db)
+    // humann(
+    //    kneaddata.out.meta,
+    //    kneaddata.out.fastq,
+    //    metaphlan_bugs_list.out.metaphlan_bugs_list,
+    //    chocophlan_db.out.chocophlan_db,
+    //    uniref_db.out.uniref_db)
 }

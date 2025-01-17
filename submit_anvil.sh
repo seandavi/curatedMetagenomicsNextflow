@@ -14,14 +14,10 @@ mkdir -p $WORKDIR
 
 echo "working in $WORKDIR"
 
-#cp main.nf $WORKDIR
-#cp nextflow.config $WORKDIR
-
-
-export GOOGLE_APPLICATION_CREDENTIALS=$HOME/omicidx-338300-cbd1527c319e.json
+export GOOGLE_APPLICATION_CREDENTIALS=$HOME/curatedmetagenomicdata-232f4a306d1d.json
 module load nextflow
 
 cd $WORKDIR
 export NXF_MODE=google
-nextflow run seandavi/curatedMetagenomicsNextflow --run_ids=$1 --sample_id=$2 -profile anvil
+nextflow run seandavi/curatedMetagenomicsNextflow --run_ids=$1 --sample_id=$2 -profile anvil -with-weblog https://efc7-71-244-146-119.ngrok-free.app/nextflow-telemetry/events
 nextflow clean

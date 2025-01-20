@@ -60,7 +60,7 @@ module load singularity-3.4.0
 #cat $HOME/.ncbi/user-settings.mkfg
 #cat /root/.ncbi/user-settings.mkfg
 
-#cd $UNITN_SCRATCH
+cd $UNITN_SCRATCH
 export NXF_MODE=google
 #nextflow run main.nf --run_ids=$1 --sample_id=$2 -profile unitn
 nextflow run seandavi/curatedMetagenomicsNextflow --run_ids=$run_ids --sample_id=$sample_id -profile unitn -with-weblog https://nf-telemetry-819875667022.us-central1.run.app/nextflow-telemetry/events

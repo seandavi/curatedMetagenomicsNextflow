@@ -128,7 +128,7 @@ process kneaddata {
 
 process install_metaphlan_db {
     cpus 4
-    memory '8g'
+    memory "8g"
 
     storeDir "${params.store_dir}"
 
@@ -165,7 +165,7 @@ process metaphlan_bugs_list {
     tag "${meta.sample}"
     
     cpus 16
-    memory '64g'
+    memory "64g"
     
     input:
     val meta
@@ -407,7 +407,7 @@ process kneaddata_ribo_rna_database {
 process humann {
     publishDir "${params.publish_dir}/${meta.sample}/humann"
     cpus 16
-    memory '64g'
+    memory "64g"
 
     tag "${meta.sample}"
 
@@ -567,10 +567,10 @@ workflow {
         metaphlan_bugs_list.out.meta,
         metaphlan_bugs_list.out.metaphlan_bt2,
         install_metaphlan_db.out.metaphlan_db.collect())
-    // humann(
-    //    kneaddata.out.meta,
-    //    kneaddata.out.fastq,
-    //    metaphlan_bugs_list.out.metaphlan_bugs_list,
-    //    chocophlan_db.out.chocophlan_db,
-    //    uniref_db.out.uniref_db)
+    humann(
+       kneaddata.out.meta,
+       kneaddata.out.fastq,
+       metaphlan_bugs_list.out.metaphlan_bugs_list,
+       chocophlan_db.out.chocophlan_db,
+       uniref_db.out.uniref_db)
 }

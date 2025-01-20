@@ -12,8 +12,8 @@
 # 6 hours maximum execution time
 #PBS -l walltime=06:00:00
 
-# execution queue: common_cpuQ
-#PBS -q common_cpuQ
+# execution queue: common_cpuQ; CIBIO_cpuQ
+#PBS -q CIBIO_cpuQ
 
 # name the job on the command line: $ qsub -N job_name submit_unitn.sh
 

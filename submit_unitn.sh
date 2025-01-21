@@ -52,7 +52,7 @@ export NXF_SINGULARITY_HOME_MOUNT=true
 
 # activate conda environment
 source /shares/CIBIO-Storage/CM/scratch/tools/20231211_2023.09_anaconda3/.conda
-conda activate simple
+conda activate metagenomicsMAC
 
 # load singularity
 module load singularity-3.4.0

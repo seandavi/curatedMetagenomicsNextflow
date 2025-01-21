@@ -3,6 +3,7 @@
 
 # Usage
 # qsub -N job_name -v run_ids=ERR4330026,sample_id=SAMEA7041133 submit_unitn.sh
+# qsub -N job_name -v metadata_tsv=samples.tsv submit_unitn.sh
 
 # 2 node
 # 4 core
@@ -13,7 +14,7 @@
 #PBS -l walltime=06:00:00
 
 # execution queue: common_cpuQ; CIBIO_cpuQ
-#PBS -q CIBIO_cpuQ
+#PBS -q short_cpuQ
 
 # name the job on the command line: $ qsub -N job_name submit_unitn.sh
 
@@ -33,8 +34,9 @@ set -x
 
 echo "working in $UNITN_SCRATCH"
 
-echo "run_ids: $run_ids"
-echo "sample_id: $sample_id"
+#echo "run_ids: $run_ids"
+#echo "sample_id: $sample_id"
+echo "metadata_tsv: $metadata_tsv"
 
 #cp main.nf $UNITN_SCRATCH
 #cp nextflow.config $UNITN_SCRATCH
@@ -52,7 +54,7 @@ export NXF_SINGULARITY_HOME_MOUNT=true
 
 # activate conda environment
 source /shares/CIBIO-Storage/CM/scratch/tools/20231211_2023.09_anaconda3/.conda
-conda activate metagenomicsMAC
+conda activate simple
 
 # load singularity
 module load singularity-3.4.0
@@ -63,4 +65,5 @@ module load singularity-3.4.0
 cd $UNITN_SCRATCH
 export NXF_MODE=google
 #nextflow run main.nf --run_ids=$1 --sample_id=$2 -profile unitn
-nextflow run seandavi/curatedMetagenomicsNextflow --run_ids=$run_ids --sample_id=$sample_id -profile unitn -with-weblog https://nf-telemetry-819875667022.us-central1.run.app/nextflow-telemetry/events
+#nextflow run seandavi/curatedMetagenomicsNextflow --run_ids=$run_ids --sample_id=$sample_id -profile unitn -with-weblog https://nf-telemetry-819875667022.us-central1.run.app/nextflow-telemetry/events
+nextflow run seandavi/curatedMetagenomicsNextflow --metadata_tsv=$metadata_tsv -profile unitn -with-weblog https://nf-telemetry-819875667022.us-central1.run.app/nextflow-telemetry/events

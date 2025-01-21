@@ -9,6 +9,7 @@ process fasterq_dump {
     // maxForks 80
     cpus 8
     memory "16g"
+    time "8h"
 
     tag "${meta.sample}"
 
@@ -86,6 +87,7 @@ process kneaddata {
 
     cpus 16
     memory "64g"
+    time "8h"
 
     input:
     val meta
@@ -129,6 +131,7 @@ process kneaddata {
 process install_metaphlan_db {
     cpus 4
     memory "8g"
+    time "8h"
 
     storeDir "${params.store_dir}"
 
@@ -166,6 +169,7 @@ process metaphlan_bugs_list {
     
     cpus 16
     memory "64g"
+    time "8h"
     
     input:
     val meta
@@ -221,6 +225,7 @@ process metaphlan_markers {
 
     cpus 2
     memory "8g"
+    time "8h"
 
     input:
     val meta
@@ -270,6 +275,7 @@ process metaphlan_markers {
 process chocophlan_db {
     cpus 1
     memory "1g"
+    time "8h"
 
     storeDir "${params.store_dir}"
 
@@ -302,6 +308,7 @@ process chocophlan_db {
 process uniref_db {
     cpus 1
     memory "1g"
+    time "8h"
 
     storeDir "${params.store_dir}"
 
@@ -334,6 +341,7 @@ process uniref_db {
 process kneaddata_human_database {
     cpus 1
     memory "4g"
+    time "8h"
 
     storeDir "${params.store_dir}"
 
@@ -365,6 +373,7 @@ process kneaddata_human_database {
 process kneaddata_ribo_rna_database {
     cpus 1
     memory "4g"
+    time "8h"
 
     storeDir "${params.store_dir}"
 
@@ -408,6 +417,7 @@ process humann {
     publishDir "${params.publish_dir}/${meta.sample}/humann"
     cpus 16
     memory "64g"
+    time "8h"
 
     tag "${meta.sample}"
 
@@ -521,28 +531,29 @@ process humann {
 
 def generate_row_tuple(row) {
     accessions=row.NCBI_accession.split(';');
-    study_id = row.study_name;
+    // study_id = row.study_name;
     sample_id = row.sample_id;
-    sample_encoded = "${study_id}::${sample_id}".bytes.encodeBase64().toString()
+    // sample_encoded = "${study_id}::${sample_id}".bytes.encodeBase64().toString()
     // Create a hash of sampleID and joined accessions for
     // use as a unique id.
     // rowhash = "${accessions.sort().join(' ')}".md5().toString()
-    return [sample: sample_encoded, accessions: accessions, meta: row]
+    // return [sample: sample_encoded, accessions: accessions, meta: row]
+    return [sample:sample_id, accessions: accessions, meta: row]
 }
 
 
 workflow {
-    // samples = Channel
-    //    .fromPath(params.metadata_tsv)
-    //    .splitCsv(header: true, quote: '"', sep:'\t')
-    //    .map { row -> generate_row_tuple(row) }
+    samples = Channel
+       .fromPath(params.metadata_tsv)
+       .splitCsv(header: true, quote: '"', sep:'\t')
+       .map { row -> generate_row_tuple(row) }
     // for debugging: 
     // samples.view()
 
-    samples = [
-        sample: params.sample_id,
-        accessions: params.run_ids.split(';')
-    ]
+    // samples = [
+    //     sample: params.sample_id,
+    //     accessions: params.run_ids.split(';')
+    // ]
 
     fasterq_dump(samples)
 

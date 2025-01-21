@@ -4,11 +4,10 @@
 Each part serves as a guideline and should be modified to suit the individual user
 
 ### Conda environment
-`submit_unitn.sh` loads the conda environment `simple`, which contains necessary tools for the pipeline.
-This environment is located within the shared CIBIO conda installation.
-If you are unable to access it for any reason, you can recreate it with the following command.
+`submit_unitn.sh` loads the conda environment `metagenomicsMAC`, which contains necessary tools for the pipeline.
+This environment can be created with the following command.
 ```
-conda create --name simple nextflow=24.10.3 google-cloud-sdk=506.0.0
+conda create --name metagenomicsMAC nextflow=24.10.4 google-cloud-sdk=506.0.0
 ```
 
 ### NCBI user-settings.mkfg

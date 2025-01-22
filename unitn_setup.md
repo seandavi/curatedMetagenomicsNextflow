@@ -11,7 +11,7 @@ conda create --name metagenomicsMAC nextflow=24.10.4 google-cloud-sdk=506.0.0
 ```
 
 ### NCBI user-settings.mkfg
-The NCBI SRA Toolkit requres an interactive configuration step. To circumvent this, place a copy of `docker/user-settings.mkfg` in your `$HOME/.ncbi/` directory.
+The NCBI SRA Toolkit requres an interactive configuration step. To circumvent this, place a copy of `docker/user-settings.mkfg` in your `$HOME/.ncbi/` directory and make sure you are using a submit script with `export NXF_SINGULARITY_HOME_MOUNT=true` such as `submit_unitn.sh`
 ```
 cp ./docker/user-settings.mkfg $HOME/.ncbi/user-settings.mkfg
 ```
@@ -21,13 +21,13 @@ cp ./docker/user-settings.mkfg $HOME/.ncbi/user-settings.mkfg
 
 You can adjust the HPC cluster queue to be used for the main script submission. The current default for the UniTn server is `common_cpuQ`, but line 16 of `submit_unitn.sh` can be adjusted to suit the user's needs.
 ```
-#PBS -q CIBIO_cpuQ
+#PBS -q common_cpuQ
 ```
 
 **Email notifications:**
 
 If you would like to receive email notifications when the pipeline begins and ends, you can supply your email address as a PBS directive.
-Simply input your email address on line 30 of `submit_unitn.sh`.
+Simply input your email address on line 30 of `submit_unitn.sh` and remove one `#` to uncomment.
 ```
 #PBS -M <your_email_address>
 ```

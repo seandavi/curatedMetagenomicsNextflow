@@ -2,7 +2,9 @@
 # submit_unitn.sh
 
 # Usage
+# For a single sample: use line 60
 # qsub -N job_name -v run_ids=ERR4330026,sample_id=SAMEA7041133 submit_unitn.sh
+# For multiple samples: use line 61
 # qsub -N job_name -v metadata_tsv=samples.tsv submit_unitn.sh
 
 # 2 node
@@ -10,11 +12,11 @@
 # 24 GB
 #PBS -l select=2:ncpus=4:mem=24gb
 
-# 6 hours maximum execution time
-#PBS -l walltime=06:00:00
+# 8 hours maximum execution time
+#PBS -l walltime=08:00:00
 
 # execution queue: common_cpuQ; CIBIO_cpuQ
-#PBS -q short_cpuQ
+#PBS -q common_cpuQ
 
 # name the job on the command line: $ qsub -N job_name submit_unitn.sh
 
@@ -27,8 +29,8 @@
 # send email on job abort, begin, end
 #PBS -m abe
 
-# email address for notifications: Kaelyn.Long@sph.cuny.edu
-#PBS -M Kaelyn.Long@sph.cuny.edu
+# email address for notifications
+##PBS -M <your_email_address>
 
 set -x
 
@@ -42,25 +44,16 @@ echo "metadata_tsv: $metadata_tsv"
 #cp nextflow.config $UNITN_SCRATCH
 
 export GOOGLE_APPLICATION_CREDENTIALS=/home/kaelyn.long/google_cred/curatedmetagenomicdata-232f4a306d1d.json
-#export NXF_SINGULARITY_LIBRARYDIR=/shares/CIBIO-Storage/CM/scratch/users/kaelyn.long/cmd_nf/singularity
-#export NXF_SINGULARITY_CACHEDIR=/shares/CIBIO-Storage/CM/scratch/users/kaelyn.long/cmd_nf/work/singularity/
-
-#export SINGULARITY_LIBRARYDIR=/shares/CIBIO-Storage/CM/scratch/users/kaelyn.long/cmd_nf/singularity
-#export SINGULARITY_CACHEDIR=/shares/CIBIO-Storage/CM/scratch/users/kaelyn.long/cmd_nf/work/singularity/
 
 # for allowing singularity to access $HOME/.ncbi/user-settings.mkfg
 # still not sure why user-settings that is supposed to be in Docker container isn't accessible
 export NXF_SINGULARITY_HOME_MOUNT=true
 
 # activate conda environment
-source /shares/CIBIO-Storage/CM/scratch/tools/20231211_2023.09_anaconda3/.conda
-conda activate simple
+conda activate metagenomicsMAC
 
 # load singularity
 module load singularity-3.4.0
-
-#cat $HOME/.ncbi/user-settings.mkfg
-#cat /root/.ncbi/user-settings.mkfg
 
 cd $UNITN_SCRATCH
 export NXF_MODE=google

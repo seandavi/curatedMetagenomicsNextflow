@@ -2,9 +2,9 @@
 # submit_unitn.sh
 
 # Usage
-# For a single sample: use line 60
+# For a single sample: use line 61
 # qsub -N job_name -v run_ids=ERR4330026,sample_id=SAMEA7041133 submit_unitn.sh
-# For multiple samples: use line 61
+# For multiple samples: use line 62
 # qsub -N job_name -v metadata_tsv=samples.tsv submit_unitn.sh
 
 # 2 node

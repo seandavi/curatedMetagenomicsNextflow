@@ -24,6 +24,33 @@ The `metadata_tsv` file must be:
 
 If using a Google Bucket, the name bucket must not have underscores.
 
+Output files grouped by process:
+
+**Fasterq_dump**
+
+- `fastq_line_count.txt`
+- `sampleinfo.txt`
+- `fastqc_data.txt`
+
+**KneadData**
+
+- `kneaddata_fastq_linecounts.txt`
+- `out_kneaddata.log`
+
+**MetaPhlAn**
+
+- `metaphlan_bugs_list.tsv.gz`
+- `marker_abundance.tsv.gz`
+- `marker_presence.tsv.gz`
+
+**HUMAnN**
+
+(... = Files also have cpm/relab and stratified/unstratified versions)
+
+- `out_genefamilies...`
+- `out_pathabundance...`
+- `out_pathcoverage...`
+
 ## On sample ids
 
 We use a simple approach to create sample ids. The `study_name` and `sample_id` are

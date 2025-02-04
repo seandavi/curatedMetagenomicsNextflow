@@ -162,8 +162,8 @@ process install_metaphlan_db {
     """
 }
 
-process metaphlan_bugs_list {
-    publishDir "${params.publish_dir}/${meta.sample}/metaphlan_bugs_list", pattern: "{*tsv.gz,.command*}"
+process metaphlan_bugs_viruses_lists {
+    publishDir "${params.publish_dir}/${meta.sample}/metaphlan_bugs_viruses_lists", pattern: "{*tsv.gz,.command*}"
 
     tag "${meta.sample}"
     
@@ -182,6 +182,8 @@ process metaphlan_bugs_list {
     path 'bowtie2.out.gz', emit: metaphlan_bt2
     path 'metaphlan_bugs_list.tsv', emit: metaphlan_bugs_list
     path 'metaphlan_bugs_list.tsv.gz', emit: metaphlan_bugs_list_gz
+    path 'metaphlan_viruses_list.tsv', emit: metaphlan_viruses_list
+    path 'metaphlan_viruses_list.tsv.gz', emit: metaphlan_viruses_list_gz
     path ".command*"
     path "versions.yml"
 
@@ -190,6 +192,8 @@ process metaphlan_bugs_list {
     touch bowtie2.out.gz
     touch metaphlan_bugs_list.tsv
     touch metaphlan_bugs_list.tsv.gz
+    touch metaphlan_viruses_list.tsv
+    touch metaphlan_viruses_list.tsv.gz
     touch .command.run
     touch versions.yml
     """
@@ -204,11 +208,67 @@ process metaphlan_bugs_list {
         --samout sam.bz2 \
         --bowtie2out bowtie2.out \
         --nproc ${task.cpus} \
+        --profile_vsc \
+        --vsc_breadth 0.75 \
+        --vsc_out metaphlan_viruses_list.tsv \
         -o metaphlan_bugs_list.tsv \
         ${fastq}
 
     gzip -c metaphlan_bugs_list.tsv > metaphlan_bugs_list.tsv.gz
+    gzip -c metaphlan_viruses_list.tsv > metaphlan_viruses_list.tsv.gz
     gzip bowtie2.out
+
+    cat <<-END_VERSIONS > versions.yml
+    versions:
+        metaphlan: \$( echo \$(metaphlan --version 2>&1 ) | awk '{print \$3}')
+        bowtie2: \$( echo \$(bowtie2 --version 2>&1 ) | awk '{print \$3}')
+    END_VERSIONS
+    """
+}
+
+process metaphlan_unknown_list {
+    publishDir "${params.publish_dir}/${meta.sample}/metaphlan_unknown_list", pattern: "{*tsv.gz,.command*}"
+
+    tag "${meta.sample}"
+    
+    cpus 16
+    memory "64g"
+    time "8h"
+    
+    input:
+    val meta
+    path metaphlan_bt2
+    path metaphlan_db
+
+
+    output:
+    val(meta), emit: meta
+    path 'metaphlan_unknown_list.tsv', emit: metaphlan_unknown_list
+    path 'metaphlan_unknown_list.tsv.gz', emit: metaphlan_unknown_list_gz
+    path ".command*"
+    path "versions.yml"
+
+    stub:
+    """
+    touch metaphlan_unknown_list.tsv
+    touch metaphlan_unknown_list.tsv.gz
+    touch .command.run
+    touch versions.yml
+    """
+
+
+    script:
+    """
+    metaphlan \
+        --input_type bowtie2out \
+        --index ${params.metaphlan_index} \
+        --bowtie2db metaphlan \
+        --nproc 1 \
+        --unclassified_estimation \
+        -o metaphlan_unknown_list.tsv \
+        <( gunzip -c ${metaphlan_bt2} )
+
+    gzip -c metaphlan_unknown_list.tsv > metaphlan_unknown_list.tsv.gz
 
     cat <<-END_VERSIONS > versions.yml
     versions:
@@ -224,7 +284,7 @@ process metaphlan_markers {
     tag "${meta.sample}"
 
     cpus 2
-    memory "8g"
+    memory "64g"
     time "8h"
 
     input:
@@ -567,17 +627,24 @@ workflow {
         fasterq_dump.out.meta,
         fasterq_dump.out.fastq,
         kneaddata_human_database.out.kd_genome.collect(),
-        kneaddata_ribo_rna_database.out.kd_ribo_rna.collect()
-    )
+        kneaddata_ribo_rna_database.out.kd_ribo_rna.collect())
 
-    metaphlan_bugs_list(
+
+    metaphlan_bugs_viruses_lists(
         kneaddata.out.meta,
         kneaddata.out.fastq,
         install_metaphlan_db.out.metaphlan_db.collect())
-    metaphlan_markers(
-        metaphlan_bugs_list.out.meta,
-        metaphlan_bugs_list.out.metaphlan_bt2,
+
+    metaphlan_unknown_list(
+        metaphlan_bugs_viruses_lists.out.meta,
+        metaphlan_bugs_viruses_lists.out.metaphlan_bt2,
         install_metaphlan_db.out.metaphlan_db.collect())
+
+    metaphlan_markers(
+        metaphlan_bugs_viruses_lists.out.meta,
+        metaphlan_bugs_viruses_lists.out.metaphlan_bt2,
+        install_metaphlan_db.out.metaphlan_db.collect())
+
     humann(
        kneaddata.out.meta,
        kneaddata.out.fastq,

@@ -9,7 +9,6 @@ process fasterq_dump {
     // maxForks 80
     cpus 8
     memory "16g"
-    time "8h"
 
     tag "${meta.sample}"
 
@@ -87,7 +86,6 @@ process kneaddata {
 
     cpus 16
     memory "64g"
-    time "8h"
 
     input:
     val meta
@@ -127,11 +125,9 @@ process kneaddata {
     """  
 }
 
-
 process install_metaphlan_db {
     cpus 4
     memory "8g"
-    time "8h"
 
     storeDir "${params.store_dir}"
 
@@ -169,7 +165,6 @@ process metaphlan_bugs_viruses_lists {
     
     cpus 16
     memory "64g"
-    time "8h"
     
     input:
     val meta
@@ -233,7 +228,6 @@ process metaphlan_unknown_list {
     
     cpus 16
     memory "64g"
-    time "8h"
     
     input:
     val meta
@@ -285,7 +279,6 @@ process metaphlan_markers {
 
     cpus 2
     memory "64g"
-    time "8h"
 
     input:
     val meta
@@ -331,11 +324,55 @@ process metaphlan_markers {
     """
 }
 
+process sample_to_markers {
+    publishDir "${params.publish_dir}/${meta.sample}/strainphlan_markers/"
+    
+    tag "${meta.sample}"
+
+    cpus 4
+    memory "8g"
+
+    input:
+    val meta
+    path metaphlan_sam
+    path metaphlan_db
+
+    output:
+    val meta, emit: meta
+    path "sample_to_markers", emit: sample_to_markers
+    path ".command*"
+    path "versions.yml"
+
+    stub:
+    """
+    mkdir sample_to_markers
+    touch .command.run
+    touch versions.yml
+    """
+
+    script:
+    """
+    mkdir sample_to_markers
+
+    pkl_file=${params.store_dir}/metaphlan/\$(cat ${params.store_dir}/metaphlan/mpa_latest).pkl
+
+    sample2markers.py \
+        --input ${metaphlan_sam} \
+        --input_format bz2 \
+        --database \$pkl_file \
+        --nprocs 4 \
+        --output_dir sample_to_markers
+
+    cat <<-END_VERSIONS > versions.yml
+    versions:
+        sample2markers.py: \$( echo \$(sample2markers.py --version 2>&1 ) | awk '{print \$3}')
+    END_VERSIONS
+    """
+}
 
 process chocophlan_db {
     cpus 1
     memory "1g"
-    time "8h"
 
     storeDir "${params.store_dir}"
 
@@ -364,11 +401,9 @@ process chocophlan_db {
     """
 }
 
-
 process uniref_db {
     cpus 1
     memory "1g"
-    time "8h"
 
     storeDir "${params.store_dir}"
 
@@ -401,7 +436,6 @@ process uniref_db {
 process kneaddata_human_database {
     cpus 1
     memory "4g"
-    time "8h"
 
     storeDir "${params.store_dir}"
 
@@ -433,7 +467,6 @@ process kneaddata_human_database {
 process kneaddata_ribo_rna_database {
     cpus 1
     memory "4g"
-    time "8h"
 
     storeDir "${params.store_dir}"
 
@@ -477,7 +510,6 @@ process humann {
     publishDir "${params.publish_dir}/${meta.sample}/humann"
     cpus 16
     memory "64g"
-    time "8h"
 
     tag "${meta.sample}"
 
@@ -589,6 +621,7 @@ process humann {
     """
 }
 
+
 def generate_row_tuple(row) {
     accessions=row.NCBI_accession.split(';');
     // study_id = row.study_name;
@@ -629,7 +662,6 @@ workflow {
         kneaddata_human_database.out.kd_genome.collect(),
         kneaddata_ribo_rna_database.out.kd_ribo_rna.collect())
 
-
     metaphlan_bugs_viruses_lists(
         kneaddata.out.meta,
         kneaddata.out.fastq,
@@ -643,6 +675,11 @@ workflow {
     metaphlan_markers(
         metaphlan_bugs_viruses_lists.out.meta,
         metaphlan_bugs_viruses_lists.out.metaphlan_bt2,
+        install_metaphlan_db.out.metaphlan_db.collect())
+
+    sample_to_markers(
+        metaphlan_bugs_viruses_lists.out.meta,
+        metaphlan_bugs_viruses_lists.out.metaphlan_sam,
         install_metaphlan_db.out.metaphlan_db.collect())
 
     humann(

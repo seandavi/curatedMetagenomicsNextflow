@@ -159,7 +159,7 @@ process install_metaphlan_db {
 }
 
 process metaphlan_bugs_viruses_lists {
-    publishDir "${params.publish_dir}/${meta.sample}/metaphlan_bugs_viruses_lists", pattern: "{*tsv.gz,.command*}"
+    publishDir "${params.publish_dir}/${meta.sample}/metaphlan_lists", pattern: "{*tsv.gz,.command*}"
 
     tag "${meta.sample}"
     
@@ -222,7 +222,7 @@ process metaphlan_bugs_viruses_lists {
 }
 
 process metaphlan_unknown_list {
-    publishDir "${params.publish_dir}/${meta.sample}/metaphlan_unknown_list", pattern: "{*tsv.gz,.command*}"
+    publishDir "${params.publish_dir}/${meta.sample}/metaphlan_lists", pattern: "{*tsv.gz,.command*}"
 
     tag "${meta.sample}"
     
@@ -500,10 +500,6 @@ process kneaddata_ribo_rna_database {
     mkdir -p ribosomal_RNA
     kneaddata_database --download ribosomal_RNA bowtie2 ribosomal_RNA
     """
-
-
-
-
 }
 
 process humann {
@@ -573,7 +569,6 @@ process humann {
     touch versions.yml
     """
 
-
     script:
     """
     humann -i ${fastq} \
@@ -624,13 +619,7 @@ process humann {
 
 def generate_row_tuple(row) {
     accessions=row.NCBI_accession.split(';');
-    // study_id = row.study_name;
     sample_id = row.sample_id;
-    // sample_encoded = "${study_id}::${sample_id}".bytes.encodeBase64().toString()
-    // Create a hash of sampleID and joined accessions for
-    // use as a unique id.
-    // rowhash = "${accessions.sort().join(' ')}".md5().toString()
-    // return [sample: sample_encoded, accessions: accessions, meta: row]
     return [sample:sample_id, accessions: accessions, meta: row]
 }
 
@@ -642,11 +631,6 @@ workflow {
        .map { row -> generate_row_tuple(row) }
     // for debugging: 
     // samples.view()
-
-    // samples = [
-    //     sample: params.sample_id,
-    //     accessions: params.run_ids.split(';')
-    // ]
 
     fasterq_dump(samples)
 

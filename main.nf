@@ -175,6 +175,7 @@ process metaphlan_bugs_viruses_lists {
     output:
     val(meta), emit: meta
     path 'bowtie2.out.gz', emit: metaphlan_bt2
+    path 'sam.bz2', emit: metaphlan_sam
     path 'metaphlan_bugs_list.tsv', emit: metaphlan_bugs_list
     path 'metaphlan_bugs_list.tsv.gz', emit: metaphlan_bugs_list_gz
     path 'metaphlan_viruses_list.tsv', emit: metaphlan_viruses_list
@@ -185,6 +186,7 @@ process metaphlan_bugs_viruses_lists {
     stub:
     """
     touch bowtie2.out.gz
+    touch sam.bz2
     touch metaphlan_bugs_list.tsv
     touch metaphlan_bugs_list.tsv.gz
     touch metaphlan_viruses_list.tsv

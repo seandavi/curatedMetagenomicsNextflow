@@ -671,7 +671,7 @@ workflow {
     humann(
        kneaddata.out.meta,
        kneaddata.out.fastq,
-       metaphlan_bugs_list.out.metaphlan_bugs_list,
+       metaphlan_bugs_viruses_lists.out.metaphlan_bugs_list,
        chocophlan_db.out.chocophlan_db,
        uniref_db.out.uniref_db)
 }

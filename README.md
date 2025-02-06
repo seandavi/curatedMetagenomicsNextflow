@@ -4,6 +4,16 @@
 
 This repo is a fork of [seandavi/curatedMetagenomicsNextflow](https://github.com/seandavi/curatedMetagenomicsNextflow), adapted to work with the University of Trento's HPC cluster and incorporate additional MetaPhlAn outputs.
 
+### Changes
+
+ - Update Dockerfile to include latest versions of Bowtie2 and SAMtools (required for new processes)
+ - Add viral profiling, unknown estimation, and consensus-marker processes
+ - Enable `.tsv` sample input
+ - Establish filepaths specific to UniTn cluster
+ - Add `unitn` profile
+ - Create submit script `submit_unitn.sh` for UniTn cluster
+ - Add documentation for running on the UniTn cluster and handling known errors
+
 ## Pipeline
 
 ### Original pipeline
@@ -39,6 +49,10 @@ The `metadata_tsv` file must be:
 - Can be a file or a web url
 
 If using a Google Bucket, the name bucket must not have underscores.
+
+### Sample IDs
+
+Sample IDs of any sort can be used, but it is recommended to use UUIDs for pipeline submission and maintain a map between them and more readable sample identifiers.
 
 ### Output files grouped by tool:
 

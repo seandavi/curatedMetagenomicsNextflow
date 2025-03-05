@@ -1,0 +1,8 @@
+steps:
+# Uses the docker build step to build an image called my-image
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['build', '-t', 'gcr.io/$PROJECT_ID/curatedmetagenomics', '.']
+
+# my-image is pushed to Container Registry
+images:
+- 'gcr.io/$PROJECT_ID/curatedmetagenomics'

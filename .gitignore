@@ -7,3 +7,4 @@ work
 swarm_*
 pipeline_trace*
 curatedmetagenomicdata-*.json
+venv/

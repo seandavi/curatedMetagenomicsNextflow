@@ -1,5 +1,7 @@
 # README
 
+google.api_core.exceptions.PermissionDenied: 403 Permission monitoring.metricDescriptors.create denied (or the resource may not exist).
+
 ## The pipeline, in brief
 
 - fastq-dump
@@ -51,9 +53,6 @@ which gives back the original string:
 study_name1::sample_name1
 ```
 
-
-
-
 ## Install
 
 ```sh
@@ -63,11 +62,11 @@ curl https://get.nextflow.io | bash
 
 ## Google setup
 
-You will need to be able to access google cloud storage as well as to 
+You will need to be able to access google cloud storage as well as to
 run the Google Cloud Pipeline API. This requires credentials to do so.
 You can either use Google Default Application Credentials or a key file.
 The latter is the recommended approach. If you need a keyfile, contact
-the person who owns the Google Project you'll be using. 
+the person who owns the Google Project you'll be using.
 
 ### Keyfile setup
 
@@ -88,7 +87,7 @@ gcloud auth activate-service-account \
 
 This assumes that you are running on Google, that credentials are set up correctly,
 and that you have a Google Storage Bucket already created. Note that bucket names
-must NOT contain the `_` or other special characters. 
+must NOT contain the `_` or other special characters.
 
 ```sh
 # No '_' or other non-url-safe characters in bucket names
@@ -98,8 +97,8 @@ export GOOGLE_BUCKET_NAME='your-bucket-name'
 gsutil mb gs://$GOOGLE_BUCKET_NAME
 ```
 
-You can now run test data. This will take a few hours the first time, so run on a system that will remain on 
-during that time (laptops are not a good choice if you are going to close it and go home, for example). 
+You can now run test data. This will take a few hours the first time, so run on a system that will remain on
+during that time (laptops are not a good choice if you are going to close it and go home, for example).
 
 ```sh
 ./nextflow run seandavi/curatedMetagenomicsNextflow \
@@ -129,7 +128,6 @@ To cleanup:
 ```sh
 gsutil -m rm -r gs://$GOOGLE_BUCKET_NAME
 ```
-
 
 ## nf-core tools integration
 

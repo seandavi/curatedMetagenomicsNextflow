@@ -668,11 +668,12 @@ workflow {
         metaphlan_bugs_viruses_lists.out.metaphlan_sam,
         install_metaphlan_db.out.metaphlan_db.collect())
 
-// TODO: #20 add parameter to disable humann step
-    humann(
-       kneaddata.out.meta,
-       kneaddata.out.fastq,
-       metaphlan_bugs_viruses_lists.out.metaphlan_bugs_list,
-       chocophlan_db.out.chocophlan_db,
-       uniref_db.out.uniref_db)
+    if (!params.skip_humann) {
+        humann(
+           kneaddata.out.meta,
+           kneaddata.out.fastq,
+           metaphlan_bugs_viruses_lists.out.metaphlan_bugs_list,
+           chocophlan_db.out.chocophlan_db,
+           uniref_db.out.uniref_db)
+    }
 }

@@ -18,15 +18,24 @@ COPY usersettings /root/.ncbi/user-settings.mkfg
 
 RUN rm -rf /tmp/sra
 
-RUN pip install humann --no-binary :all: 
-RUN pip install metaphlan 
-RUN pip install awscli
-
 RUN mkdir /installed
 
 WORKDIR /installed
 
-## install seqtk
+## install bowtie2-2.5.4
+RUN wget https://github.com/BenLangmead/bowtie2/releases/download/v2.5.4/bowtie2-2.5.4-linux-x86_64.zip && unzip bowtie2-2.5.4-linux-x86_64.zip && chmod +x bowtie2-2.5.4-linux-x86_64/bowtie2*
+ENV PATH=$PATH:/installed/bowtie2-2.5.4-linux-x86_64/
+
+## install humann, metaphlan, and awscli
+RUN pip install humann --no-binary :all: 
+RUN pip install metaphlan 
+RUN pip install awscli
+
+## install SAMtools-1.21
+RUN wget https://github.com/samtools/samtools/releases/download/1.21/samtools-1.21.tar.bz2 && tar -xjf samtools-1.21.tar.bz2 && cd samtools-1.21 && make && make install && chmod +x samtools
+ENV PATH=$PATH:/installed/samtools-1.21
+
+## install seqtk and fastqc
 RUN git clone https://github.com/lh3/seqtk.git && cd seqtk && make
 RUN chmod +x seqtk/seqtk
 RUN wget https://www.bioinformatics.babraham.ac.uk/projects/fastqc/fastqc_v0.12.1.zip && unzip fastqc_v0.12.1.zip && chmod +x FastQC/fastqc

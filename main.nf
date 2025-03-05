@@ -85,7 +85,7 @@ process kneaddata {
     tag "${meta.sample}"
 
     cpus 16
-    memory "32g"
+    memory "64g"
 
     input:
     val meta
@@ -125,10 +125,9 @@ process kneaddata {
     """  
 }
 
-
 process install_metaphlan_db {
     cpus 4
-    memory '8g'
+    memory "8g"
 
     storeDir "${params.store_dir}"
 
@@ -159,13 +158,13 @@ process install_metaphlan_db {
     """
 }
 
-process metaphlan_bugs_list {
-    publishDir "${params.publish_dir}/${meta.sample}/metaphlan_bugs_list", pattern: "{*tsv.gz,.command*}"
+process metaphlan_bugs_viruses_lists {
+    publishDir "${params.publish_dir}/${meta.sample}/metaphlan_lists", pattern: "{*tsv.gz,.command*}"
 
     tag "${meta.sample}"
     
     cpus 16
-    memory { 16.GB * task.attempt }
+    memory "64g"
     
     input:
     val meta
@@ -176,16 +175,22 @@ process metaphlan_bugs_list {
     output:
     val(meta), emit: meta
     path 'bowtie2.out.gz', emit: metaphlan_bt2
+    path 'sam.bz2', emit: metaphlan_sam
     path 'metaphlan_bugs_list.tsv', emit: metaphlan_bugs_list
     path 'metaphlan_bugs_list.tsv.gz', emit: metaphlan_bugs_list_gz
+    path 'metaphlan_viruses_list.tsv', emit: metaphlan_viruses_list
+    path 'metaphlan_viruses_list.tsv.gz', emit: metaphlan_viruses_list_gz
     path ".command*"
     path "versions.yml"
 
     stub:
     """
     touch bowtie2.out.gz
+    touch sam.bz2
     touch metaphlan_bugs_list.tsv
     touch metaphlan_bugs_list.tsv.gz
+    touch metaphlan_viruses_list.tsv
+    touch metaphlan_viruses_list.tsv.gz
     touch .command.run
     touch versions.yml
     """
@@ -200,11 +205,66 @@ process metaphlan_bugs_list {
         --samout sam.bz2 \
         --bowtie2out bowtie2.out \
         --nproc ${task.cpus} \
+        --profile_vsc \
+        --vsc_breadth 0.75 \
+        --vsc_out metaphlan_viruses_list.tsv \
         -o metaphlan_bugs_list.tsv \
         ${fastq}
 
     gzip -c metaphlan_bugs_list.tsv > metaphlan_bugs_list.tsv.gz
+    gzip -c metaphlan_viruses_list.tsv > metaphlan_viruses_list.tsv.gz
     gzip bowtie2.out
+
+    cat <<-END_VERSIONS > versions.yml
+    versions:
+        metaphlan: \$( echo \$(metaphlan --version 2>&1 ) | awk '{print \$3}')
+        bowtie2: \$( echo \$(bowtie2 --version 2>&1 ) | awk '{print \$3}')
+    END_VERSIONS
+    """
+}
+
+process metaphlan_unknown_list {
+    publishDir "${params.publish_dir}/${meta.sample}/metaphlan_lists", pattern: "{*tsv.gz,.command*}"
+
+    tag "${meta.sample}"
+    
+    cpus 16
+    memory "64g"
+    
+    input:
+    val meta
+    path metaphlan_bt2
+    path metaphlan_db
+
+
+    output:
+    val(meta), emit: meta
+    path 'metaphlan_unknown_list.tsv', emit: metaphlan_unknown_list
+    path 'metaphlan_unknown_list.tsv.gz', emit: metaphlan_unknown_list_gz
+    path ".command*"
+    path "versions.yml"
+
+    stub:
+    """
+    touch metaphlan_unknown_list.tsv
+    touch metaphlan_unknown_list.tsv.gz
+    touch .command.run
+    touch versions.yml
+    """
+
+
+    script:
+    """
+    metaphlan \
+        --input_type bowtie2out \
+        --index ${params.metaphlan_index} \
+        --bowtie2db metaphlan \
+        --nproc 1 \
+        --unclassified_estimation \
+        -o metaphlan_unknown_list.tsv \
+        <( gunzip -c ${metaphlan_bt2} )
+
+    gzip -c metaphlan_unknown_list.tsv > metaphlan_unknown_list.tsv.gz
 
     cat <<-END_VERSIONS > versions.yml
     versions:
@@ -220,7 +280,7 @@ process metaphlan_markers {
     tag "${meta.sample}"
 
     cpus 2
-    memory "8g"
+    memory "64g"
 
     input:
     val meta
@@ -266,6 +326,51 @@ process metaphlan_markers {
     """
 }
 
+process sample_to_markers {
+    publishDir "${params.publish_dir}/${meta.sample}/strainphlan_markers/"
+    
+    tag "${meta.sample}"
+
+    cpus 4
+    memory "8g"
+
+    input:
+    val meta
+    path metaphlan_sam
+    path metaphlan_db
+
+    output:
+    val meta, emit: meta
+    path "sample_to_markers", emit: sample_to_markers
+    path ".command*"
+    path "versions.yml"
+
+    stub:
+    """
+    mkdir sample_to_markers
+    touch .command.run
+    touch versions.yml
+    """
+
+    script:
+    """
+    mkdir sample_to_markers
+
+    pkl_file=${params.store_dir}/metaphlan/\$(cat ${params.store_dir}/metaphlan/mpa_latest).pkl
+
+    sample2markers.py \
+        --input ${metaphlan_sam} \
+        --input_format bz2 \
+        --database \$pkl_file \
+        --nprocs 4 \
+        --output_dir sample_to_markers
+
+    cat <<-END_VERSIONS > versions.yml
+    versions:
+        sample2markers.py: \$( echo \$(sample2markers.py --version 2>&1 ) | awk '{print \$3}')
+    END_VERSIONS
+    """
+}
 
 process chocophlan_db {
     cpus 1
@@ -297,7 +402,6 @@ process chocophlan_db {
     END_VERSIONS
     """
 }
-
 
 process uniref_db {
     cpus 1
@@ -398,16 +502,12 @@ process kneaddata_ribo_rna_database {
     mkdir -p ribosomal_RNA
     kneaddata_database --download ribosomal_RNA bowtie2 ribosomal_RNA
     """
-
-
-
-
 }
 
 process humann {
     publishDir "${params.publish_dir}/${meta.sample}/humann"
     cpus 16
-    memory { 32.GB + 16.GB * task.attempt } // 48.GB on first run
+    memory "64g"
 
     tag "${meta.sample}"
 
@@ -471,7 +571,6 @@ process humann {
     touch versions.yml
     """
 
-
     script:
     """
     humann -i ${fastq} \
@@ -519,30 +618,21 @@ process humann {
     """
 }
 
+
 def generate_row_tuple(row) {
     accessions=row.NCBI_accession.split(';');
-    study_id = row.study_name;
     sample_id = row.sample_id;
-    sample_encoded = "${study_id}::${sample_id}".bytes.encodeBase64().toString()
-    // Create a hash of sampleID and joined accessions for
-    // use as a unique id.
-    // rowhash = "${accessions.sort().join(' ')}".md5().toString()
-    return [sample: sample_encoded, accessions: accessions, meta: row]
+    return [sample:sample_id, accessions: accessions, meta: row]
 }
 
 
 workflow {
-    // samples = Channel
-    //    .fromPath(params.metadata_tsv)
-    //    .splitCsv(header: true, quote: '"', sep:'\t')
-    //    .map { row -> generate_row_tuple(row) }
+    samples = Channel
+       .fromPath(params.metadata_tsv)
+       .splitCsv(header: true, quote: '"', sep:'\t')
+       .map { row -> generate_row_tuple(row) }
     // for debugging: 
     // samples.view()
-
-    samples = [
-        sample: params.sample_id,
-        accessions: params.run_ids.split(';')
-    ]
 
     fasterq_dump(samples)
 
@@ -556,21 +646,32 @@ workflow {
         fasterq_dump.out.meta,
         fasterq_dump.out.fastq,
         kneaddata_human_database.out.kd_genome.collect(),
-        kneaddata_ribo_rna_database.out.kd_ribo_rna.collect()
-    )
+        kneaddata_ribo_rna_database.out.kd_ribo_rna.collect())
 
-    metaphlan_bugs_list(
+    metaphlan_bugs_viruses_lists(
         kneaddata.out.meta,
         kneaddata.out.fastq,
         install_metaphlan_db.out.metaphlan_db.collect())
+
+    metaphlan_unknown_list(
+        metaphlan_bugs_viruses_lists.out.meta,
+        metaphlan_bugs_viruses_lists.out.metaphlan_bt2,
+        install_metaphlan_db.out.metaphlan_db.collect())
+
     metaphlan_markers(
-        metaphlan_bugs_list.out.meta,
-        metaphlan_bugs_list.out.metaphlan_bt2,
+        metaphlan_bugs_viruses_lists.out.meta,
+        metaphlan_bugs_viruses_lists.out.metaphlan_bt2,
         install_metaphlan_db.out.metaphlan_db.collect())
+
+    sample_to_markers(
+        metaphlan_bugs_viruses_lists.out.meta,
+        metaphlan_bugs_viruses_lists.out.metaphlan_sam,
+        install_metaphlan_db.out.metaphlan_db.collect())
+
     humann(
-        kneaddata.out.meta,
-        kneaddata.out.fastq,
-        metaphlan_bugs_list.out.metaphlan_bugs_list,
-        chocophlan_db.out.chocophlan_db,
-        uniref_db.out.uniref_db)
+       kneaddata.out.meta,
+       kneaddata.out.fastq,
+       metaphlan_bugs_viruses_lists.out.metaphlan_bugs_list,
+       chocophlan_db.out.chocophlan_db,
+       uniref_db.out.uniref_db)
 }

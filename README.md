@@ -1,57 +1,107 @@
 # README
 
-google.api_core.exceptions.PermissionDenied: 403 Permission monitoring.metricDescriptors.create denied (or the resource may not exist).
+## Overview
 
-## The pipeline, in brief
+This repo is a fork of [seandavi/curatedMetagenomicsNextflow](https://github.com/seandavi/curatedMetagenomicsNextflow), adapted to work with the University of Trento's HPC cluster and incorporate additional MetaPhlAn outputs.
 
-- fastq-dump
+### Changes
+
+ - Update Dockerfile to include latest versions of Bowtie2 and SAMtools (required for new processes)
+ - Add viral profiling, unknown estimation, and consensus-marker processes
+ - Enable `.tsv` sample input
+ - Establish filepaths specific to UniTn cluster
+ - Add `unitn` profile
+ - Create submit script `submit_unitn.sh` for UniTn cluster
+ - Add documentation for running on the UniTn cluster and handling known errors
+
+## Pipeline
+
+### Original pipeline
+
+- fasterq-dump + FastQC
 - setup databases
-  - metaphlan
-  - chocophlan
-  - uniref
-- metaphlan bug list
-- metaphlan markers
-- humann (including various aggregations)
+  - MetaPhlAn
+  - ChocoPhlAn
+  - UniRef
+  - KneadData
+    - human genome
+    - ribosomal RNA
+- MetaPhlAn bug list
+- MetaPhlAn markers
+- HUMAnN (including various aggregations)
+
+### Added outputs
+
+ - MetaPhlAn viruses list
+ - MetaPhlAn unknown estimation
+ - MetaPhlAn consensus-marker files
 
 ## Inputs and Outputs
+
+### Input table
 
 The `metadata_tsv` file must be:
 
 - tab-separated
 - must contain columns
   - `sample_id`
-  - `study_name`
   - `NCBI_accession`, a semicolon-separated list of SRRs
 - Can be a file or a web url
 
 If using a Google Bucket, the name bucket must not have underscores.
 
-## On sample ids
+### Sample IDs
 
-We use a simple approach to create sample ids. The `study_name` and `sample_id` are
-first concatenated by `::`. Then, we base64 encode. For example:
+Sample IDs of any sort can be used, but it is recommended to use UUIDs for pipeline submission and maintain a map between them and more readable sample identifiers.
 
-```sh
-echo 'study_name1::sample_name1' | base64
-```
+### Output files grouped by tool:
 
-This yields:
+**fasterq-dump + FastQC**
 
-```
-c3R1ZHlfbmFtZTE6OnNhbXBsZV9uYW1lMQo=
-```
+- `fastq_line_count.txt`
+- `sampleinfo.txt`
+- `fastqc_data.txt`
 
-To decode a sample id:
+**KneadData**
 
-```sh
-echo 'c3R1ZHlfbmFtZTE6OnNhbXBsZV9uYW1lMQo=' | base64 -d
-```
+- `kneaddata_fastq_linecounts.txt`
+- `out_kneaddata.log`
 
-which gives back the original string:
+**MetaPhlAn**
 
-```
-study_name1::sample_name1
-```
+- `metaphlan_bugs_list.tsv.gz`
+- `metaphlan_viruses_list.tsv.gz`*
+- `metaphlan_unknown_list.tsv.gz`*
+- `marker_abundance.tsv.gz`
+- `marker_presence.tsv.gz`
+- `sam.json.bz2`*
+
+=======
+\* = new with this fork
+
+**HUMAnN**
+
+- `out_genefamilies.tsv.gz`
+- `out_genefamilies_cpm.tsv.gz`
+- `out_genefamilies_relab.tsv.gz`
+- `out_genefamilies_stratified.tsv.gz`
+- `out_genefamilies_unstratified.tsv.gz`
+- `out_genefamilies_cpm_stratified.tsv.gz`
+- `out_genefamilies_relab_stratified.tsv.gz`
+- `out_genefamilies_cpm_unstratified.tsv.gz`
+- `out_genefamilies_relab_unstratified.tsv.gz`
+- `out_pathabundance.tsv.gz`
+- `out_pathabundance_cpm.tsv.gz`
+- `out_pathabundance_relab.tsv.gz`
+- `out_pathabundance_stratified.tsv.gz`
+- `out_pathabundance_unstratified.tsv.gz`
+- `out_pathabundance_cpm_stratified.tsv.gz`
+- `out_pathabundance_relab_stratified.tsv.gz`
+- `out_pathabundance_cpm_unstratified.tsv.gz`
+- `out_pathabundance_relab_unstratified.tsv.gz`
+- `out_pathcoverage_unstratified.tsv.gz`
+- `out_pathcoverage_stratified.tsv.gz`
+- `out_pathcoverage.tsv.gz`
 
 ## Install
 
@@ -60,7 +110,7 @@ export NXF_MODE=google
 curl https://get.nextflow.io | bash
 ```
 
-## Google setup
+## Google Setup
 
 You will need to be able to access google cloud storage as well as to
 run the Google Cloud Pipeline API. This requires credentials to do so.

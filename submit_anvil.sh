@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --mem=48G
+#SBATCH --mem=64G
 #SBATCH --cpus-per-task=16
 #SBATCH --time=24:00:00
 #SBATCH --account=bio240036
@@ -18,10 +18,12 @@ echo "working in $WORKDIR"
 #cp nextflow.config $WORKDIR
 
 
-export GOOGLE_APPLICATION_CREDENTIALS=$HOME/omicidx-338300-cbd1527c319e.json
+export GOOGLE_APPLICATION_CREDENTIALS=$HOME/curatedmetagenomicdata-232f4a306d1d.json
 module load nextflow
 
 cd $WORKDIR
 export NXF_MODE=google
-nextflow run seandavi/curatedMetagenomicsNextflow --run_ids=$1 --sample_id=$2 -profile anvil
-nextflow clean
+nextflow run seandavi/curatedMetagenomicsNextflow --run_ids=$1 --sample_id=$2 -profile anvil -with-weblog https://nf-telemetry-819875667022.us-central1.run.app/nextflow-telemetry/events 
+cd ..
+rm -rf $SLURM_JOB_ID
+

@@ -19,7 +19,7 @@ module load nextflow
 
 cd $WORKDIR
 export NXF_MODE=google
-nextflow run seandavi/curatedMetagenomicsNextflow --run_ids=$1 --sample_id=$2 -profile anvil -with-weblog https://nf-telemetry-819875667022.us-central1.run.app/nextflow-telemetry/events 
+nextflow run seandavi/curatedMetagenomicsNextflow --metadata_tsv=$1 -profile anvil -with-weblog https://nf-telemetry-819875667022.us-central1.run.app/nextflow-telemetry/events 
 cd ..
 rm -rf $SLURM_JOB_ID
 

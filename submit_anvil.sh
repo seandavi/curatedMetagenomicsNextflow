@@ -14,10 +14,6 @@ mkdir -p $WORKDIR
 
 echo "working in $WORKDIR"
 
-#cp main.nf $WORKDIR
-#cp nextflow.config $WORKDIR
-
-
 export GOOGLE_APPLICATION_CREDENTIALS=$HOME/curatedmetagenomicdata-232f4a306d1d.json
 module load nextflow
 

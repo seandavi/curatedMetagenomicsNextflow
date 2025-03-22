@@ -627,7 +627,7 @@ def generate_row_tuple(row) {
     return [sample:sample_id, accessions: accessions, meta: row]
 }
 
-def run_ids_to_accessions(sample_id, run_ids) {
+def generate_sample_metadata_single_sample(sample_id, run_ids) {
     accessions = run_ids.split(';')
     return [sample: sample_id, accessions: accessions, meta: null]
 }

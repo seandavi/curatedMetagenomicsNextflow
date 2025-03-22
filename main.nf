@@ -356,7 +356,9 @@ process sample_to_markers {
     """
     mkdir sample_to_markers
 
-    pkl_file=${params.store_dir}metaphlan/\$(cat ${params.store_dir}metaphlan/mpa_latest).pkl
+    mpa_version=`cat ${params.store_dir}metaphlan/mpa_latest`
+
+    pkl_file=${params.store_dir}metaphlan/\${mpa_version}.pkl
 
     sample2markers.py \
         --input ${metaphlan_sam} \

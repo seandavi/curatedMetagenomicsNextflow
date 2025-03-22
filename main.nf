@@ -627,14 +627,30 @@ def generate_row_tuple(row) {
     return [sample:sample_id, accessions: accessions, meta: row]
 }
 
+def run_ids_to_accessions(sample_id, run_ids) {
+    accessions = run_ids.split(';')
+    return [sample: sample_id, accessions: accessions, meta: null]
+}
 
 workflow {
-    samples = Channel
-       .fromPath(params.metadata_tsv)
-       .splitCsv(header: true, quote: '"', sep:'\t')
-       .map { row -> generate_row_tuple(row) }
+    // Allow EITHER metadata_tsv or run_ids/sample_id
+    if (params.metadata_tsv == null) {
+        if (params.run_ids == null) or (params.sample_id == null) {
+            error "Either metadata_tsv or run_ids/sample_id must be provided"
+        } else {
+            samples = generate_sample_metadata_single_sample(
+                params.sample_id, 
+                params.run_ids
+            )
+        }
+    } else {
+        samples = Channel
+            .fromPath(params.metadata_tsv)
+            .splitCsv(header: true, quote: '"', sep:'\t')
+            .map { row -> generate_row_tuple(row) }
+    }
     // for debugging: 
-    // samples.view()
+    samples.view()
 
     fasterq_dump(samples)
 

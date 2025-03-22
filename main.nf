@@ -633,6 +633,7 @@ def generate_sample_metadata_single_sample(sample_id, run_ids) {
 }
 
 workflow {
+    samples = null
     // Allow EITHER metadata_tsv or run_ids/sample_id
     if (params.metadata_tsv == null) {
         if (params.run_ids == null) or (params.sample_id == null) {
@@ -649,8 +650,6 @@ workflow {
             .splitCsv(header: true, quote: '"', sep:'\t')
             .map { row -> generate_row_tuple(row) }
     }
-    // for debugging: 
-    samples.view()
 
     fasterq_dump(samples)
 

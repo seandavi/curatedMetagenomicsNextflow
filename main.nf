@@ -363,7 +363,7 @@ process sample_to_markers {
     sample2markers.py \
         --input ${metaphlan_sam} \
         --input_format bz2 \
-        --database \${pkl_file} \
+        --database ${metaphlan_db}/\${pkl_file} \
         --nprocs 4 \
         --output_dir sample_to_markers
 

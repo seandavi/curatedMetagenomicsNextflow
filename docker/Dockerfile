@@ -6,12 +6,12 @@ RUN apt-get install -y git make curl wget gcc g++ unzip
 
 
 ## install sratoolkit
-RUN mkdir /tmp/sra
-WORKDIR /tmp/sra
+RUN mkdir /usr/local/ncbi
+WORKDIR /usr/local/ncbi
 
-RUN curl -O https://ftp-trace.ncbi.nlm.nih.gov/sra/sdk/2.10.8/setup-apt.sh
-RUN /bin/bash setup-apt.sh
-ENV PATH=/usr/local/ncbi/sra-tools/bin:$PATH
+RUN curl -o sratoolkit.tar.gz https://ftp-trace.ncbi.nlm.nih.gov/sra/sdk/current/sratoolkit.current-ubuntu64.tar.gz
+RUN tar -vxzf sratoolkit.tar.gz
+ENV PATH=/usr/local/ncbi/sratoolkit.3.2.1-ubuntu64/bin:$PATH
 
 ## interactive user settings workaround
 COPY usersettings /root/.ncbi/user-settings.mkfg

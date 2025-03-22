@@ -341,7 +341,7 @@ process sample_to_markers {
 
     output:
     val meta, emit: meta
-    path "sample_to_markers", emit: sample_to_markers
+    path "sample_to_markers", emit: sample_to_markers, type: 'dir'
     path ".command*"
     path "versions.yml"
 
@@ -356,9 +356,7 @@ process sample_to_markers {
     """
     mkdir sample_to_markers
 
-    mpa_version=`cat ${params.store_dir}metaphlan/mpa_latest`
-
-    pkl_file=${params.store_dir}metaphlan/\${mpa_version}.pkl
+    pkl_file=`ls ${metaphlan_db} | sort -r | grep pkl | head -1`
 
     sample2markers.py \
         --input ${metaphlan_sam} \

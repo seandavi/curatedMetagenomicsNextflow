@@ -358,10 +358,12 @@ process sample_to_markers {
 
     pkl_file=`ls ${metaphlan_db} | sort -r | grep pkl | head -1`
 
+    echo \${pkl_file}"
+
     sample2markers.py \
         --input ${metaphlan_sam} \
         --input_format bz2 \
-        --database \$pkl_file \
+        --database \${pkl_file} \
         --nprocs 4 \
         --output_dir sample_to_markers
 

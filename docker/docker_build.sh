@@ -1,1 +1,1 @@
-docker build -t seandavi/curatedmetagenomics:metaphlan4.1.0 --push .
+docker build --platform linux/amd64 -t seandavi/curatedmetagenomics:4.0.0 --push .

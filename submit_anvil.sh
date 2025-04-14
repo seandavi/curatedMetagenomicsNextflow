@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --mem=48G
+#SBATCH --mem=64G
 #SBATCH --cpus-per-task=16
 #SBATCH --time=24:00:00
 #SBATCH --account=bio240036
@@ -19,5 +19,7 @@ module load nextflow
 
 cd $WORKDIR
 export NXF_MODE=google
-nextflow run seandavi/curatedMetagenomicsNextflow --run_ids=$1 --sample_id=$2 -profile anvil -with-weblog https://efc7-71-244-146-119.ngrok-free.app/nextflow-telemetry/events
-nextflow clean
+nextflow run seandavi/curatedMetagenomicsNextflow --metadata_tsv=$1 -profile anvil -with-weblog https://nf-telemetry-819875667022.us-central1.run.app/nextflow-telemetry/events 
+cd ..
+rm -rf $SLURM_JOB_ID
+

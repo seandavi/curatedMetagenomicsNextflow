@@ -341,7 +341,7 @@ process sample_to_markers {
 
     output:
     val meta, emit: meta
-    path "sample_to_markers", emit: sample_to_markers
+    path "sample_to_markers", emit: sample_to_markers, type: 'dir'
     path ".command*"
     path "versions.yml"
 
@@ -356,12 +356,14 @@ process sample_to_markers {
     """
     mkdir sample_to_markers
 
-    pkl_file=${params.store_dir}/metaphlan/\$(cat ${params.store_dir}/metaphlan/mpa_latest).pkl
+    pkl_file=`ls ${metaphlan_db} | sort -r | grep pkl | head -1`
+
+    echo \${pkl_file}
 
     sample2markers.py \
         --input ${metaphlan_sam} \
         --input_format bz2 \
-        --database \$pkl_file \
+        --database ${metaphlan_db}/\${pkl_file} \
         --nprocs 4 \
         --output_dir sample_to_markers
 
@@ -625,14 +627,29 @@ def generate_row_tuple(row) {
     return [sample:sample_id, accessions: accessions, meta: row]
 }
 
+def generate_sample_metadata_single_sample(sample_id, run_ids) {
+    accessions = run_ids.split(';')
+    return [sample: sample_id, accessions: accessions, meta: null]
+}
 
 workflow {
-    samples = Channel
-       .fromPath(params.metadata_tsv)
-       .splitCsv(header: true, quote: '"', sep:'\t')
-       .map { row -> generate_row_tuple(row) }
-    // for debugging: 
-    // samples.view()
+    samples = null
+    // Allow EITHER metadata_tsv or run_ids/sample_id
+    if (params.metadata_tsv == null) {
+        if (params.run_ids == null) or (params.sample_id == null) {
+            error "Either metadata_tsv or run_ids/sample_id must be provided"
+        } else {
+            samples = generate_sample_metadata_single_sample(
+                params.sample_id, 
+                params.run_ids
+            )
+        }
+    } else {
+        samples = Channel
+            .fromPath(params.metadata_tsv)
+            .splitCsv(header: true, quote: '"', sep:'\t')
+            .map { row -> generate_row_tuple(row) }
+    }
 
     fasterq_dump(samples)
 
@@ -668,10 +685,12 @@ workflow {
         metaphlan_bugs_viruses_lists.out.metaphlan_sam,
         install_metaphlan_db.out.metaphlan_db.collect())
 
-    // humann(
-    //    kneaddata.out.meta,
-    //    kneaddata.out.fastq,
-    //    metaphlan_bugs_viruses_lists.out.metaphlan_bugs_list,
-    //    chocophlan_db.out.chocophlan_db,
-    //    uniref_db.out.uniref_db)
+    if (!params.skip_humann) {
+        humann(
+           kneaddata.out.meta,
+           kneaddata.out.fastq,
+           metaphlan_bugs_viruses_lists.out.metaphlan_bugs_list,
+           chocophlan_db.out.chocophlan_db,
+           uniref_db.out.uniref_db)
+    }
 }

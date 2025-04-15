@@ -92,6 +92,7 @@ process kneaddata {
     path fastq
     path kd_genome
     path kd_ribo_rna 
+    path kd_mouse
 
     output:
     val(meta), emit: meta
@@ -110,7 +111,7 @@ process kneaddata {
     script:
     """
     kneaddata --unpaired ${fastq} \
-        --reference-db human_genome \
+        --reference-db ${params.organism_database} \
         --reference-db ribosomal_RNA \
         --output kneaddata_output  \
         --trimmomatic /installed/Trimmomatic-0.39 \
@@ -158,7 +159,7 @@ process install_metaphlan_db {
     """
 }
 
-process metaphlan_bugs_viruses_lists {
+process metaphlan_unknown_viruses_lists {
     publishDir "${params.publish_dir}/${meta.sample}/metaphlan_lists", pattern: "{*tsv.gz,.command*}"
 
     tag "${meta.sample}"
@@ -176,8 +177,8 @@ process metaphlan_bugs_viruses_lists {
     val(meta), emit: meta
     path 'bowtie2.out.gz', emit: metaphlan_bt2
     path 'sam.bz2', emit: metaphlan_sam
-    path 'metaphlan_bugs_list.tsv', emit: metaphlan_bugs_list
-    path 'metaphlan_bugs_list.tsv.gz', emit: metaphlan_bugs_list_gz
+    path 'metaphlan_unknown_list.tsv', emit: metaphlan_unknown_list
+    path 'metaphlan_unknown_list.tsv.gz', emit: metaphlan_unknown_list_gz
     path 'metaphlan_viruses_list.tsv', emit: metaphlan_viruses_list
     path 'metaphlan_viruses_list.tsv.gz', emit: metaphlan_viruses_list_gz
     path ".command*"
@@ -187,8 +188,8 @@ process metaphlan_bugs_viruses_lists {
     """
     touch bowtie2.out.gz
     touch sam.bz2
-    touch metaphlan_bugs_list.tsv
-    touch metaphlan_bugs_list.tsv.gz
+    touch metaphlan_unknown_list.tsv
+    touch metaphlan_unknown_list.tsv.gz
     touch metaphlan_viruses_list.tsv
     touch metaphlan_viruses_list.tsv.gz
     touch .command.run
@@ -205,13 +206,14 @@ process metaphlan_bugs_viruses_lists {
         --samout sam.bz2 \
         --bowtie2out bowtie2.out \
         --nproc ${task.cpus} \
+        --unclassified_estimation \
         --profile_vsc \
         --vsc_breadth 0.75 \
         --vsc_out metaphlan_viruses_list.tsv \
-        -o metaphlan_bugs_list.tsv \
+        -o metaphlan_unknown_list.tsv \
         ${fastq}
 
-    gzip -c metaphlan_bugs_list.tsv > metaphlan_bugs_list.tsv.gz
+    gzip -c metaphlan_unknown_list.tsv > metaphlan_unknown_list.tsv.gz
     gzip -c metaphlan_viruses_list.tsv > metaphlan_viruses_list.tsv.gz
     gzip bowtie2.out
 
@@ -506,6 +508,37 @@ process kneaddata_ribo_rna_database {
     """
 }
 
+process kneaddata_mouse_database {
+    cpus 1
+    memory "4g"
+
+    storeDir "${params.store_dir}"
+
+    output:
+    path "mouse_C57BL", emit: kd_genome, type: "dir"
+    path ".command*"
+    // path "mouse_C57BL_6NJ_Bowtie2_v0.1.1.bt2"
+    // path "mouse_C57BL_6NJ_Bowtie2_v0.1.2.bt2"
+    // path "mouse_C57BL_6NJ_Bowtie2_v0.1.3.bt2"
+    // path "mouse_C57BL_6NJ_Bowtie2_v0.1.4.bt2"
+    // path "mouse_C57BL_6NJ_Bowtie2_v0.1.rev.1.bt2"
+    // path "mouse_C57BL_6NJ_Bowtie2_v0.1.rev.2.bt2"
+    
+    stub:
+    """
+    mkdir -p mouse_C57BL
+    touch mouse_C57BL/mouse_C57BL_6NJ_Bowtie2_v0.1.bt2
+    touch .command.run
+    """
+
+    script:
+    """
+    echo ${PWD}
+    mkdir -p mouse_C57BL
+    kneaddata_database --download mouse_C57BL bowtie2 mouse_C57BL
+    """
+}
+
 process humann {
     publishDir "${params.publish_dir}/${meta.sample}/humann"
     cpus 16
@@ -516,7 +549,7 @@ process humann {
     input:
     val meta
     path fastq
-    path metaphlan_bugs_list // metaphlan_bugs_list.tsv
+    path metaphlan_unknown_list // metaphlan_unknown_list.tsv
     path chocophlan_db
     path uniref_db
 
@@ -580,7 +613,7 @@ process humann {
         --verbose \
         --metaphlan-options "-t rel_ab --index latest" \
         --nucleotide-database ${chocophlan_db} \
-        --taxonomic-profile ${metaphlan_bugs_list} \
+        --taxonomic-profile ${metaphlan_unknown_list} \
         --protein-database ${uniref_db} \
         --threads ${task.cpus}
 
@@ -658,38 +691,44 @@ workflow {
     chocophlan_db()
     kneaddata_human_database()
     kneaddata_ribo_rna_database()
+    kneaddata_mouse_database()
     
     kneaddata(
         fasterq_dump.out.meta,
         fasterq_dump.out.fastq,
         kneaddata_human_database.out.kd_genome.collect(),
-        kneaddata_ribo_rna_database.out.kd_ribo_rna.collect())
+        kneaddata_ribo_rna_database.out.kd_ribo_rna.collect(),
+        kneaddata_mouse_database.out.ke.mouse.collect())
 
-    metaphlan_bugs_viruses_lists(
-        kneaddata.out.meta,
+    metaphlan_unknown_viruses_lists(
+        kneaddata.out.meta,    kneaddata(
+        fasterq_dump.out.meta,
+        fasterq_dump.out.fastq,
+        kneaddata_human_database.out.kd_genome.collect(),
+        kneaddata_ribo_rna_database.out.kd_ribo_rna.collect())
         kneaddata.out.fastq,
         install_metaphlan_db.out.metaphlan_db.collect())
 
-    metaphlan_unknown_list(
-        metaphlan_bugs_viruses_lists.out.meta,
-        metaphlan_bugs_viruses_lists.out.metaphlan_bt2,
-        install_metaphlan_db.out.metaphlan_db.collect())
+    #metaphlan_unknown_list(
+    #    metaphlan_bugs_viruses_lists.out.meta,
+    #    metaphlan_bugs_viruses_lists.out.metaphlan_bt2,
+    #    install_metaphlan_db.out.metaphlan_db.collect())
 
     metaphlan_markers(
-        metaphlan_bugs_viruses_lists.out.meta,
-        metaphlan_bugs_viruses_lists.out.metaphlan_bt2,
+        metaphlan_unknown_viruses_lists.out.meta,
+        metaphlan_unknown_viruses_lists.out.metaphlan_bt2,
         install_metaphlan_db.out.metaphlan_db.collect())
 
     sample_to_markers(
-        metaphlan_bugs_viruses_lists.out.meta,
-        metaphlan_bugs_viruses_lists.out.metaphlan_sam,
+        metaphlan_unknown_viruses_lists.out.meta,
+        metaphlan_unknown_viruses_lists.out.metaphlan_sam,
         install_metaphlan_db.out.metaphlan_db.collect())
 
     if (!params.skip_humann) {
         humann(
            kneaddata.out.meta,
            kneaddata.out.fastq,
-           metaphlan_bugs_viruses_lists.out.metaphlan_bugs_list,
+           metaphlan_unknown_viruses_lists.out.metaphlan_unknown_list,
            chocophlan_db.out.chocophlan_db,
            uniref_db.out.uniref_db)
     }

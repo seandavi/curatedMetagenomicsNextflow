@@ -114,6 +114,7 @@ process kneaddata {
         --reference-db ribosomal_RNA \
         --output kneaddata_output  \
         --trimmomatic /installed/Trimmomatic-0.39 \
+        --trimmomatic-options 'SLIDINGWINDOW:4:20 MINLEN:30' \
         --bypass-trf \
 	--bowtie2-options='--very-fast' \
 	-t 16 -p 8

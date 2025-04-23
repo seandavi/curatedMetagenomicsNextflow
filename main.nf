@@ -164,7 +164,7 @@ process metaphlan_bugs_viruses_lists {
 
     tag "${meta.sample}"
     
-    cpus 16
+    cpus 8
     memory "30g"
     
     input:
@@ -229,7 +229,7 @@ process metaphlan_unknown_list {
 
     tag "${meta.sample}"
     
-    cpus 16
+    cpus 8
     memory "30g"
     
     input:
@@ -260,7 +260,7 @@ process metaphlan_unknown_list {
         --input_type bowtie2out \
         --index ${params.metaphlan_index} \
         --bowtie2db metaphlan \
-        --nproc 1 \
+        --nproc ${task.cpus} \
         --unclassified_estimation \
         -o metaphlan_unknown_list.tsv \
         <( gunzip -c ${metaphlan_bt2} )
@@ -365,7 +365,7 @@ process sample_to_markers {
         --input ${metaphlan_sam} \
         --input_format bz2 \
         --database ${metaphlan_db}/\${pkl_file} \
-        --nprocs 4 \
+        --nprocs ${task.cpus} \
         --output_dir sample_to_markers
 
     cat <<-END_VERSIONS > versions.yml

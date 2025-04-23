@@ -84,8 +84,8 @@ process kneaddata {
 
     tag "${meta.sample}"
 
-    cpus 16
-    memory "64g"
+    cpus 8
+    memory "30g"
 
     input:
     val meta
@@ -165,7 +165,7 @@ process metaphlan_bugs_viruses_lists {
     tag "${meta.sample}"
     
     cpus 16
-    memory "64g"
+    memory "30g"
     
     input:
     val meta
@@ -230,7 +230,7 @@ process metaphlan_unknown_list {
     tag "${meta.sample}"
     
     cpus 16
-    memory "64g"
+    memory "30g"
     
     input:
     val meta
@@ -281,7 +281,7 @@ process metaphlan_markers {
     tag "${meta.sample}"
 
     cpus 2
-    memory "64g"
+    memory "30g"
 
     input:
     val meta

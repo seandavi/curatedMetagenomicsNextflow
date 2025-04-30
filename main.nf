@@ -4,7 +4,7 @@ nextflow.enable.dsl=2
 
 
 process fasterq_dump {
-    publishDir "${params.publish_dir}/${meta.sample}/fasterq_dump", pattern: "{fastq_line_count.txt,*_fastqc/fastqc_data.txt,sampleinfo.txt,.command*}"
+    publishDir "${params.publish_dir}/${meta.sample}/fasterq_dump", pattern: "{fastq_line_count.txt,*_fastqc/fastqc_data.txt,sampleinfo.txt,.command*}", mode: "${params.publish_mode}"
     
     // maxForks 80
     cpus 8
@@ -76,11 +76,75 @@ process fasterq_dump {
     echo "finalizing fasterqc-dump" 
 
     """
+}
 
+process local_fastqc {
+    publishDir "${params.publish_dir}/${meta.sample}/local_fastqc", pattern: "{fastq_line_count.txt,*_fastqc/fastqc_data.txt,sampleinfo.txt,.command*}", mode: "${params.publish_mode}"
+    
+    // maxForks 80
+    cpus 8
+    memory "16g"
+
+    tag "${meta.sample}"
+
+    input:
+    val meta
+
+    output:
+    val(meta), emit: meta
+    path "out.fastq.gz", emit: fastq
+    path "*_fastqc/fastqc_data.txt", emit: fastqc_data
+    path "fastq_line_count.txt"
+    path ".command*"
+    path "sampleinfo.txt"
+    path "versions.yml"
+
+    stub:
+    """
+    touch out.fastq.gz
+    touch fastq_line_count.txt
+    touch sampleinfo.txt
+    touch versions.yml
+    touch .command.run
+    mkdir -p ${meta.sample}_fastqc
+    touch ${meta.sample}_fastqc/fastqc_data.txt
+    """
+
+    script:
+    """
+
+    echo "file_paths: ${meta.fpaths}" > sampleinfo.txt
+    echo "copying fastq files"
+    for fpath in ${meta.fpaths.join(" ")}; do
+        echo "copying \$fpath"
+        ls -l \$fpath
+        cp \$fpath .
+    done
+    ls -ld
+    echo "copying done"
+    gunzip *.gz
+    wc -l *.fastq > fastq_line_count.txt
+
+    echo "combining fastq files and gzipping"
+    cat *.fastq | pv | pigz -p ${task.cpus} > out.fastq.gz
+
+    echo "sampling fastq file for fastqc"
+    seqtk sample -s100 out.fastq.gz 50000 > out_sample.fastq
+
+    echo "running fastqc"
+    fastqc --extract out_sample.fastq
+
+
+    echo "collecting version info"
+    cat <<-END_VERSIONS > versions.yml
+    versions:
+        fastqc: \$( echo \$(fastqc --version 2>&1 ) | sed 's/^.*FastQC //' )
+    END_VERSIONS
+    """
 }
 
 process kneaddata {
-    publishDir "${params.publish_dir}/${meta.sample}/kneaddata", pattern: "{kneaddata_output/kneaddata_fastq_linecounts.txt,kneaddata_output/out_kneaddata.log,.command*}"
+    publishDir "${params.publish_dir}/${meta.sample}/kneaddata", pattern: "{kneaddata_output/kneaddata_fastq_linecounts.txt,kneaddata_output/out_kneaddata.log,.command*}", mode: "${params.publish_mode}"
 
     tag "${meta.sample}"
 
@@ -106,6 +170,7 @@ process kneaddata {
     mkdir -p kneaddata_output
     touch kneaddata_output/out.fastq
     touch kneaddata_output/kneaddata_fastq_linecounts.txt
+    touch kneaddata_output/out_kneaddata.log
     """
 
     script:
@@ -160,7 +225,7 @@ process install_metaphlan_db {
 }
 
 process metaphlan_unknown_viruses_lists {
-    publishDir "${params.publish_dir}/${meta.sample}/metaphlan_lists", pattern: "{*tsv.gz,.command*}"
+    publishDir "${params.publish_dir}/${meta.sample}/metaphlan_lists", pattern: "{*tsv.gz,.command*}", mode: "${params.publish_mode}"
 
     tag "${meta.sample}"
     
@@ -226,7 +291,7 @@ process metaphlan_unknown_viruses_lists {
 }
 
 process metaphlan_unknown_list {
-    publishDir "${params.publish_dir}/${meta.sample}/metaphlan_lists", pattern: "{*tsv.gz,.command*}"
+    publishDir "${params.publish_dir}/${meta.sample}/metaphlan_lists", pattern: "{*tsv.gz,.command*}", mode: "${params.publish_mode}"
 
     tag "${meta.sample}"
     
@@ -277,7 +342,7 @@ process metaphlan_unknown_list {
 }
 
 process metaphlan_markers {
-    publishDir "${params.publish_dir}/${meta.sample}/metaphlan_markers/"
+    publishDir "${params.publish_dir}/${meta.sample}/metaphlan_markers/", mode: "${params.publish_mode}"
     
     tag "${meta.sample}"
 
@@ -329,7 +394,7 @@ process metaphlan_markers {
 }
 
 process sample_to_markers {
-    publishDir "${params.publish_dir}/${meta.sample}/strainphlan_markers/"
+    publishDir "${params.publish_dir}/${meta.sample}/strainphlan_markers/", mode: "${params.publish_mode}"
     
     tag "${meta.sample}"
 
@@ -343,7 +408,7 @@ process sample_to_markers {
 
     output:
     val meta, emit: meta
-    path "sample_to_markers", emit: sample_to_markers, type: 'dir'
+    path "sample_to_markers", emit: sample_to_markers
     path ".command*"
     path "versions.yml"
 
@@ -358,14 +423,12 @@ process sample_to_markers {
     """
     mkdir sample_to_markers
 
-    pkl_file=`ls ${metaphlan_db} | sort -r | grep pkl | head -1`
-
-    echo \${pkl_file}
+    pkl_file=${params.store_dir}/metaphlan/\$(cat ${params.store_dir}/metaphlan/mpa_latest).pkl
 
     sample2markers.py \
         --input ${metaphlan_sam} \
         --input_format bz2 \
-        --database ${metaphlan_db}/\${pkl_file} \
+        --database \$pkl_file \
         --nprocs 4 \
         --output_dir sample_to_markers
 
@@ -515,7 +578,7 @@ process kneaddata_mouse_database {
     storeDir "${params.store_dir}"
 
     output:
-    path "mouse_C57BL", emit: kd_genome, type: "dir"
+    path "mouse_C57BL", emit: kd_mouse, type: "dir"
     path ".command*"
     // path "mouse_C57BL_6NJ_Bowtie2_v0.1.1.bt2"
     // path "mouse_C57BL_6NJ_Bowtie2_v0.1.2.bt2"
@@ -540,7 +603,7 @@ process kneaddata_mouse_database {
 }
 
 process humann {
-    publishDir "${params.publish_dir}/${meta.sample}/humann"
+    publishDir "${params.publish_dir}/${meta.sample}/humann", mode: "${params.publish_mode}"
     cpus 16
     memory "64g"
 
@@ -655,36 +718,38 @@ process humann {
 
 
 def generate_row_tuple(row) {
-    accessions=row.NCBI_accession.split(';');
+    accessions = row.NCBI_accession.split(';');
     sample_id = row.sample_id;
     return [sample:sample_id, accessions: accessions, meta: row]
 }
 
-def generate_sample_metadata_single_sample(sample_id, run_ids) {
-    accessions = run_ids.split(';')
-    return [sample: sample_id, accessions: accessions, meta: null]
+def generate_row_tuple_local(row) {
+    fpaths = row.file_paths.split(';');
+    sample_id = row.sample_id;
+    return [sample:sample_id, fpaths: fpaths, meta: row]
 }
 
 workflow {
-    samples = null
-    // Allow EITHER metadata_tsv or run_ids/sample_id
-    if (params.metadata_tsv == null) {
-        if (params.run_ids == null) or (params.sample_id == null) {
-            error "Either metadata_tsv or run_ids/sample_id must be provided"
-        } else {
-            samples = generate_sample_metadata_single_sample(
-                params.sample_id, 
-                params.run_ids
-            )
-        }
+
+    if (params.local_input) {
+        samples = Channel
+            .fromPath(params.metadata_tsv)
+            .splitCsv(header: true, quote: '"', sep:'\t')
+            .map { row -> generate_row_tuple_local(row) }
+
+        local_fastqc(samples)
     } else {
         samples = Channel
             .fromPath(params.metadata_tsv)
             .splitCsv(header: true, quote: '"', sep:'\t')
             .map { row -> generate_row_tuple(row) }
+    
+        fasterq_dump(samples)
     }
 
-    fasterq_dump(samples)
+    // for debugging: 
+    // samples.view()
+
 
     install_metaphlan_db()
     uniref_db()
@@ -693,26 +758,31 @@ workflow {
     kneaddata_ribo_rna_database()
     kneaddata_mouse_database()
     
+    if (params.local_input) {
     kneaddata(
-        fasterq_dump.out.meta,
-        fasterq_dump.out.fastq,
+        local_fastqc.out.meta,
+        local_fastqc.out.fastq,
         kneaddata_human_database.out.kd_genome.collect(),
         kneaddata_ribo_rna_database.out.kd_ribo_rna.collect(),
-        kneaddata_mouse_database.out.ke.mouse.collect())
+        kneaddata_mouse_database.out.kd_mouse.collect())
+    } else {
+        kneaddata(
+            fasterq_dump.out.meta,
+            fasterq_dump.out.fastq,
+            kneaddata_human_database.out.kd_genome.collect(),
+            kneaddata_ribo_rna_database.out.kd_ribo_rna.collect(),
+            kneaddata_mouse_database.out.kd_mouse.collect())
+    }
 
     metaphlan_unknown_viruses_lists(
-        kneaddata.out.meta,    kneaddata(
-        fasterq_dump.out.meta,
-        fasterq_dump.out.fastq,
-        kneaddata_human_database.out.kd_genome.collect(),
-        kneaddata_ribo_rna_database.out.kd_ribo_rna.collect())
+        kneaddata.out.meta,
         kneaddata.out.fastq,
         install_metaphlan_db.out.metaphlan_db.collect())
 
-    #metaphlan_unknown_list(
-    #    metaphlan_bugs_viruses_lists.out.meta,
-    #    metaphlan_bugs_viruses_lists.out.metaphlan_bt2,
-    #    install_metaphlan_db.out.metaphlan_db.collect())
+    // metaphlan_unknown_list(
+    //     metaphlan_bugs_viruses_lists.out.meta,
+    //     metaphlan_bugs_viruses_lists.out.metaphlan_bt2,
+    //     install_metaphlan_db.out.metaphlan_db.collect())
 
     metaphlan_markers(
         metaphlan_unknown_viruses_lists.out.meta,

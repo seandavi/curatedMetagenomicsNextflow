@@ -4,13 +4,13 @@
 # Usage
 # qsub -N job_name -v metadata_tsv=/absolute/path/to/samples.tsv submit_unitn.sh
 
-# 2 node
-# 4 core
+# 1 node
+# 1 core
 # 24 GB
-#PBS -l select=2:ncpus=4:mem=24gb
+#PBS -l select=1:ncpus=1:mem=24gb
 
 # 8 hours maximum execution time
-#PBS -l walltime=10:00:00
+##PBS -l walltime=10:00:00
 
 # execution queue: common_cpuQ; CIBIO_cpuQ
 #PBS -q CIBIO_cpuQ
@@ -24,7 +24,7 @@
 #PBS -k oed
 
 # send email on job abort, begin, end
-#PBS -m abe
+##PBS -m abe
 
 # email address for notifications
 ##PBS -M <your_email_address>
@@ -50,4 +50,4 @@ module load singularity-3.4.0
 cd $UNITN_SCRATCH
 export NXF_MODE=google
 
-nextflow run ASAP-MAC/metagenomicsNextflowMAC --metadata_tsv=$metadata_tsv -profile unitn -with-weblog https://nf-telemetry-819875667022.us-central1.run.app/nextflow-telemetry/events
+nextflow run ASAP-MAC/metagenomicsNextflowMAC --metadata_tsv=$metadata_tsv -profile unitn

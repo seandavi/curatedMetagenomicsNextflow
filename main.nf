@@ -111,7 +111,6 @@ process kneaddata {
     """
     kneaddata --unpaired ${fastq} \
         --reference-db human_genome \
-        --reference-db ribosomal_RNA \
         --output kneaddata_output  \
         --trimmomatic /installed/Trimmomatic-0.39 \
         --trimmomatic-options 'SLIDINGWINDOW:4:20 MINLEN:30' \

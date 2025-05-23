@@ -142,8 +142,8 @@ process kneaddata {
 
     tag "${meta.sample}"
 
-    cpus 16
-    memory "64g"
+    cpus 8
+    memory "30g"
 
     input:
     val meta
@@ -173,6 +173,7 @@ process kneaddata {
         --reference-db ${params.organism_database} \
         --output kneaddata_output  \
         --trimmomatic /installed/Trimmomatic-0.39 \
+        --trimmomatic-options 'SLIDINGWINDOW:4:20 MINLEN:30' \
         --bypass-trf \
 	--bowtie2-options='--very-fast' \
 	-t 16 -p 8
@@ -222,8 +223,8 @@ process metaphlan_unknown_viruses_lists {
 
     tag "${meta.sample}"
     
-    cpus 16
-    memory "64g"
+    cpus 8
+    memory "30g"
     
     input:
     val meta
@@ -288,8 +289,8 @@ process metaphlan_unknown_list {
 
     tag "${meta.sample}"
     
-    cpus 16
-    memory "64g"
+    cpus 8
+    memory "30g"
     
     input:
     val meta
@@ -319,7 +320,7 @@ process metaphlan_unknown_list {
         --input_type bowtie2out \
         --index ${params.metaphlan_index} \
         --bowtie2db metaphlan \
-        --nproc 1 \
+        --nproc ${task.cpus} \
         --unclassified_estimation \
         -o metaphlan_unknown_list.tsv \
         <( gunzip -c ${metaphlan_bt2} )
@@ -340,7 +341,7 @@ process metaphlan_markers {
     tag "${meta.sample}"
 
     cpus 2
-    memory "64g"
+    memory "30g"
 
     input:
     val meta

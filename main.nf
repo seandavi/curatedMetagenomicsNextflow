@@ -737,11 +737,6 @@ workflow {
         kneaddata.out.fastq,
         install_metaphlan_db.out.metaphlan_db.collect())
 
-    // metaphlan_unknown_list(
-    //     metaphlan_bugs_viruses_lists.out.meta,
-    //     metaphlan_bugs_viruses_lists.out.metaphlan_bt2,
-    //     install_metaphlan_db.out.metaphlan_db.collect())
-
     metaphlan_markers(
         metaphlan_unknown_viruses_lists.out.meta,
         metaphlan_unknown_viruses_lists.out.metaphlan_bt2,

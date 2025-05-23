@@ -149,7 +149,6 @@ process kneaddata {
     val meta
     path fastq
     path kd_genome
-    path kd_ribo_rna 
     path kd_mouse
 
     output:
@@ -423,7 +422,7 @@ process sample_to_markers {
         --input ${metaphlan_sam} \
         --input_format bz2 \
         --database \$pkl_file \
-        --nprocs 4 \
+        --nprocs ${task.cpus} \
         --output_dir sample_to_markers
 
     cat <<-END_VERSIONS > versions.yml
@@ -524,44 +523,6 @@ process kneaddata_human_database {
     echo ${PWD}
     mkdir -p human_genome
     kneaddata_database --download human_genome bowtie2 human_genome
-    """
-}
-
-process kneaddata_ribo_rna_database {
-    cpus 1
-    memory "4g"
-
-    storeDir "${params.store_dir}"
-
-    output:
-    path "ribosomal_RNA", emit: kd_ribo_rna, type: "dir"
-    path ".command*"
-    // path "SILVA_128_LSUParc_SSUParc_ribosomal_RNA.1.bt2l"
-    // path "SILVA_128_LSUParc_SSUParc_ribosomal_RNA.2.bt2l"
-    // path "SILVA_128_LSUParc_SSUParc_ribosomal_RNA.3.bt2l"
-    // path "SILVA_128_LSUParc_SSUParc_ribosomal_RNA.4.bt2l"
-    // path "SILVA_128_LSUParc_SSUParc_ribosomal_RNA.rev.1.bt2l"
-    // path "SILVA_128_LSUParc_SSUParc_ribosomal_RNA.rev.1.bt2l"
-
-    stub:
-    """
-    mkdir -p ribosomal_RNA
-    touch ribosomal_RNA/SILVA_128_LSUParc_SSUParc_ribosomal_RNA.1.bt2l
-    touch ribosomal_RNA/SILVA_128_LSUParc_SSUParc_ribosomal_RNA.2.bt2l
-    touch ribosomal_RNA/SILVA_128_LSUParc_SSUParc_ribosomal_RNA.3.bt2l
-    touch ribosomal_RNA/SILVA_128_LSUParc_SSUParc_ribosomal_RNA.4.bt2l
-    touch ribosomal_RNA/SILVA_128_LSUParc_SSUParc_ribosomal_RNA.rev.1.bt2l
-    touch ribosomal_RNA/SILVA_128_LSUParc_SSUParc_ribosomal_RNA.rev.2.bt2l
-    touch .command.run
-    """
-
-    
-    script:
-    """
-    curl -k -LO http://huttenhower.sph.harvard.edu/kneadData_databases/SILVA_128_LSUParc_SSUParc_ribosomal_RNA_v0.2.tar.gz
-    echo ${PWD}
-    mkdir -p ribosomal_RNA
-    kneaddata_database --download ribosomal_RNA bowtie2 ribosomal_RNA
     """
 }
 
@@ -748,23 +709,26 @@ workflow {
     install_metaphlan_db()
     uniref_db()
     chocophlan_db()
-    kneaddata_human_database()
-    kneaddata_ribo_rna_database()
-    kneaddata_mouse_database()
+
+    if (params.organism_database == 'human_genome') {
+        kneaddata_human_database()
+    }
+
+    if (params.organism_database == 'mouse_C57BL') {
+        kneaddata_mouse_database()
+    }
     
     if (params.local_input) {
-    kneaddata(
-        local_fastqc.out.meta,
-        local_fastqc.out.fastq,
-        kneaddata_human_database.out.kd_genome.collect(),
-        kneaddata_ribo_rna_database.out.kd_ribo_rna.collect(),
-        kneaddata_mouse_database.out.kd_mouse.collect())
+        kneaddata(
+            local_fastqc.out.meta,
+            local_fastqc.out.fastq,
+            kneaddata_human_database.out.kd_genome.collect(),
+            kneaddata_mouse_database.out.kd_mouse.collect())
     } else {
         kneaddata(
             fasterq_dump.out.meta,
             fasterq_dump.out.fastq,
             kneaddata_human_database.out.kd_genome.collect(),
-            kneaddata_ribo_rna_database.out.kd_ribo_rna.collect(),
             kneaddata_mouse_database.out.kd_mouse.collect())
     }
 

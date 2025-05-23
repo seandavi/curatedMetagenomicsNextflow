@@ -58,11 +58,8 @@ process fasterq_dump {
     echo "combining fastq files and gzipping"
     cat *.fastq | pv | pigz -p ${task.cpus} > out.fastq.gz
 
-    echo "sampling fastq file for fastqc"
-    seqtk sample -s100 out.fastq.gz 50000 > out_sample.fastq
-
     echo "running fastqc"
-    fastqc --extract out_sample.fastq
+    fastqc --extract out.fastq.gz
 
 
     echo "collecting version info"
@@ -128,11 +125,8 @@ process local_fastqc {
     echo "combining fastq files and gzipping"
     cat *.fastq | pv | pigz -p ${task.cpus} > out.fastq.gz
 
-    echo "sampling fastq file for fastqc"
-    seqtk sample -s100 out.fastq.gz 50000 > out_sample.fastq
-
     echo "running fastqc"
-    fastqc --extract out_sample.fastq
+    fastqc --extract out.fastq.gz
 
 
     echo "collecting version info"
@@ -177,7 +171,6 @@ process kneaddata {
     """
     kneaddata --unpaired ${fastq} \
         --reference-db ${params.organism_database} \
-        --reference-db ribosomal_RNA \
         --output kneaddata_output  \
         --trimmomatic /installed/Trimmomatic-0.39 \
         --bypass-trf \

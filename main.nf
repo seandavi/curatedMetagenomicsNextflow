@@ -42,10 +42,7 @@ process fasterq_dump {
     echo "starting fasterq-dump"
     for accession in ${meta.accessions.join(" ")}; do
         echo "downloading \$accession"
-        aws s3 cp s3://sra-pub-run-odp/sra/\$accession/\$accession . \
-            --no-sign-request \
-            --no-progress
-        mv \$accession \$accession.sra
+        curl -o \$accession.sra https://sra-pub-run-odp.s3.amazonaws.com/sra/\$accession/\$accession  
         fasterq-dump --threads ${task.cpus} \
             --skip-technical \
             --force \

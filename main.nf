@@ -681,22 +681,41 @@ def generate_row_tuple_local(row) {
     return [sample:sample_id, fpaths: fpaths, meta: row]
 }
 
+def generate_sample_metadata_single_sample(sample_id, run_ids) {
+    accessions = run_ids.split(';')
+    return [sample: sample_id, accessions: accessions, meta: null]
+}
+
 workflow {
 
-    if (params.local_input) {
-        samples = Channel
-            .fromPath(params.metadata_tsv)
-            .splitCsv(header: true, quote: '"', sep:'\t')
-            .map { row -> generate_row_tuple_local(row) }
-
-        local_fastqc(samples)
+    samples = null
+    // Allow EITHER metadata_tsv or run_ids/sample_id
+    if (params.metadata_tsv == null) {
+        if (params.run_ids == null) or (params.sample_id == null) {
+            error "Either metadata_tsv or run_ids/sample_id must be provided"
+        } else {
+            samples = generate_sample_metadata_single_sample(
+                params.sample_id, 
+                params.run_ids
+            )
+	    fasterq_dump(samples)
+        }
     } else {
-        samples = Channel
-            .fromPath(params.metadata_tsv)
-            .splitCsv(header: true, quote: '"', sep:'\t')
-            .map { row -> generate_row_tuple(row) }
+	if (params.local_input) {
+            samples = Channel
+                .fromPath(params.metadata_tsv)
+                .splitCsv(header: true, quote: '"', sep:'\t')
+                .map { row -> generate_row_tuple_local(row) }
+
+            local_fastqc(samples)
+        } else {
+            samples = Channel
+                .fromPath(params.metadata_tsv)
+                .splitCsv(header: true, quote: '"', sep:'\t')
+                .map { row -> generate_row_tuple(row) }
     
-        fasterq_dump(samples)
+            fasterq_dump(samples)
+        }
     }
 
     // for debugging: 
@@ -707,13 +726,12 @@ workflow {
     uniref_db()
     chocophlan_db()
 
-    if (params.organism_database == 'human_genome') {
-        kneaddata_human_database()
-    }
-
-    if (params.organism_database == 'mouse_C57BL') {
-        kneaddata_mouse_database()
-    }
+    // kneaddata, as written now, requires both 
+    // human and mouse database functions to run
+    // in order to access output in next few
+    // lines below.
+    kneaddata_human_database()
+    kneaddata_mouse_database()
     
     if (params.local_input) {
         kneaddata(

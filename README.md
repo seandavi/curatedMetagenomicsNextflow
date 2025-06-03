@@ -102,4 +102,3 @@ nextflow run main.nf -profile google --metadata_tsv samples.tsv
 This pipeline requires:
 - Nextflow 22.10.0 or later
 - Container support (Docker, Singularity, etc.)
-- AWS CLI (for data retrieval from SRA)

@@ -4,7 +4,7 @@ nextflow.enable.dsl=2
 
 
 process fasterq_dump {
-    publishDir "${params.publish_dir}/${meta.sample}/fasterq_dump", pattern: "{fastq_line_count.txt,*_fastqc/fastqc_data.txt,sampleinfo.txt,.command*}"
+    publishDir "${params.publish_dir}/${meta.sample}/fasterq_dump", pattern: "{fastq_line_count.txt,*_fastqc/fastqc_data.txt,sampleinfo.txt,.command*}", mode: "${params.publish_mode}"
     
     // maxForks 80
     cpus 8
@@ -55,11 +55,8 @@ process fasterq_dump {
     echo "combining fastq files and gzipping"
     cat *.fastq | pv | pigz -p ${task.cpus} > out.fastq.gz
 
-    echo "sampling fastq file for fastqc"
-    seqtk sample -s100 out.fastq.gz 50000 > out_sample.fastq
-
     echo "running fastqc"
-    fastqc --extract out_sample.fastq
+    fastqc --extract out.fastq.gz
 
 
     echo "collecting version info"
@@ -73,11 +70,72 @@ process fasterq_dump {
     echo "finalizing fasterqc-dump" 
 
     """
+}
 
+process local_fastqc {
+    publishDir "${params.publish_dir}/${meta.sample}/local_fastqc", pattern: "{fastq_line_count.txt,*_fastqc/fastqc_data.txt,sampleinfo.txt,.command*}", mode: "${params.publish_mode}"
+    
+    // maxForks 80
+    cpus 8
+    memory "16g"
+
+    tag "${meta.sample}"
+
+    input:
+    val meta
+
+    output:
+    val(meta), emit: meta
+    path "out.fastq.gz", emit: fastq
+    path "*_fastqc/fastqc_data.txt", emit: fastqc_data
+    path "fastq_line_count.txt"
+    path ".command*"
+    path "sampleinfo.txt"
+    path "versions.yml"
+
+    stub:
+    """
+    touch out.fastq.gz
+    touch fastq_line_count.txt
+    touch sampleinfo.txt
+    touch versions.yml
+    touch .command.run
+    mkdir -p ${meta.sample}_fastqc
+    touch ${meta.sample}_fastqc/fastqc_data.txt
+    """
+
+    script:
+    """
+
+    echo "file_paths: ${meta.fpaths}" > sampleinfo.txt
+    echo "copying fastq files"
+    for fpath in ${meta.fpaths.join(" ")}; do
+        echo "copying \$fpath"
+        ls -l \$fpath
+        cp \$fpath .
+    done
+    ls -ld
+    echo "copying done"
+    gunzip *.gz
+    wc -l *.fastq > fastq_line_count.txt
+
+    echo "combining fastq files and gzipping"
+    cat *.fastq | pv | pigz -p ${task.cpus} > out.fastq.gz
+
+    echo "running fastqc"
+    fastqc --extract out.fastq.gz
+
+
+    echo "collecting version info"
+    cat <<-END_VERSIONS > versions.yml
+    versions:
+        fastqc: \$( echo \$(fastqc --version 2>&1 ) | sed 's/^.*FastQC //' )
+    END_VERSIONS
+    """
 }
 
 process kneaddata {
-    publishDir "${params.publish_dir}/${meta.sample}/kneaddata", pattern: "{kneaddata_output/kneaddata_fastq_linecounts.txt,kneaddata_output/out_kneaddata.log,.command*}"
+    publishDir "${params.publish_dir}/${meta.sample}/kneaddata", pattern: "{kneaddata_output/kneaddata_fastq_linecounts.txt,kneaddata_output/out_kneaddata.log,.command*}", mode: "${params.publish_mode}"
 
     tag "${meta.sample}"
 
@@ -88,7 +146,7 @@ process kneaddata {
     val meta
     path fastq
     path kd_genome
-    path kd_ribo_rna 
+    path kd_mouse
 
     output:
     val(meta), emit: meta
@@ -102,12 +160,13 @@ process kneaddata {
     mkdir -p kneaddata_output
     touch kneaddata_output/out.fastq
     touch kneaddata_output/kneaddata_fastq_linecounts.txt
+    touch kneaddata_output/out_kneaddata.log
     """
 
     script:
     """
     kneaddata --unpaired ${fastq} \
-        --reference-db human_genome \
+        --reference-db ${params.organism_database} \
         --output kneaddata_output  \
         --trimmomatic /installed/Trimmomatic-0.39 \
         --trimmomatic-options 'SLIDINGWINDOW:4:20 MINLEN:30' \
@@ -155,8 +214,8 @@ process install_metaphlan_db {
     """
 }
 
-process metaphlan_bugs_viruses_lists {
-    publishDir "${params.publish_dir}/${meta.sample}/metaphlan_lists", pattern: "{*tsv.gz,.command*}"
+process metaphlan_unknown_viruses_lists {
+    publishDir "${params.publish_dir}/${meta.sample}/metaphlan_lists", pattern: "{*tsv.gz,.command*}", mode: "${params.publish_mode}"
 
     tag "${meta.sample}"
     
@@ -173,8 +232,8 @@ process metaphlan_bugs_viruses_lists {
     val(meta), emit: meta
     path 'bowtie2.out.gz', emit: metaphlan_bt2
     path 'sam.bz2', emit: metaphlan_sam
-    path 'metaphlan_bugs_list.tsv', emit: metaphlan_bugs_list
-    path 'metaphlan_bugs_list.tsv.gz', emit: metaphlan_bugs_list_gz
+    path 'metaphlan_unknown_list.tsv', emit: metaphlan_unknown_list
+    path 'metaphlan_unknown_list.tsv.gz', emit: metaphlan_unknown_list_gz
     path 'metaphlan_viruses_list.tsv', emit: metaphlan_viruses_list
     path 'metaphlan_viruses_list.tsv.gz', emit: metaphlan_viruses_list_gz
     path ".command*"
@@ -184,8 +243,8 @@ process metaphlan_bugs_viruses_lists {
     """
     touch bowtie2.out.gz
     touch sam.bz2
-    touch metaphlan_bugs_list.tsv
-    touch metaphlan_bugs_list.tsv.gz
+    touch metaphlan_unknown_list.tsv
+    touch metaphlan_unknown_list.tsv.gz
     touch metaphlan_viruses_list.tsv
     touch metaphlan_viruses_list.tsv.gz
     touch .command.run
@@ -202,13 +261,14 @@ process metaphlan_bugs_viruses_lists {
         --samout sam.bz2 \
         --bowtie2out bowtie2.out \
         --nproc ${task.cpus} \
+        --unclassified_estimation \
         --profile_vsc \
         --vsc_breadth 0.75 \
         --vsc_out metaphlan_viruses_list.tsv \
-        -o metaphlan_bugs_list.tsv \
+        -o metaphlan_unknown_list.tsv \
         ${fastq}
 
-    gzip -c metaphlan_bugs_list.tsv > metaphlan_bugs_list.tsv.gz
+    gzip -c metaphlan_unknown_list.tsv > metaphlan_unknown_list.tsv.gz
     gzip -c metaphlan_viruses_list.tsv > metaphlan_viruses_list.tsv.gz
     gzip bowtie2.out
 
@@ -221,7 +281,7 @@ process metaphlan_bugs_viruses_lists {
 }
 
 process metaphlan_unknown_list {
-    publishDir "${params.publish_dir}/${meta.sample}/metaphlan_lists", pattern: "{*tsv.gz,.command*}"
+    publishDir "${params.publish_dir}/${meta.sample}/metaphlan_lists", pattern: "{*tsv.gz,.command*}", mode: "${params.publish_mode}"
 
     tag "${meta.sample}"
     
@@ -272,7 +332,7 @@ process metaphlan_unknown_list {
 }
 
 process metaphlan_markers {
-    publishDir "${params.publish_dir}/${meta.sample}/metaphlan_markers/"
+    publishDir "${params.publish_dir}/${meta.sample}/metaphlan_markers/", mode: "${params.publish_mode}"
     
     tag "${meta.sample}"
 
@@ -324,7 +384,7 @@ process metaphlan_markers {
 }
 
 process sample_to_markers {
-    publishDir "${params.publish_dir}/${meta.sample}/strainphlan_markers/"
+    publishDir "${params.publish_dir}/${meta.sample}/strainphlan_markers/", mode: "${params.publish_mode}"
     
     tag "${meta.sample}"
 
@@ -338,7 +398,7 @@ process sample_to_markers {
 
     output:
     val meta, emit: meta
-    path "sample_to_markers", emit: sample_to_markers, type: 'dir'
+    path "sample_to_markers", emit: sample_to_markers
     path ".command*"
     path "versions.yml"
 
@@ -353,14 +413,12 @@ process sample_to_markers {
     """
     mkdir sample_to_markers
 
-    pkl_file=`ls ${metaphlan_db} | sort -r | grep pkl | head -1`
-
-    echo \${pkl_file}
+    pkl_file=${params.store_dir}/metaphlan/\$(cat ${params.store_dir}/metaphlan/mpa_latest).pkl
 
     sample2markers.py \
         --input ${metaphlan_sam} \
         --input_format bz2 \
-        --database ${metaphlan_db}/\${pkl_file} \
+        --database \$pkl_file \
         --nprocs ${task.cpus} \
         --output_dir sample_to_markers
 
@@ -465,46 +523,39 @@ process kneaddata_human_database {
     """
 }
 
-process kneaddata_ribo_rna_database {
+process kneaddata_mouse_database {
     cpus 1
     memory "4g"
 
     storeDir "${params.store_dir}"
 
     output:
-    path "ribosomal_RNA", emit: kd_ribo_rna, type: "dir"
+    path "mouse_C57BL", emit: kd_mouse, type: "dir"
     path ".command*"
-    // path "SILVA_128_LSUParc_SSUParc_ribosomal_RNA.1.bt2l"
-    // path "SILVA_128_LSUParc_SSUParc_ribosomal_RNA.2.bt2l"
-    // path "SILVA_128_LSUParc_SSUParc_ribosomal_RNA.3.bt2l"
-    // path "SILVA_128_LSUParc_SSUParc_ribosomal_RNA.4.bt2l"
-    // path "SILVA_128_LSUParc_SSUParc_ribosomal_RNA.rev.1.bt2l"
-    // path "SILVA_128_LSUParc_SSUParc_ribosomal_RNA.rev.1.bt2l"
-
+    // path "mouse_C57BL_6NJ_Bowtie2_v0.1.1.bt2"
+    // path "mouse_C57BL_6NJ_Bowtie2_v0.1.2.bt2"
+    // path "mouse_C57BL_6NJ_Bowtie2_v0.1.3.bt2"
+    // path "mouse_C57BL_6NJ_Bowtie2_v0.1.4.bt2"
+    // path "mouse_C57BL_6NJ_Bowtie2_v0.1.rev.1.bt2"
+    // path "mouse_C57BL_6NJ_Bowtie2_v0.1.rev.2.bt2"
+    
     stub:
     """
-    mkdir -p ribosomal_RNA
-    touch ribosomal_RNA/SILVA_128_LSUParc_SSUParc_ribosomal_RNA.1.bt2l
-    touch ribosomal_RNA/SILVA_128_LSUParc_SSUParc_ribosomal_RNA.2.bt2l
-    touch ribosomal_RNA/SILVA_128_LSUParc_SSUParc_ribosomal_RNA.3.bt2l
-    touch ribosomal_RNA/SILVA_128_LSUParc_SSUParc_ribosomal_RNA.4.bt2l
-    touch ribosomal_RNA/SILVA_128_LSUParc_SSUParc_ribosomal_RNA.rev.1.bt2l
-    touch ribosomal_RNA/SILVA_128_LSUParc_SSUParc_ribosomal_RNA.rev.2.bt2l
+    mkdir -p mouse_C57BL
+    touch mouse_C57BL/mouse_C57BL_6NJ_Bowtie2_v0.1.bt2
     touch .command.run
     """
 
-    
     script:
     """
-    curl -k -LO http://huttenhower.sph.harvard.edu/kneadData_databases/SILVA_128_LSUParc_SSUParc_ribosomal_RNA_v0.2.tar.gz
     echo ${PWD}
-    mkdir -p ribosomal_RNA
-    kneaddata_database --download ribosomal_RNA bowtie2 ribosomal_RNA
+    mkdir -p mouse_C57BL
+    kneaddata_database --download mouse_C57BL bowtie2 mouse_C57BL
     """
 }
 
 process humann {
-    publishDir "${params.publish_dir}/${meta.sample}/humann"
+    publishDir "${params.publish_dir}/${meta.sample}/humann", mode: "${params.publish_mode}"
     cpus 16
     memory "64g"
 
@@ -513,7 +564,7 @@ process humann {
     input:
     val meta
     path fastq
-    path metaphlan_bugs_list // metaphlan_bugs_list.tsv
+    path metaphlan_unknown_list // metaphlan_unknown_list.tsv
     path chocophlan_db
     path uniref_db
 
@@ -577,7 +628,7 @@ process humann {
         --verbose \
         --metaphlan-options "-t rel_ab --index latest" \
         --nucleotide-database ${chocophlan_db} \
-        --taxonomic-profile ${metaphlan_bugs_list} \
+        --taxonomic-profile ${metaphlan_unknown_list} \
         --protein-database ${uniref_db} \
         --threads ${task.cpus}
 
@@ -619,74 +670,85 @@ process humann {
 
 
 def generate_row_tuple(row) {
-    accessions=row.NCBI_accession.split(';');
+    accessions = row.NCBI_accession.split(';');
     sample_id = row.sample_id;
     return [sample:sample_id, accessions: accessions, meta: row]
 }
 
-def generate_sample_metadata_single_sample(sample_id, run_ids) {
-    accessions = run_ids.split(';')
-    return [sample: sample_id, accessions: accessions, meta: null]
+def generate_row_tuple_local(row) {
+    fpaths = row.file_paths.split(';');
+    sample_id = row.sample_id;
+    return [sample:sample_id, fpaths: fpaths, meta: row]
 }
 
 workflow {
-    samples = null
-    // Allow EITHER metadata_tsv or run_ids/sample_id
-    if (params.metadata_tsv == null) {
-        if (params.run_ids == null) or (params.sample_id == null) {
-            error "Either metadata_tsv or run_ids/sample_id must be provided"
-        } else {
-            samples = generate_sample_metadata_single_sample(
-                params.sample_id, 
-                params.run_ids
-            )
-        }
+
+    if (params.local_input) {
+        samples = Channel
+            .fromPath(params.metadata_tsv)
+            .splitCsv(header: true, quote: '"', sep:'\t')
+            .map { row -> generate_row_tuple_local(row) }
+
+        local_fastqc(samples)
     } else {
         samples = Channel
             .fromPath(params.metadata_tsv)
             .splitCsv(header: true, quote: '"', sep:'\t')
             .map { row -> generate_row_tuple(row) }
+    
+        fasterq_dump(samples)
     }
 
-    fasterq_dump(samples)
+    // for debugging: 
+    // samples.view()
+
 
     install_metaphlan_db()
     uniref_db()
     chocophlan_db()
-    kneaddata_human_database()
-    kneaddata_ribo_rna_database()
-    
-    kneaddata(
-        fasterq_dump.out.meta,
-        fasterq_dump.out.fastq,
-        kneaddata_human_database.out.kd_genome.collect(),
-        kneaddata_ribo_rna_database.out.kd_ribo_rna.collect())
 
-    metaphlan_bugs_viruses_lists(
+    if (params.organism_database == 'human_genome') {
+        kneaddata_human_database()
+    }
+
+    if (params.organism_database == 'mouse_C57BL') {
+        kneaddata_mouse_database()
+    }
+    
+    if (params.local_input) {
+        kneaddata(
+            local_fastqc.out.meta,
+            local_fastqc.out.fastq,
+            kneaddata_human_database.out.kd_genome.collect(),
+            kneaddata_mouse_database.out.kd_mouse.collect())
+    } else {
+        kneaddata(
+            fasterq_dump.out.meta,
+            fasterq_dump.out.fastq,
+            kneaddata_human_database.out.kd_genome.collect(),
+            kneaddata_mouse_database.out.kd_mouse.collect())
+    }
+
+    metaphlan_unknown_viruses_lists(
         kneaddata.out.meta,
         kneaddata.out.fastq,
         install_metaphlan_db.out.metaphlan_db.collect())
 
-    metaphlan_unknown_list(
-        metaphlan_bugs_viruses_lists.out.meta,
-        metaphlan_bugs_viruses_lists.out.metaphlan_bt2,
-        install_metaphlan_db.out.metaphlan_db.collect())
-
     metaphlan_markers(
-        metaphlan_bugs_viruses_lists.out.meta,
-        metaphlan_bugs_viruses_lists.out.metaphlan_bt2,
+        metaphlan_unknown_viruses_lists.out.meta,
+        metaphlan_unknown_viruses_lists.out.metaphlan_bt2,
         install_metaphlan_db.out.metaphlan_db.collect())
 
     sample_to_markers(
-        metaphlan_bugs_viruses_lists.out.meta,
-        metaphlan_bugs_viruses_lists.out.metaphlan_sam,
+        metaphlan_unknown_viruses_lists.out.meta,
+        metaphlan_unknown_viruses_lists.out.metaphlan_sam,
         install_metaphlan_db.out.metaphlan_db.collect())
 
     if (!params.skip_humann) {
         humann(
            kneaddata.out.meta,
            kneaddata.out.fastq,
-           metaphlan_bugs_viruses_lists.out.metaphlan_bugs_list,
+           metaphlan_unknown_viruses_lists.out.metaphlan_unknown_list,
            chocophlan_db.out.chocophlan_db,
            uniref_db.out.uniref_db)
     }

@@ -4,6 +4,8 @@ ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update
 RUN apt-get install -y git make curl wget gcc g++ unzip
 
+# install ps for nextflow task monitoring
+RUN apt-get update && apt-get install -y procps pigz pv default-jre
 
 ## install sratoolkit
 RUN mkdir /usr/local/ncbi
@@ -41,6 +43,10 @@ RUN chmod +x seqtk/seqtk
 RUN wget https://www.bioinformatics.babraham.ac.uk/projects/fastqc/fastqc_v0.12.1.zip && unzip fastqc_v0.12.1.zip && chmod +x FastQC/fastqc
 ENV PATH=$PATH:/installed/seqtk:/installed/FastQC/
 
+## install minimap2
+RUN curl -L https://github.com/lh3/minimap2/releases/download/v2.30/minimap2-2.30_x64-linux.tar.bz2 | tar -jxvf -
+ENV PATH=$PATH:/installed/minimap2-2.30_x64-linux/
+
 ## install kneaddata
 RUN pip install kneaddata --install-option='--bypass-dependencies-install'
 
@@ -51,9 +57,6 @@ RUN wget http://www.usadellab.org/cms/uploads/supplementary/Trimmomatic/Trimmoma
 RUN fastq-dump --version
 RUN metaphlan --version
 RUN humann --version
-
-# install ps for nextflow task monitoring
-RUN apt-get update && apt-get install -y procps pigz pv default-jre
 
 ## root directory for databases
 ENV mpa_dir=/usr/local/miniconda3/lib/python3.7/site-packages/metaphlan

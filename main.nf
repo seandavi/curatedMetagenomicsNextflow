@@ -203,7 +203,7 @@ process install_metaphlan_db {
     script:
     """
     echo ${PWD}
-    metaphlan --install --index latest --bowtie2db metaphlan
+    metaphlan --install --index ${params.metaphlan_index} --bowtie2db metaphlan
 
     cat <<-END_VERSIONS > versions.yml
     versions:
@@ -219,7 +219,7 @@ process metaphlan_unknown_viruses_lists {
 
     tag "${meta.sample}"
     
-    cpus 8
+    cpus 16
     memory "30g"
     
     input:
@@ -230,8 +230,7 @@ process metaphlan_unknown_viruses_lists {
 
     output:
     val(meta), emit: meta
-    path 'bowtie2.out.gz', emit: metaphlan_bt2
-    path 'sam.bz2', emit: metaphlan_sam
+    path 'bowtie2.out.bz2', emit: metaphlan_bt2
     path 'metaphlan_unknown_list.tsv', emit: metaphlan_unknown_list
     path 'metaphlan_unknown_list.tsv.gz', emit: metaphlan_unknown_list_gz
     path 'metaphlan_viruses_list.tsv', emit: metaphlan_viruses_list
@@ -258,8 +257,7 @@ process metaphlan_unknown_viruses_lists {
     metaphlan --input_type fastq \
         --index ${params.metaphlan_index} \
         --bowtie2db metaphlan \
-        --samout sam.bz2 \
-        --bowtie2out bowtie2.out \
+        --mapout bowtie2.out.bz2 \
         --nproc ${task.cpus} \
         --unclassified_estimation \
         --profile_vsc \

@@ -28,7 +28,7 @@ ENV PATH=$PATH:/installed/bowtie2-2.5.4-linux-x86_64/
 
 ## install humann, metaphlan, and awscli
 RUN pip install humann --no-binary :all: 
-RUN pip install metaphlan 
+RUN pip install metaphlan==4.2.2 
 RUN pip install awscli
 
 ## install SAMtools-1.21

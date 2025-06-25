@@ -413,12 +413,10 @@ process sample_to_markers {
     """
     mkdir sample_to_markers
 
-    pkl_file=${params.store_dir}/metaphlan/\$(cat ${params.store_dir}/metaphlan/mpa_latest).pkl
-
     sample2markers.py \
         --input ${metaphlan_sam} \
         --input_format bz2 \
-        --database \$pkl_file \
+        --database ${params.store_dir}/metaphlan/\$(cat ${params.store_dir}/metaphlan/mpa_latest).pkl \
         --nprocs ${task.cpus} \
         --output_dir sample_to_markers
 

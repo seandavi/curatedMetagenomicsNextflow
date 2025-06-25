@@ -660,7 +660,7 @@ process humann {
     """
     humann -i ${fastq} \
         -o '.' \
-        --verbose \ \
+        --verbose \
         --nucleotide-database ${chocophlan_db} \
         --taxonomic-profile <( gunzip -c ${marker_rel_ab_w_read_stats} ) \
         --protein-database ${uniref_db} \

@@ -556,7 +556,7 @@ process kneaddata_mouse_database {
 process humann {
     publishDir "${params.publish_dir}/${meta.sample}/humann", mode: "${params.publish_mode}"
     cpus 16
-    memory "64g"
+    memory "48g"
 
     tag "${meta.sample}"
 

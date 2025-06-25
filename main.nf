@@ -235,6 +235,7 @@ process metaphlan_unknown_viruses_lists {
     path 'metaphlan_unknown_list.tsv.gz', emit: metaphlan_unknown_list_gz
     path 'metaphlan_viruses_list.tsv', emit: metaphlan_viruses_list
     path 'metaphlan_viruses_list.tsv.gz', emit: metaphlan_viruses_list_gz
+    path 'sam.bz2', emit: metaphlan_sam
     path ".command*"
     path "versions.yml"
 
@@ -260,7 +261,7 @@ process metaphlan_unknown_viruses_lists {
         --mapout bowtie2.out.bz2 \
         --nproc ${task.cpus} \
         --profile_vsc \
-        -s metaphlan.sam \
+        -s sam.bz2 \
         --vsc_breadth 0.75 \
         --vsc_out metaphlan_viruses_list.tsv \
         -o metaphlan_unknown_list.tsv \

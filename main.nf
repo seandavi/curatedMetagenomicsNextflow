@@ -657,7 +657,7 @@ process humann {
     humann -i ${fastq} \
         -o '.' \
         --verbose \
-        --metaphlan-options "-t rel_ab --index latest" \
+        --metaphlan-options "-t relab_w_read_stats --index latest" \
         --nucleotide-database ${chocophlan_db} \
         --taxonomic-profile ${metaphlan_unknown_list} \
         --protein-database ${uniref_db} \

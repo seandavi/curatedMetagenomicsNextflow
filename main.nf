@@ -240,7 +240,7 @@ process metaphlan_unknown_viruses_lists {
 
     stub:
     """
-    touch bowtie2.out.gz
+    touch bowtie2.out.bz2
     touch sam.bz2
     touch metaphlan_unknown_list.tsv
     touch metaphlan_unknown_list.tsv.gz
@@ -268,7 +268,6 @@ process metaphlan_unknown_viruses_lists {
 
     gzip -c metaphlan_unknown_list.tsv > metaphlan_unknown_list.tsv.gz
     gzip -c metaphlan_viruses_list.tsv > metaphlan_viruses_list.tsv.gz
-    gzip bowtie2.out
 
     cat <<-END_VERSIONS > versions.yml
     versions:

@@ -806,7 +806,7 @@ workflow {
         humann(
            kneaddata.out.meta,
            kneaddata.out.fastq,
-           metaphlan_unknown_viruses_lists.out.marker_rel_ab_w_read_stats,
+           metaphlan_markers.out.marker_rel_ab_w_read_stats,
            chocophlan_db.out.chocophlan_db,
            uniref_db.out.uniref_db,
            utility_mapping_db.out.utility_mapping_db)

@@ -260,6 +260,7 @@ process metaphlan_unknown_viruses_lists {
         --mapout bowtie2.out.bz2 \
         --nproc ${task.cpus} \
         --profile_vsc \
+        -s metaphlan.sam \
         --vsc_breadth 0.75 \
         --vsc_out metaphlan_viruses_list.tsv \
         -o metaphlan_unknown_list.tsv \

@@ -660,10 +660,9 @@ process humann {
     """
     humann -i ${fastq} \
         -o '.' \
-        --verbose \
-        --metaphlan-options "-t relab_w_read_stats --index latest" \
+        --verbose \ \
         --nucleotide-database ${chocophlan_db} \
-        --taxonomic-profile ${marker_rel_ab_w_read_stats} \
+        --taxonomic-profile <( gunzip -c ${marker_rel_ab_w_read_stats} ) \
         --protein-database ${uniref_db} \
         --utility-database ${utility_mapping_db}
         --threads ${task.cpus}

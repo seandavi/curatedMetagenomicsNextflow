@@ -259,7 +259,6 @@ process metaphlan_unknown_viruses_lists {
         --db_dir metaphlan \
         --mapout bowtie2.out.bz2 \
         --nproc ${task.cpus} \
-        --unclassified_estimation \
         --profile_vsc \
         --vsc_breadth 0.75 \
         --vsc_out metaphlan_viruses_list.tsv \
@@ -315,7 +314,6 @@ process metaphlan_unknown_list {
         --index ${params.metaphlan_index} \
         --db_dir metaphlan \
         --nproc ${task.cpus} \
-        --unclassified_estimation \
         -o metaphlan_unknown_list.tsv \
         <( gunzip -c ${metaphlan_bt2} )
 

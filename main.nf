@@ -345,6 +345,7 @@ process metaphlan_markers {
     val meta, emit: meta
     path "marker_abundance.tsv.gz", emit: marker_abundance
     path "marker_presence.tsv.gz", emit: marker_presence
+    path "marker_rel_ab_w_read_stats.tsv.gz", emit: marker_rel_ab_w_read_stats
     path ".command*"
     path "versions.yml"
 
@@ -369,6 +370,12 @@ process metaphlan_markers {
         --db_dir metaphlan \
         -t marker_ab_table \
         -o marker_abundance.tsv \
+        <( gunzip -c ${metaphlan_bt2} )
+    metaphlan --input_type mapout \
+        --index ${params.metaphlan_index} \
+        --db_dir metaphlan \
+        -t rel_ab_w_read_stats \
+        -o marker_rel_ab_w_read_stats.tsv \
         <( gunzip -c ${metaphlan_bt2} )
     gzip *.tsv
 
@@ -594,7 +601,7 @@ process humann {
     input:
     val meta
     path fastq
-    path metaphlan_unknown_list // metaphlan_unknown_list.tsv
+    path marker_rel_ab_w_read_stats
     path chocophlan_db
     path uniref_db
     path utility_mapping_db
@@ -659,7 +666,7 @@ process humann {
         --verbose \
         --metaphlan-options "-t relab_w_read_stats --index latest" \
         --nucleotide-database ${chocophlan_db} \
-        --taxonomic-profile ${metaphlan_unknown_list} \
+        --taxonomic-profile ${marker_rel_ab_w_read_stats} \
         --protein-database ${uniref_db} \
         --utility-database ${utility_mapping_db}
         --threads ${task.cpus}
@@ -799,7 +806,7 @@ workflow {
         humann(
            kneaddata.out.meta,
            kneaddata.out.fastq,
-           metaphlan_unknown_viruses_lists.out.metaphlan_unknown_list,
+           metaphlan_unknown_viruses_lists.out.marker_rel_ab_w_read_stats,
            chocophlan_db.out.chocophlan_db,
            uniref_db.out.uniref_db,
            utility_mapping_db.out.utility_mapping_db)

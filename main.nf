@@ -203,7 +203,7 @@ process install_metaphlan_db {
     script:
     """
     echo ${PWD}
-    metaphlan --install --index ${params.metaphlan_index} --bowtie2db metaphlan
+    metaphlan --install --index ${params.metaphlan_index} --db_dir metaphlan
 
     cat <<-END_VERSIONS > versions.yml
     versions:
@@ -220,7 +220,7 @@ process metaphlan_unknown_viruses_lists {
     tag "${meta.sample}"
     
     cpus 16
-    memory "30g"
+    memory "47g"
     
     input:
     val meta
@@ -256,7 +256,7 @@ process metaphlan_unknown_viruses_lists {
     find .
     metaphlan --input_type fastq \
         --index ${params.metaphlan_index} \
-        --bowtie2db metaphlan \
+        --db_dir metaphlan \
         --mapout bowtie2.out.bz2 \
         --nproc ${task.cpus} \
         --unclassified_estimation \
@@ -283,7 +283,7 @@ process metaphlan_unknown_list {
 
     tag "${meta.sample}"
     
-    cpus 8
+    cpus 4
     memory "30g"
     
     input:
@@ -311,9 +311,9 @@ process metaphlan_unknown_list {
     script:
     """
     metaphlan \
-        --input_type bowtie2out \
+        --input_type mapout \
         --index ${params.metaphlan_index} \
-        --bowtie2db metaphlan \
+        --db_dir metaphlan \
         --nproc ${task.cpus} \
         --unclassified_estimation \
         -o metaphlan_unknown_list.tsv \
@@ -359,15 +359,15 @@ process metaphlan_markers {
 
     script:
     """
-    metaphlan --input_type bowtie2out \
+    metaphlan --input_type mapout \
         --index ${params.metaphlan_index} \
-        --bowtie2db metaphlan \
+        --db_dir metaphlan \
         -t marker_pres_table \
         -o marker_presence.tsv \
         <( gunzip -c ${metaphlan_bt2} )    
-    metaphlan --input_type bowtie2out \
+    metaphlan --input_type mapout \
         --index ${params.metaphlan_index} \
-        --bowtie2db metaphlan \
+        --db_dir metaphlan \
         -t marker_ab_table \
         -o marker_abundance.tsv \
         <( gunzip -c ${metaphlan_bt2} )

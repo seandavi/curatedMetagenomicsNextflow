@@ -555,8 +555,6 @@ process kneaddata_human_database {
     echo ${PWD}
     mkdir -p human_genome
     kneaddata_database --download human_genome bowtie2 human_genome
-    mv human_genome/bowtie2-index/* human_genome
-    rmdir human_genome/bowtie2-index
     """
 }
 

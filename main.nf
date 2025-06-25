@@ -230,19 +230,19 @@ process metaphlan_unknown_viruses_lists {
 
     output:
     val(meta), emit: meta
-    path 'bowtie2.out.bz2', emit: metaphlan_bt2
+    path 'bowtie2.out.gz', emit: metaphlan_bt2
     path 'metaphlan_unknown_list.tsv', emit: metaphlan_unknown_list
     path 'metaphlan_unknown_list.tsv.gz', emit: metaphlan_unknown_list_gz
     path 'metaphlan_viruses_list.tsv', emit: metaphlan_viruses_list
     path 'metaphlan_viruses_list.tsv.gz', emit: metaphlan_viruses_list_gz
-    path 'sam.bz2', emit: metaphlan_sam
+    path 'sam.gz', emit: metaphlan_sam
     path ".command*"
     path "versions.yml"
 
     stub:
     """
-    touch bowtie2.out.bz2
-    touch sam.bz2
+    touch bowtie2.out.gz
+    touch sam.gz
     touch metaphlan_unknown_list.tsv
     touch metaphlan_unknown_list.tsv.gz
     touch metaphlan_viruses_list.tsv
@@ -258,10 +258,10 @@ process metaphlan_unknown_viruses_lists {
     metaphlan --input_type fastq \
         --index ${params.metaphlan_index} \
         --db_dir metaphlan \
-        --mapout bowtie2.out.bz2 \
+        --mapout bowtie2.out.gz \
         --nproc ${task.cpus} \
         --profile_vsc \
-        -s sam.bz2 \
+        -s sam.gz \
         --vsc_breadth 0.75 \
         --vsc_out metaphlan_viruses_list.tsv \
         -o metaphlan_unknown_list.tsv \
@@ -421,7 +421,7 @@ process sample_to_markers {
 
     sample2markers.py \
         --input ${metaphlan_sam} \
-        --input_format bz2 \
+        --input_format sam \
         --database \$pkl_file \
         --nprocs ${task.cpus} \
         --output_dir sample_to_markers

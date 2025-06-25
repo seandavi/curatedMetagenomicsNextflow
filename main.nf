@@ -258,7 +258,7 @@ process metaphlan_unknown_viruses_lists {
     metaphlan --input_type fastq \
         --index ${params.metaphlan_index} \
         --db_dir metaphlan \
-        --mapout bowtie2.out.gz \
+        --mapout bowtie2.out \
         --nproc ${task.cpus} \
         --profile_vsc \
         -s metaphlan.sam \
@@ -269,6 +269,7 @@ process metaphlan_unknown_viruses_lists {
 
     gzip -c metaphlan_unknown_list.tsv > metaphlan_unknown_list.tsv.gz
     gzip -c metaphlan_viruses_list.tsv > metaphlan_viruses_list.tsv.gz
+    gzip bowtie2.out
 
     cat <<-END_VERSIONS > versions.yml
     versions:

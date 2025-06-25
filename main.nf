@@ -457,6 +457,37 @@ process chocophlan_db {
     """
 }
 
+process utility_mapping_db {
+    cpus 1
+    memory "1g"
+
+    storeDir "${params.store_dir}"
+
+    output:
+    path "utility_mapping", emit: utility_mapping_db, type: 'dir'
+    path ".command*"
+    path "versions.yml"
+
+    stub:
+    """
+    mkdir -p utility_mapping
+    touch utility_mapping/db.fake
+    touch .command.run
+    touch versions.yml
+    """
+
+    script:
+    """
+    echo ${PWD}
+    humann_databases --update-config no --download utility_mapping full .
+
+    cat <<-END_VERSIONS > versions.yml
+    versions:
+        humann: \$( echo \$(humann --version 2>&1 ) | awk '{print \$2}')
+    END_VERSIONS
+    """
+}
+
 process uniref_db {
     cpus 1
     memory "1g"
@@ -566,6 +597,7 @@ process humann {
     path metaphlan_unknown_list // metaphlan_unknown_list.tsv
     path chocophlan_db
     path uniref_db
+    path utility_mapping_db
 
     output:
     // lots of files....
@@ -629,6 +661,7 @@ process humann {
         --nucleotide-database ${chocophlan_db} \
         --taxonomic-profile ${metaphlan_unknown_list} \
         --protein-database ${uniref_db} \
+        --utility-database ${utility_mapping_db}
         --threads ${task.cpus}
 
     humann_renorm_table \
@@ -724,6 +757,7 @@ workflow {
     install_metaphlan_db()
     uniref_db()
     chocophlan_db()
+    utility_mapping_db()
 
     // kneaddata, as written now, requires both 
     // human and mouse database functions to run
@@ -767,6 +801,7 @@ workflow {
            kneaddata.out.fastq,
            metaphlan_unknown_viruses_lists.out.metaphlan_unknown_list,
            chocophlan_db.out.chocophlan_db,
-           uniref_db.out.uniref_db)
+           uniref_db.out.uniref_db,
+           utility_mapping_db.out.utility_mapping_db)
     }
 }

@@ -417,7 +417,7 @@ process sample_to_markers {
     """
     mkdir sample_to_markers
 
-    pkl_file=${params.store_dir}/metaphlan/${params.chocophlan}.pkl
+    pkl_file=${params.store_dir}/metaphlan/${params.metaphlan_index}.pkl
 
     sample2markers.py \
         --input ${metaphlan_sam} \

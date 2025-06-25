@@ -420,7 +420,7 @@ process sample_to_markers {
     sample2markers.py \
         --input ${metaphlan_sam} \
         --input_format sam \
-        --database ${params.store_dir}/metaphlan/${params.metaphlan_index}.pkl \
+        --database ${metaphlan_db}/${params.metaphlan_index}.pkl \
         --nprocs ${task.cpus} \
         --output_dir sample_to_markers
 

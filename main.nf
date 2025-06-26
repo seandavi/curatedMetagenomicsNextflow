@@ -346,7 +346,8 @@ process metaphlan_markers {
     val meta, emit: meta
     path "marker_abundance.tsv.gz", emit: marker_abundance
     path "marker_presence.tsv.gz", emit: marker_presence
-    path "marker_rel_ab_w_read_stats.tsv.gz", emit: marker_rel_ab_w_read_stats
+    path "marker_rel_ab_w_read_stats.tsv.gz", emit: marker_rel_ab_w_read_stats_gz
+    path "marker_rel_ab_w_read_stats.tsv", emit: marker_rel_ab_w_read_stats
     path ".command*"
     path "versions.yml"
 
@@ -662,7 +663,7 @@ process humann {
         -o '.' \
         --verbose \
         --nucleotide-database ${chocophlan_db} \
-        --taxonomic-profile <( gunzip -c ${marker_rel_ab_w_read_stats} ) \
+        --taxonomic-profile ${marker_rel_ab_w_read_stats} \
         --protein-database ${uniref_db} \
         --utility-database ${utility_mapping_db}
         --threads ${task.cpus}

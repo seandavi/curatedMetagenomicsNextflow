@@ -380,6 +380,7 @@ process metaphlan_markers {
         -o marker_rel_ab_w_read_stats.tsv \
         <( gunzip -c ${metaphlan_bt2} )
     gzip *.tsv
+    gunzip -c marker_rel_ab_w_read_stats.tsv.gz > marker_rel_ab_w_read_stats.tsv
 
     cat <<-END_VERSIONS > versions.yml
     versions:

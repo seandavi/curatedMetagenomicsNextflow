@@ -330,7 +330,7 @@ process metaphlan_unknown_list {
 }
 
 process metaphlan_markers {
-    publishDir "${params.publish_dir}/${meta.sample}/metaphlan_markers/", mode: "${params.publish_mode}"
+    publishDir "${params.publish_dir}/${meta.sample}/metaphlan_markers/", pattern: "{*tsv.gz,.command*}", mode: "${params.publish_mode}"
     
     tag "${meta.sample}"
 
@@ -425,7 +425,7 @@ process sample_to_markers {
         --input_format sam \
         --database ${metaphlan_db}/${params.metaphlan_index}.pkl \
         --nprocs ${task.cpus} \
-        --output_dir sample_to_markers
+        --output_dir .
 
     cat <<-END_VERSIONS > versions.yml
     versions:

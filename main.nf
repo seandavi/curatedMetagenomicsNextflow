@@ -284,7 +284,7 @@ process metaphlan_unknown_list {
 
     tag "${meta.sample}"
     
-    cpus 4
+    cpus 16
     memory "30g"
     
     input:
@@ -334,7 +334,7 @@ process metaphlan_markers {
     
     tag "${meta.sample}"
 
-    cpus 2
+    cpus 16
     memory "30g"
 
     input:
@@ -365,11 +365,13 @@ process metaphlan_markers {
         --index ${params.metaphlan_index} \
         --db_dir metaphlan \
         -t marker_pres_table \
+        --nproc ${task.cpus} \
         -o marker_presence.tsv \
         <( gunzip -c ${metaphlan_bt2} )    
     metaphlan --input_type mapout \
         --index ${params.metaphlan_index} \
         --db_dir metaphlan \
+        --nproc ${task.cpus} \
         -t marker_ab_table \
         -o marker_abundance.tsv \
         <( gunzip -c ${metaphlan_bt2} )
@@ -377,6 +379,7 @@ process metaphlan_markers {
         --index ${params.metaphlan_index} \
         --db_dir metaphlan \
         -t rel_ab_w_read_stats \
+        --nproc ${task.cpus} \
         -o marker_rel_ab_w_read_stats.tsv \
         <( gunzip -c ${metaphlan_bt2} )
     gzip *.tsv
@@ -395,7 +398,7 @@ process sample_to_markers {
     
     tag "${meta.sample}"
 
-    cpus 4
+    cpus 16
     memory "8g"
 
     input:

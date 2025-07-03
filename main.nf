@@ -428,7 +428,7 @@ process sample_to_markers {
         --input_format sam \
         --database ${metaphlan_db}/${params.metaphlan_index}.pkl \
         --nprocs ${task.cpus} \
-        --output_dir .
+        --output_dir sample_to_markers
 
     cat <<-END_VERSIONS > versions.yml
     versions:

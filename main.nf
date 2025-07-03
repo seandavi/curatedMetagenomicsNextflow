@@ -408,27 +408,24 @@ process sample_to_markers {
 
     output:
     val meta, emit: meta
-    path "sample_to_markers", emit: sample_to_markers
+    path "metaphlan.json.bz2", emit: sample_to_markers_json_bz2
     path ".command*"
     path "versions.yml"
 
     stub:
     """
-    mkdir sample_to_markers
     touch .command.run
     touch versions.yml
     """
 
     script:
     """
-    mkdir sample_to_markers
-
     sample2markers.py \
         --input ${metaphlan_sam} \
         --input_format sam \
         --database ${metaphlan_db}/${params.metaphlan_index}.pkl \
         --nprocs ${task.cpus} \
-        --output_dir sample_to_markers
+        --output_dir .
 
     cat <<-END_VERSIONS > versions.yml
     versions:

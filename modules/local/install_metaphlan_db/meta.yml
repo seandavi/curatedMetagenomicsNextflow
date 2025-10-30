@@ -1,0 +1,24 @@
+name: install_metaphlan_db
+description: Download and install MetaPhlAn database
+keywords:
+  - database
+  - metaphlan
+  - taxonomic profiling
+tools:
+  - metaphlan:
+      description: Metagenomic Phylogenetic Analysis
+      homepage: https://github.com/biobakery/MetaPhlAn
+      documentation: https://github.com/biobakery/MetaPhlAn/wiki
+
+output:
+  - metaphlan_db:
+      type: directory
+      description: MetaPhlAn database directory
+      pattern: "metaphlan"
+  - versions:
+      type: file
+      description: File containing software versions
+      pattern: "versions.yml"
+
+authors:
+  - "@seandavi"

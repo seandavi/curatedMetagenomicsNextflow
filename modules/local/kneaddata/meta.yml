@@ -1,0 +1,50 @@
+name: kneaddata
+description: Quality control tool to remove contaminating sequences from metagenomic data
+keywords:
+  - quality control
+  - metagenomics
+  - decontamination
+  - trimming
+tools:
+  - kneaddata:
+      description: A tool designed to perform quality control on metagenomic sequencing data
+      homepage: https://huttenhower.sph.harvard.edu/kneaddata/
+      documentation: https://github.com/biobakery/kneaddata
+
+input:
+  - meta:
+      type: map
+      description: |
+        Groovy Map containing sample information
+        e.g. [ sample: 'test' ]
+  - fastq:
+      type: file
+      description: Input FASTQ file
+      pattern: "*.fastq.gz"
+  - kd_genome:
+      type: directory
+      description: Reference genome database for contamination removal
+  - kd_mouse:
+      type: directory
+      description: Mouse reference database for contamination removal
+
+output:
+  - meta:
+      type: map
+      description: |
+        Groovy Map containing sample information
+  - fastq:
+      type: file
+      description: Quality-controlled FASTQ file
+      pattern: "kneaddata_output/out.fastq"
+  - line_counts:
+      type: file
+      description: Line counts for processed FASTQ files
+      pattern: "kneaddata_output/kneaddata_fastq_linecounts.txt"
+  - log:
+      type: file
+      description: KneadData log file
+      pattern: "kneaddata_output/out_kneaddata.log"
+
+authors:
+  - "@seandavi"

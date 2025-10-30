@@ -1,0 +1,48 @@
+name: local_fastqc
+description: Process local FASTQ files and perform quality control
+keywords:
+  - fastq
+  - local
+  - fastqc
+  - quality control
+tools:
+  - fastqc:
+      description: Quality control tool for high throughput sequence data
+      homepage: https://www.bioinformatics.babraham.ac.uk/projects/fastqc/
+      documentation: https://www.bioinformatics.babraham.ac.uk/projects/fastqc/Help/
+
+input:
+  - meta:
+      type: map
+      description: |
+        Groovy Map containing sample information
+        e.g. [ sample: 'test', fpaths: ['/path/to/file1.fastq.gz'] ]
+
+output:
+  - meta:
+      type: map
+      description: |
+        Groovy Map containing sample information
+  - fastq:
+      type: file
+      description: Compressed FASTQ file
+      pattern: "*.fastq.gz"
+  - fastqc_data:
+      type: file
+      description: FastQC data file
+      pattern: "*_fastqc/fastqc_data.txt"
+  - line_count:
+      type: file
+      description: Line count information for FASTQ files
+      pattern: "fastq_line_count.txt"
+  - sampleinfo:
+      type: file
+      description: Sample information text file
+      pattern: "sampleinfo.txt"
+  - versions:
+      type: file
+      description: File containing software versions
+      pattern: "versions.yml"
+
+authors:
+  - "@seandavi"

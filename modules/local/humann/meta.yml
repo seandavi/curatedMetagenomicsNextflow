@@ -7,7 +7,7 @@ keywords:
   - gene families
 tools:
   - humann:
-      description: HUMAnN: The HMP Unified Metabolic Analysis Network
+      description: "HUMAnN: The HMP Unified Metabolic Analysis Network"
       homepage: https://huttenhower.sph.harvard.edu/humann/
       documentation: https://github.com/biobakery/humann
 

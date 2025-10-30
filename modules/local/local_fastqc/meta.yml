@@ -16,7 +16,7 @@ input:
       type: map
       description: |
         Groovy Map containing sample information
-        e.g. [ sample: 'test', fpaths: ['/path/to/file1.fastq.gz'] ]
+        e.g. [ sample 'test', fpaths ['/path/to/file1.fastq.gz'] ]
 
 output:
   - meta:

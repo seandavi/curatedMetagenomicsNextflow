@@ -20,14 +20,14 @@ input:
       type: map
       description: |
         Groovy Map containing sample information
-        e.g. [ sample: 'test', accessions: ['SRR123456'] ]
+        e.g. [ sample 'test', accessions ['SRR123456'] ]
 
 output:
   - meta:
       type: map
       description: |
         Groovy Map containing sample information
-        e.g. [ sample: 'test' ]
+        e.g. [ sample 'test' ]
   - fastq:
       type: file
       description: Compressed FASTQ file

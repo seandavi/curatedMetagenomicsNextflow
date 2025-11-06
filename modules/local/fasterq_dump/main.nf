@@ -48,7 +48,7 @@ process FASTERQ_DUMP {
         fasterq-dump: \$(echo \$(fasterq-dump --version 2>&1) | head -2 | tail -1 | awk '{print \$3}')
     END_VERSIONS
 
-    echo "finalizing fasterqc-dump"
+    echo "finalizing fasterq-dump"
     """
 
     stub:

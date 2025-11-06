@@ -1,0 +1,16 @@
+repository_type: pipeline
+nf_core_version: "2.14.1"
+org_path: seandavi
+lint:
+  files_exist:
+    - .github/workflows/ci.yml
+    - .github/workflows/linting.yml
+    - CHANGELOG.md
+    - CODE_OF_CONDUCT.md
+    - CITATIONS.md
+  files_unchanged: []
+  nextflow_config:
+    - manifest.name
+    - manifest.version
+    - manifest.description
+    - manifest.author

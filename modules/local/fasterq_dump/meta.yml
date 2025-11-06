@@ -1,0 +1,53 @@
+name: fasterq_dump
+description: Download FASTQ files from SRA using fasterq-dump
+keywords:
+  - sra
+  - fastq
+  - download
+  - fastqc
+tools:
+  - fasterqdump:
+      description: Fast and efficient SRA data download tool
+      homepage: https://github.com/ncbi/sra-tools
+      documentation: https://github.com/ncbi/sra-tools/wiki
+  - fastqc:
+      description: Quality control tool for high throughput sequence data
+      homepage: https://www.bioinformatics.babraham.ac.uk/projects/fastqc/
+      documentation: https://www.bioinformatics.babraham.ac.uk/projects/fastqc/Help/
+
+input:
+  - meta:
+      type: map
+      description: |
+        Groovy Map containing sample information
+        e.g. [ sample 'test', accessions ['SRR123456'] ]
+
+output:
+  - meta:
+      type: map
+      description: |
+        Groovy Map containing sample information
+        e.g. [ sample 'test' ]
+  - fastq:
+      type: file
+      description: Compressed FASTQ file
+      pattern: "*.fastq.gz"
+  - fastqc_data:
+      type: file
+      description: FastQC data file
+      pattern: "*_fastqc/fastqc_data.txt"
+  - line_count:
+      type: file
+      description: Line count information for FASTQ files
+      pattern: "fastq_line_count.txt"
+  - sampleinfo:
+      type: file
+      description: Sample information text file
+      pattern: "sampleinfo.txt"
+  - versions:
+      type: file
+      description: File containing software versions
+      pattern: "versions.yml"
+
+authors:
+  - "@seandavi"

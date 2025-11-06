@@ -27,7 +27,7 @@ process KNEADDATA {
         --trimmomatic-options 'SLIDINGWINDOW:4:20 MINLEN:30' \\
         --bypass-trf \\
         --bowtie2-options='--very-fast' \\
-        -t 16 -p 8
+        -t ${task.cpus} -p ${task.cpus}
 
     cd kneaddata_output
     cat out_kneaddata.fastq | sed 's/^+.RR.*/+/g' > out.fastq

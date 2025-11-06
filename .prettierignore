@@ -1,0 +1,13 @@
+# Ignore Nextflow and Groovy files (no parser available)
+*.nf
+*.config
+
+# Ignore existing files from before refactoring
+docker/cloudbuild.yaml
+nextflow_schema.json
+unitn_setup.md
+
+# Ignore build artifacts and dependencies
+work/
+.nextflow*
+results/

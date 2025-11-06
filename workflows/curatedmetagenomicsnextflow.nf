@@ -9,7 +9,6 @@ include { LOCAL_FASTQC                  } from '../modules/local/local_fastqc/ma
 include { KNEADDATA                     } from '../modules/local/kneaddata/main'
 include { INSTALL_METAPHLAN_DB          } from '../modules/local/install_metaphlan_db/main'
 include { METAPHLAN_UNKNOWN_VIRUSES_LISTS } from '../modules/local/metaphlan_unknown_viruses_lists/main'
-include { METAPHLAN_UNKNOWN_LIST        } from '../modules/local/metaphlan_unknown_list/main'
 include { METAPHLAN_MARKERS             } from '../modules/local/metaphlan_markers/main'
 include { SAMPLE_TO_MARKERS             } from '../modules/local/sample_to_markers/main'
 include { CHOCOPHLAN_DB                 } from '../modules/local/chocophlan_db/main'

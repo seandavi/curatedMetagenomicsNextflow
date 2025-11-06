@@ -11,6 +11,7 @@ The pipeline has been successfully refactored from a monolithic structure to a m
 ### 1. Directory Structure
 
 **Before:**
+
 ```
 curatedMetagenomicsNextflow/
 ├── main.nf (800+ lines)
@@ -20,6 +21,7 @@ curatedMetagenomicsNextflow/
 ```
 
 **After:**
+
 ```
 curatedMetagenomicsNextflow/
 ├── main.nf (73 lines)
@@ -80,23 +82,27 @@ All processes have been extracted into individual modules:
 13. **HUMANN** - Functional profiling
 
 Each module includes:
+
 - `main.nf` - Process definition
 - `meta.yml` - Module metadata and documentation (for key modules)
 
 ### 3. Configuration Improvements
 
 #### conf/base.config
+
 - Defines base process settings
 - Implements resource labels (process_single, process_low, process_medium, process_high)
 - Includes check_max() function for resource management
 - Standard error handling strategies
 
 #### conf/modules.config
+
 - Module-specific configurations
 - PublishDir settings per module
 - Extension arguments support
 
 #### conf/test.config
+
 - Minimal test dataset configuration
 - Resource limits for CI/CD
 - Skip computationally expensive steps
@@ -104,6 +110,7 @@ Each module includes:
 ### 4. Parameter Standardization
 
 **New nf-core standard parameters:**
+
 - `--input` (replaces `--metadata_tsv`)
 - `--outdir` (replaces `--publish_dir`)
 - `--publish_dir_mode` (replaces `--publish_mode`)
@@ -111,18 +118,21 @@ Each module includes:
 - `--help`, `--version`
 
 **Backwards compatibility maintained:**
+
 - `--metadata_tsv` still works (maps to `--input`)
 - `--publish_dir` still works (maps to `--outdir`)
 
 ### 5. Workflow Structure
 
 **New workflow file:** `workflows/curatedmetagenomicsnextflow.nf`
+
 - Clean separation of concerns
 - Reusable helper functions
 - Improved readability
 - Better maintainability
 
 **Updated main.nf:**
+
 - Minimal entry point
 - Parameter validation
 - Help message
@@ -131,6 +141,7 @@ Each module includes:
 ### 6. Documentation
 
 #### README.md
+
 - Comprehensive usage guide
 - Installation instructions
 - Parameter documentation
@@ -139,20 +150,24 @@ Each module includes:
 - Quick start examples
 
 #### CHANGELOG.md
+
 - Version history
 - Detailed change log
 - Migration guide
 
 #### CITATIONS.md
+
 - All tool citations
 - Proper attribution
 - DOI links
 
 #### CODE_OF_CONDUCT.md
+
 - Community standards
 - Contributor guidelines
 
 #### Module meta.yml files
+
 - Input/output specifications
 - Tool descriptions
 - Keywords and authors
@@ -160,12 +175,14 @@ Each module includes:
 ### 7. CI/CD
 
 #### .github/workflows/ci.yml
+
 - Automated testing
 - Multiple Nextflow versions
 - Stub run testing
 - Profile testing
 
 #### .github/workflows/linting.yml
+
 - Code quality checks
 - nf-core lint
 - Pre-commit hooks
@@ -175,6 +192,7 @@ Each module includes:
 ### 8. Container Management
 
 Enhanced container support:
+
 - Docker profile
 - Singularity profile
 - Podman support
@@ -208,16 +226,19 @@ nextflow run . -profile test,docker --outdir results
 For users of the previous version:
 
 ### Old Command:
+
 ```bash
 nextflow run main.nf --metadata_tsv samples.tsv --publish_dir results
 ```
 
 ### New Command (recommended):
+
 ```bash
 nextflow run seandavi/curatedmetagenomicsnextflow --input samples.tsv --outdir results -profile docker
 ```
 
 ### Backwards Compatible:
+
 ```bash
 nextflow run seandavi/curatedmetagenomicsnextflow --metadata_tsv samples.tsv --publish_dir results
 ```
@@ -246,6 +267,7 @@ nextflow run seandavi/curatedmetagenomicsnextflow --metadata_tsv samples.tsv --p
 ## Validation
 
 The refactored pipeline:
+
 - ✅ Maintains all original functionality
 - ✅ Follows nf-core directory structure
 - ✅ Uses nf-core parameter conventions
@@ -258,6 +280,7 @@ The refactored pipeline:
 ## Next Steps
 
 Future enhancements could include:
+
 1. Creating subworkflows for related processes (e.g., METAPHLAN_PROFILE)
 2. Adding more module metadata files
 3. Implementing input validation schema

@@ -38,7 +38,6 @@ The pipeline is built using [Nextflow](https://www.nextflow.io), a workflow tool
    ```
 
    Note that some form of configuration will be needed so that Nextflow knows how to fetch the required software. This is usually done in the form of a config profile (`YOURPROFILE` in the example command above). You can chain multiple config profiles in a comma-separated string.
-
    - The pipeline comes with config profiles called `docker`, `singularity`, `podman`, `shifter`, `charliecloud` and `conda` which instruct the pipeline to use the named tool for software management. For example, `-profile test,docker`.
    - Please check [nf-core/configs](https://github.com/nf-core/configs#documentation) to see if a custom config file to run nf-core pipelines already exists for your Institute. If so, you can simply use `-profile <institute>` in your command. This will enable either `docker` or `singularity` and set the appropriate execution settings for your local compute environment.
    - If you are using `singularity`, please use the [`nf-core download`](https://nf-co.re/tools/#downloading-pipelines-for-offline-use) command to download images first, before running the pipeline. Setting the [`NXF_SINGULARITY_CACHEDIR` or `singularity.cacheDir`](https://www.nextflow.io/docs/latest/singularity.html?#singularity-docker-hub) Nextflow options enables you to store and re-use the images from a central location for future pipeline runs.
@@ -65,6 +64,7 @@ The samplesheet should be a tab-separated file with the following columns:
 - `NCBI_accession`: SRA accession number(s), separated by semicolons for multiple runs
 
 For local FASTQ files (with `--local_input`):
+
 - `sample_id`: Unique sample identifier
 - `file_paths`: Path(s) to FASTQ file(s), separated by semicolons for multiple files
 
@@ -127,17 +127,21 @@ Multiple profiles can be specified by separating them with a comma.
 ### Main arguments
 
 #### `--input`
+
 Path to input samplesheet (TSV format). This replaces the older `--metadata_tsv` parameter.
 
 #### `--outdir`
+
 The output directory where the results will be saved. You must use absolute paths to storage on Cloud infrastructure.
 
 #### `--local_input`
+
 Set to `true` to provide local FASTQ file paths instead of downloading from SRA.
 
 Default: `false`
 
 #### `--skip_humann`
+
 Skip HUMAnN functional profiling step.
 
 Default: `false`
@@ -152,26 +156,31 @@ The pipeline will automatically download and cache reference databases in the lo
 - Human and mouse reference genomes for KneadData
 
 #### `--store_dir`
+
 Directory to store reference databases.
 
 Default: `'databases'`
 
 #### `--metaphlan_index`
+
 MetaPhlAn database index version.
 
 Default: `'latest'`
 
 #### `--chocophlan`
+
 ChocoPhlAn database version for HUMAnN.
 
 Default: `'full'`
 
 #### `--uniref`
+
 UniRef database version for HUMAnN.
 
 Default: `'uniref90_diamond'`
 
 #### `--organism_database`
+
 Organism reference database for KneadData contamination removal.
 
 Options: `'human_genome'`, `'mouse_C57BL'`
@@ -207,15 +216,19 @@ If you use seandavi/curatedmetagenomicsnextflow for your analysis, please cite t
 ### Pipeline tools
 
 - [MetaPhlAn](https://github.com/biobakery/MetaPhlAn)
+
   > Blanco-Míguez A, Beghini F, Cumbo F, et al. Extending and improving metagenomic taxonomic profiling with uncharacterized species using MetaPhlAn 4. Nat Biotechnol. 2023;41(11):1633-1644. doi:10.1038/s41587-023-01688-w
 
 - [HUMAnN](https://github.com/biobakery/humann)
+
   > Beghini F, McIver LJ, Blanco-Míguez A, et al. Integrating taxonomic, functional, and strain-level profiling of diverse microbial communities with bioBakery 3. eLife. 2021;10:e65088. doi:10.7554/eLife.65088
 
 - [KneadData](https://github.com/biobakery/kneaddata)
+
   > The KneadData tool is part of the bioBakery suite of tools for metagenomic analysis.
 
 - [Nextflow](https://pubmed.ncbi.nlm.nih.gov/28398311/)
+
   > Di Tommaso P, Chatzou M, Floden EW, et al. Nextflow enables reproducible computational workflows. Nat Biotechnol. 2017;35(4):316-319. doi:10.1038/nbt.3820
 
 - [Docker](https://dl.acm.org/doi/10.5555/2600239.2600241)

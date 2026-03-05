@@ -567,6 +567,7 @@ process humann {
     path uniref_db
 
     output:
+    val(meta), emit: meta
     // lots of files....
     path("out_genefamilies.tsv.gz")
     path("out_genefamilies_cpm.tsv.gz")
@@ -663,6 +664,32 @@ process humann {
     versions:
         humann: \$( echo \$(humann --version 2>&1 ) | awk '{print \$2}')
     END_VERSIONS
+    """
+}
+
+
+process FINISHED {
+    publishDir "${params.publish_dir}/${meta.sample}", mode: "${params.publish_mode}"
+
+    tag "${meta.sample}"
+
+    cpus 1
+    memory "2g"
+
+    input:
+    val meta
+
+    output:
+    path "FINISHED"
+
+    stub:
+    """
+    echo "${meta.sample} \$(date -u +%Y-%m-%dT%H:%M:%SZ)" > FINISHED
+    """
+
+    script:
+    """
+    echo "${meta.sample} \$(date -u +%Y-%m-%dT%H:%M:%SZ)" > FINISHED
     """
 }
 
@@ -768,4 +795,21 @@ workflow {
            chocophlan_db.out.chocophlan_db,
            uniref_db.out.uniref_db)
     }
+
+    // Build a per-sample channel that fires only after metaphlan_markers
+    // and sample_to_markers have both completed for the same sample.
+    finished_ch = metaphlan_markers.out.meta
+        .map { meta -> tuple(meta.sample, meta) }
+        .join(sample_to_markers.out.meta.map { meta -> tuple(meta.sample, meta) })
+        .map { sample_id, meta1, meta2 -> meta1 }
+
+    if (!params.skip_humann) {
+        // Also wait for humann to complete for the sample.
+        finished_ch = finished_ch
+            .map { meta -> tuple(meta.sample, meta) }
+            .join(humann.out.meta.map { meta -> tuple(meta.sample, meta) })
+            .map { sample_id, meta1, meta2 -> meta1 }
+    }
+
+    FINISHED(finished_ch)
 }

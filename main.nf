@@ -203,7 +203,7 @@ process install_metaphlan_db {
     script:
     """
     echo ${PWD}
-    metaphlan --install --index latest --bowtie2db metaphlan
+    metaphlan --install --index ${params.metaphlan_index} --db_dir metaphlan
 
     cat <<-END_VERSIONS > versions.yml
     versions:
@@ -219,8 +219,8 @@ process metaphlan_unknown_viruses_lists {
 
     tag "${meta.sample}"
     
-    cpus 8
-    memory "30g"
+    cpus 16
+    memory "47g"
     
     input:
     val meta
@@ -231,18 +231,18 @@ process metaphlan_unknown_viruses_lists {
     output:
     val(meta), emit: meta
     path 'bowtie2.out.gz', emit: metaphlan_bt2
-    path 'sam.bz2', emit: metaphlan_sam
     path 'metaphlan_unknown_list.tsv', emit: metaphlan_unknown_list
     path 'metaphlan_unknown_list.tsv.gz', emit: metaphlan_unknown_list_gz
     path 'metaphlan_viruses_list.tsv', emit: metaphlan_viruses_list
     path 'metaphlan_viruses_list.tsv.gz', emit: metaphlan_viruses_list_gz
+    path 'metaphlan.sam', emit: metaphlan_sam
     path ".command*"
     path "versions.yml"
 
     stub:
     """
     touch bowtie2.out.gz
-    touch sam.bz2
+    touch sam.gz
     touch metaphlan_unknown_list.tsv
     touch metaphlan_unknown_list.tsv.gz
     touch metaphlan_viruses_list.tsv
@@ -257,12 +257,11 @@ process metaphlan_unknown_viruses_lists {
     find .
     metaphlan --input_type fastq \
         --index ${params.metaphlan_index} \
-        --bowtie2db metaphlan \
-        --samout sam.bz2 \
-        --bowtie2out bowtie2.out \
+        --db_dir metaphlan \
+        --mapout bowtie2.out \
         --nproc ${task.cpus} \
-        --unclassified_estimation \
         --profile_vsc \
+        -s metaphlan.sam \
         --vsc_breadth 0.75 \
         --vsc_out metaphlan_viruses_list.tsv \
         -o metaphlan_unknown_list.tsv \
@@ -285,7 +284,7 @@ process metaphlan_unknown_list {
 
     tag "${meta.sample}"
     
-    cpus 8
+    cpus 16
     memory "30g"
     
     input:
@@ -313,11 +312,10 @@ process metaphlan_unknown_list {
     script:
     """
     metaphlan \
-        --input_type bowtie2out \
+        --input_type mapout \
         --index ${params.metaphlan_index} \
-        --bowtie2db metaphlan \
+        --db_dir metaphlan \
         --nproc ${task.cpus} \
-        --unclassified_estimation \
         -o metaphlan_unknown_list.tsv \
         <( gunzip -c ${metaphlan_bt2} )
 
@@ -332,11 +330,11 @@ process metaphlan_unknown_list {
 }
 
 process metaphlan_markers {
-    publishDir "${params.publish_dir}/${meta.sample}/metaphlan_markers/", mode: "${params.publish_mode}"
+    publishDir "${params.publish_dir}/${meta.sample}/metaphlan_markers/", pattern: "{*tsv.gz,.command*}", mode: "${params.publish_mode}"
     
     tag "${meta.sample}"
 
-    cpus 2
+    cpus 16
     memory "30g"
 
     input:
@@ -348,6 +346,8 @@ process metaphlan_markers {
     val meta, emit: meta
     path "marker_abundance.tsv.gz", emit: marker_abundance
     path "marker_presence.tsv.gz", emit: marker_presence
+    path "marker_rel_ab_w_read_stats.tsv.gz", emit: marker_rel_ab_w_read_stats_gz
+    path "marker_rel_ab_w_read_stats.tsv", emit: marker_rel_ab_w_read_stats
     path ".command*"
     path "versions.yml"
 
@@ -361,19 +361,29 @@ process metaphlan_markers {
 
     script:
     """
-    metaphlan --input_type bowtie2out \
+    metaphlan --input_type mapout \
         --index ${params.metaphlan_index} \
-        --bowtie2db metaphlan \
+        --db_dir metaphlan \
         -t marker_pres_table \
+        --nproc ${task.cpus} \
         -o marker_presence.tsv \
         <( gunzip -c ${metaphlan_bt2} )    
-    metaphlan --input_type bowtie2out \
+    metaphlan --input_type mapout \
         --index ${params.metaphlan_index} \
-        --bowtie2db metaphlan \
+        --db_dir metaphlan \
+        --nproc ${task.cpus} \
         -t marker_ab_table \
         -o marker_abundance.tsv \
         <( gunzip -c ${metaphlan_bt2} )
+    metaphlan --input_type mapout \
+        --index ${params.metaphlan_index} \
+        --db_dir metaphlan \
+        -t rel_ab_w_read_stats \
+        --nproc ${task.cpus} \
+        -o marker_rel_ab_w_read_stats.tsv \
+        <( gunzip -c ${metaphlan_bt2} )
     gzip *.tsv
+    gunzip -c marker_rel_ab_w_read_stats.tsv.gz > marker_rel_ab_w_read_stats.tsv
 
     cat <<-END_VERSIONS > versions.yml
     versions:
@@ -388,7 +398,7 @@ process sample_to_markers {
     
     tag "${meta.sample}"
 
-    cpus 4
+    cpus 16
     memory "8g"
 
     input:
@@ -398,27 +408,24 @@ process sample_to_markers {
 
     output:
     val meta, emit: meta
-    path "sample_to_markers", emit: sample_to_markers
+    path "metaphlan.json.bz2", emit: sample_to_markers_json_bz2
     path ".command*"
     path "versions.yml"
 
     stub:
     """
-    mkdir sample_to_markers
     touch .command.run
     touch versions.yml
     """
 
     script:
     """
-    mkdir sample_to_markers
-
     sample2markers.py \
         --input ${metaphlan_sam} \
-        --input_format bz2 \
-        --database ${params.store_dir}/metaphlan/\$(cat ${params.store_dir}/metaphlan/mpa_latest).pkl \
+        --input_format sam \
+        --database ${metaphlan_db}/${params.metaphlan_index}.pkl \
         --nprocs ${task.cpus} \
-        --output_dir sample_to_markers
+        --output_dir .
 
     cat <<-END_VERSIONS > versions.yml
     versions:
@@ -450,6 +457,37 @@ process chocophlan_db {
     """
     echo ${PWD}
     humann_databases --update-config no --download chocophlan ${params.chocophlan} .
+
+    cat <<-END_VERSIONS > versions.yml
+    versions:
+        humann: \$( echo \$(humann --version 2>&1 ) | awk '{print \$2}')
+    END_VERSIONS
+    """
+}
+
+process utility_mapping_db {
+    cpus 1
+    memory "1g"
+
+    storeDir "${params.store_dir}"
+
+    output:
+    path "utility_mapping", emit: utility_mapping_db, type: 'dir'
+    path ".command*"
+    path "versions.yml"
+
+    stub:
+    """
+    mkdir -p utility_mapping
+    touch utility_mapping/db.fake
+    touch .command.run
+    touch versions.yml
+    """
+
+    script:
+    """
+    echo ${PWD}
+    humann_databases --update-config no --download utility_mapping full .
 
     cat <<-END_VERSIONS > versions.yml
     versions:
@@ -555,16 +593,17 @@ process kneaddata_mouse_database {
 process humann {
     publishDir "${params.publish_dir}/${meta.sample}/humann", mode: "${params.publish_mode}"
     cpus 16
-    memory "64g"
+    memory "48g"
 
     tag "${meta.sample}"
 
     input:
     val meta
     path fastq
-    path metaphlan_unknown_list // metaphlan_unknown_list.tsv
+    path marker_rel_ab_w_read_stats
     path chocophlan_db
     path uniref_db
+    path utility_mapping_db
 
     output:
     val(meta), emit: meta
@@ -625,10 +664,10 @@ process humann {
     humann -i ${fastq} \
         -o '.' \
         --verbose \
-        --metaphlan-options "-t rel_ab --index latest" \
         --nucleotide-database ${chocophlan_db} \
-        --taxonomic-profile ${metaphlan_unknown_list} \
+        --taxonomic-profile ${marker_rel_ab_w_read_stats} \
         --protein-database ${uniref_db} \
+        --utility-database ${utility_mapping_db}
         --threads ${task.cpus}
 
     humann_renorm_table \
@@ -750,6 +789,7 @@ workflow {
     install_metaphlan_db()
     uniref_db()
     chocophlan_db()
+    utility_mapping_db()
 
     // kneaddata, as written now, requires both 
     // human and mouse database functions to run
@@ -791,9 +831,10 @@ workflow {
         humann(
            kneaddata.out.meta,
            kneaddata.out.fastq,
-           metaphlan_unknown_viruses_lists.out.metaphlan_unknown_list,
+           metaphlan_markers.out.marker_rel_ab_w_read_stats,
            chocophlan_db.out.chocophlan_db,
-           uniref_db.out.uniref_db)
+           uniref_db.out.uniref_db,
+           utility_mapping_db.out.utility_mapping_db)
     }
 
     // Build a per-sample channel that fires only after metaphlan_markers

@@ -668,7 +668,7 @@ process humann {
 }
 
 
-process FINISHED {
+process MARK_COMPLETE {
     publishDir "${params.publish_dir}/${meta.sample}", mode: "${params.publish_mode}"
 
     tag "${meta.sample}"
@@ -680,16 +680,16 @@ process FINISHED {
     val meta
 
     output:
-    path "FINISHED"
+    path "MARK_COMPLETE"
 
     stub:
     """
-    echo "${meta.sample} \$(date -u +%Y-%m-%dT%H:%M:%SZ)" > FINISHED
+    echo "${meta.sample} \$(date -u +%Y-%m-%dT%H:%M:%SZ)" > MARK_COMPLETE
     """
 
     script:
     """
-    echo "${meta.sample} \$(date -u +%Y-%m-%dT%H:%M:%SZ)" > FINISHED
+    echo "${meta.sample} \$(date -u +%Y-%m-%dT%H:%M:%SZ)" > MARK_COMPLETE
     """
 }
 
@@ -811,5 +811,5 @@ workflow {
             .map { sample_id, meta1, meta2 -> meta1 }
     }
 
-    FINISHED(finished_ch)
+    MARK_COMPLETE(finished_ch)
 }

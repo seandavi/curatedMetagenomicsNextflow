@@ -399,7 +399,7 @@ process sample_to_markers {
     tag "${meta.sample}"
 
     cpus 16
-    memory "8g"
+    memory "32g"
 
     input:
     val meta

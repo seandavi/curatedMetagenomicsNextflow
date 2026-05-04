@@ -62,6 +62,11 @@ nextflow run main.nf --metadata_tsv samples.tsv --skip_humann --publish_dir resu
 | ------------- | -------------------------------- | ------- |
 | `skip_humann` | Skip HUMAnN functional profiling | `true` |
 
+`skip_humann=true` is the current supported default. The `skip_humann=false`
+path is kept in the pipeline for future use, but it is not expected to work
+correctly at present because the active MetaPhlAn database/version combination
+is not aligned with the HUMAnN branch.
+
 ### MetaPhlAn Parameters
 
 | Parameter         | Description            | Default  |
@@ -75,6 +80,10 @@ nextflow run main.nf --metadata_tsv samples.tsv --skip_humann --publish_dir resu
 | ------------ | --------------------------- | ------------------ |
 | `chocophlan` | ChocoPhlAn database version | `full`             |
 | `uniref`     | UniRef database version     | `uniref90_ec_filtered_diamond` |
+
+Important: enabling the HUMAnN branch currently requires coordinated
+MetaPhlAn/HUMAnN version alignment and validation. Treat the existing HUMAnN
+path as preserved-but-dormant until that compatibility work is done.
 
 ## Input Format
 

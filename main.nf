@@ -17,6 +17,10 @@ nextflow.enable.dsl=2
 
 
 process fasterq_dump {
+    label 'qc'
+    label 'io_heavy'
+    label 'download_retry'
+
     publishDir "${params.publish_dir}/${meta.sample}/fasterq_dump", pattern: "{fastq_line_count.txt,*_fastqc/fastqc_data.txt,sampleinfo.txt,.command*}", mode: "${params.publish_mode}"
     
     // maxForks 80
@@ -86,6 +90,9 @@ process fasterq_dump {
 }
 
 process local_fastqc {
+    label 'qc'
+    label 'io_heavy'
+
     publishDir "${params.publish_dir}/${meta.sample}/local_fastqc", pattern: "{fastq_line_count.txt,*_fastqc/fastqc_data.txt,sampleinfo.txt,.command*}", mode: "${params.publish_mode}"
     
     // maxForks 80
@@ -148,6 +155,8 @@ process local_fastqc {
 }
 
 process kneaddata {
+    label 'host_filter'
+
     publishDir "${params.publish_dir}/${meta.sample}/kneaddata", pattern: "{kneaddata_output/kneaddata_fastq_linecounts.txt,kneaddata_output/out_kneaddata.log,.command*}", mode: "${params.publish_mode}"
 
     tag "${meta.sample}"
@@ -195,6 +204,9 @@ process kneaddata {
 }
 
 process install_metaphlan_db {
+    label 'db_setup'
+    label 'download_retry'
+
     cpus 4
     memory "8g"
 
@@ -228,6 +240,8 @@ process install_metaphlan_db {
 }
 
 process metaphlan_unknown_viruses_lists {
+    label 'profiling'
+
     publishDir "${params.publish_dir}/${meta.sample}/metaphlan_lists", pattern: "{*tsv.gz,.command*}", mode: "${params.publish_mode}"
 
     tag "${meta.sample}"
@@ -293,6 +307,8 @@ process metaphlan_unknown_viruses_lists {
 }
 
 process metaphlan_unknown_list {
+    label 'profiling'
+
     publishDir "${params.publish_dir}/${meta.sample}/metaphlan_lists", pattern: "{*tsv.gz,.command*}", mode: "${params.publish_mode}"
 
     tag "${meta.sample}"
@@ -343,6 +359,8 @@ process metaphlan_unknown_list {
 }
 
 process metaphlan_markers {
+    label 'profiling'
+
     publishDir "${params.publish_dir}/${meta.sample}/metaphlan_markers/", pattern: "{*tsv.gz,.command*}", mode: "${params.publish_mode}"
     
     tag "${meta.sample}"
@@ -407,6 +425,8 @@ process metaphlan_markers {
 }
 
 process sample_to_markers {
+    label 'profiling'
+
     publishDir "${params.publish_dir}/${meta.sample}/strainphlan_markers/", mode: "${params.publish_mode}"
     
     tag "${meta.sample}"
@@ -448,6 +468,9 @@ process sample_to_markers {
 }
 
 process chocophlan_db {
+    label 'db_setup'
+    label 'download_retry'
+
     cpus 1
     memory "1g"
 
@@ -479,6 +502,9 @@ process chocophlan_db {
 }
 
 process utility_mapping_db {
+    label 'db_setup'
+    label 'download_retry'
+
     cpus 1
     memory "1g"
 
@@ -510,6 +536,9 @@ process utility_mapping_db {
 }
 
 process uniref_db {
+    label 'db_setup'
+    label 'download_retry'
+
     cpus 1
     memory "1g"
 
@@ -542,6 +571,9 @@ process uniref_db {
 }
 
 process kneaddata_human_database {
+    label 'db_setup'
+    label 'download_retry'
+
     cpus 1
     memory "4g"
 
@@ -573,6 +605,9 @@ process kneaddata_human_database {
 }
 
 process kneaddata_mouse_database {
+    label 'db_setup'
+    label 'download_retry'
+
     cpus 1
     memory "4g"
 
@@ -604,6 +639,8 @@ process kneaddata_mouse_database {
 }
 
 process humann {
+    label 'functional_profile'
+
     publishDir "${params.publish_dir}/${meta.sample}/humann", mode: "${params.publish_mode}"
     cpus 16
     memory "48g"
@@ -721,6 +758,8 @@ process humann {
 
 
 process MARK_COMPLETE {
+    label 'finalize'
+
     publishDir "${params.publish_dir}/${meta.sample}", mode: "${params.publish_mode}"
 
     tag "${meta.sample}"

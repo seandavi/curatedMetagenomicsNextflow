@@ -5,7 +5,7 @@
 process humann {
     label 'functional_profile'
 
-    publishDir "${params.publish_dir}/${meta.sample}/humann", mode: "${params.publish_mode}"
+    publishDir "${params.publish_dir ?: "${params.publish_base_dir}/${workflow.manifest.name}/${workflow.manifest.version}"}/${meta.sample}/humann", mode: "${params.publish_mode}"
     cpus 16
     memory "48g"
 

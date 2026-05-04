@@ -38,7 +38,7 @@ nextflow run main.nf --metadata_tsv samples.tsv
 With specific parameters:
 
 ```bash
-nextflow run main.nf --metadata_tsv samples.tsv --skip_humann --publish_dir results
+nextflow run main.nf --metadata_tsv samples.tsv --skip_humann --publish_base_dir results
 ```
 
 ## Parameters
@@ -51,7 +51,8 @@ nextflow run main.nf --metadata_tsv samples.tsv --skip_humann --publish_dir resu
 | `sample_id` | Sample identifier for single-sample mode | `null` |
 | `run_ids` | Semicolon-delimited run accessions for single-sample mode | `null` |
 | `local_input` | Interpret TSV `file_paths` instead of SRA accessions | `false` |
-| `publish_dir`  | Directory to publish results           | `gs://cmgd-data/results/cMDv4` |
+| `publish_base_dir`  | Base directory prefix for published results | `gs://cmgd-data/results/cMDv4` |
+| `publish_dir`  | Optional full publish root override after workflow-name/version expansion | `null` |
 | `store_dir`    | Directory to store reference databases | `databases`   |
 | `cmgd_version` | Curated Metagenomic Data version       | `4`           |
 | `publish_mode` | `publishDir` mode for all published outputs | `copy` |
@@ -112,17 +113,23 @@ sample1      /data/sample1_R1.fastq.gz;/data/sample1_R2.fastq.gz
 
 Results will be organized by sample in the `publish_dir` directory:
 ```
-results/
-├── sample1/
-│   ├── fasterq_dump/
-│   ├── kneaddata/
-│   ├── metaphlan_lists/
-│   ├── metaphlan_markers/
-│   ├── strainphlan_markers/
-│   └── humann/
-├── sample2/
-│   └── ...
+<publish_base_dir>/
+├── cmgd_nextflow/
+│   ├── 1.5.0/
+│   │   ├── sample1/
+│   │   │   ├── fasterq_dump/
+│   │   │   ├── kneaddata/
+│   │   │   ├── metaphlan_lists/
+│   │   │   ├── metaphlan_markers/
+│   │   │   ├── strainphlan_markers/
+│   │   │   └── humann/
+│   │   ├── sample2/
+│   │   │   └── ...
 ```
+
+The sample-level directory name is the normalized `meta.sample` value used for
+task tags. That comes from `--sample_id` in single-sample mode or the
+`sample_id` column in TSV-driven runs.
 
 ## Profiles
 

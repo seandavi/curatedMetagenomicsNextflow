@@ -11,7 +11,7 @@ process fasterq_dump {
     label 'io_heavy'
     label 'download_retry'
 
-    publishDir "${params.publish_dir}/${meta.sample}/fasterq_dump", pattern: "{fastq_line_count.txt,*_fastqc/fastqc_data.txt,sampleinfo.txt,.command*}", mode: "${params.publish_mode}"
+    publishDir "${params.publish_dir ?: "${params.publish_base_dir}/${workflow.manifest.name}/${workflow.manifest.version}"}/${meta.sample}/fasterq_dump", pattern: "{fastq_line_count.txt,*_fastqc/fastqc_data.txt,sampleinfo.txt,.command*}", mode: "${params.publish_mode}"
 
     cpus 8
     memory "16g"
@@ -82,7 +82,7 @@ process local_fastqc {
     label 'qc'
     label 'io_heavy'
 
-    publishDir "${params.publish_dir}/${meta.sample}/local_fastqc", pattern: "{fastq_line_count.txt,*_fastqc/fastqc_data.txt,sampleinfo.txt,.command*}", mode: "${params.publish_mode}"
+    publishDir "${params.publish_dir ?: "${params.publish_base_dir}/${workflow.manifest.name}/${workflow.manifest.version}"}/${meta.sample}/local_fastqc", pattern: "{fastq_line_count.txt,*_fastqc/fastqc_data.txt,sampleinfo.txt,.command*}", mode: "${params.publish_mode}"
 
     cpus 8
     memory "16g"

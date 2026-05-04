@@ -8,7 +8,7 @@
 process MARK_COMPLETE {
     label 'finalize'
 
-    publishDir "${params.publish_dir}/${meta.sample}", mode: "${params.publish_mode}"
+    publishDir "${params.publish_dir ?: "${params.publish_base_dir}/${workflow.manifest.name}/${workflow.manifest.version}"}/${meta.sample}", mode: "${params.publish_mode}"
 
     tag "${meta.sample}"
 

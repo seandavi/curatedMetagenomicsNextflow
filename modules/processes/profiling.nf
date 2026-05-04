@@ -5,7 +5,7 @@
 process kneaddata {
     label 'host_filter'
 
-    publishDir "${params.publish_dir}/${meta.sample}/kneaddata", pattern: "{kneaddata_output/kneaddata_fastq_linecounts.txt,kneaddata_output/out_kneaddata.log,.command*}", mode: "${params.publish_mode}"
+    publishDir "${params.publish_dir ?: "${params.publish_base_dir}/${workflow.manifest.name}/${workflow.manifest.version}"}/${meta.sample}/kneaddata", pattern: "{kneaddata_output/kneaddata_fastq_linecounts.txt,kneaddata_output/out_kneaddata.log,.command*}", mode: "${params.publish_mode}"
 
     tag "${meta.sample}"
 
@@ -54,7 +54,7 @@ process kneaddata {
 process metaphlan_unknown_viruses_lists {
     label 'profiling'
 
-    publishDir "${params.publish_dir}/${meta.sample}/metaphlan_lists", pattern: "{*tsv.gz,.command*}", mode: "${params.publish_mode}"
+    publishDir "${params.publish_dir ?: "${params.publish_base_dir}/${workflow.manifest.name}/${workflow.manifest.version}"}/${meta.sample}/metaphlan_lists", pattern: "{*tsv.gz,.command*}", mode: "${params.publish_mode}"
 
     tag "${meta.sample}"
 
@@ -121,7 +121,7 @@ process metaphlan_unknown_viruses_lists {
 process metaphlan_unknown_list {
     label 'profiling'
 
-    publishDir "${params.publish_dir}/${meta.sample}/metaphlan_lists", pattern: "{*tsv.gz,.command*}", mode: "${params.publish_mode}"
+    publishDir "${params.publish_dir ?: "${params.publish_base_dir}/${workflow.manifest.name}/${workflow.manifest.version}"}/${meta.sample}/metaphlan_lists", pattern: "{*tsv.gz,.command*}", mode: "${params.publish_mode}"
 
     tag "${meta.sample}"
 
@@ -173,7 +173,7 @@ process metaphlan_unknown_list {
 process metaphlan_markers {
     label 'profiling'
 
-    publishDir "${params.publish_dir}/${meta.sample}/metaphlan_markers/", pattern: "{*tsv.gz,.command*}", mode: "${params.publish_mode}"
+    publishDir "${params.publish_dir ?: "${params.publish_base_dir}/${workflow.manifest.name}/${workflow.manifest.version}"}/${meta.sample}/metaphlan_markers/", pattern: "{*tsv.gz,.command*}", mode: "${params.publish_mode}"
 
     tag "${meta.sample}"
 
@@ -241,7 +241,7 @@ process metaphlan_markers {
 process sample_to_markers {
     label 'profiling'
 
-    publishDir "${params.publish_dir}/${meta.sample}/strainphlan_markers/", mode: "${params.publish_mode}"
+    publishDir "${params.publish_dir ?: "${params.publish_base_dir}/${workflow.manifest.name}/${workflow.manifest.version}"}/${meta.sample}/strainphlan_markers/", mode: "${params.publish_mode}"
 
     tag "${meta.sample}"
 

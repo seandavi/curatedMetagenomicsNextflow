@@ -180,6 +180,63 @@ nextflow run . \
 That test path disables telemetry, reports, trace output, containers, and cloud
 publishing so the full DAG can be validated in restricted local environments.
 
+## Development Test Harness
+
+The recommended developer test entrypoint is `just`, with Nextflow-native tests
+implemented in `nf-test`.
+
+Why this split:
+
+- `just` gives the repository one obvious command surface for developers and CI
+- `nextflow config` checks catch profile and config composition regressions
+- `nextflow ... -stub-run` provides a fast whole-DAG structural smoke test
+- `nf-test` is purpose-built for testing Nextflow pipelines, processes, and functions
+
+### `just` commands
+
+This repository currently keeps all developer recipes in a single `test` group:
+
+```bash
+just --list --unsorted
+```
+
+The most important recipes are:
+
+- `just test-config-local`
+- `just test-config-all`
+- `just test-stub`
+- `just test-nf`
+- `just test-clean`
+
+### `nf-test` layout
+
+The repo includes a minimal `nf-test` setup intended for structural and helper
+function validation rather than full end-to-end execution:
+
+- `nf-test.config`
+  - default nf-test settings
+- `tests/nextflow.config`
+  - test-specific Nextflow config that reuses the offline local overrides
+- `tests/main.nf.test`
+  - top-level pipeline smoke tests
+- `tests/main.functions.nf.test`
+  - helper-function unit tests
+
+`nf-test` is not bundled with Nextflow. Install it separately before running
+`just test-nf` or `nf-test test`.
+
+### Recommended local workflow
+
+For routine development, use this order:
+
+1. `just test-config-local`
+2. `just test-stub`
+3. `just test-nf`
+
+That sequence is intentionally lightweight. It gives fast feedback on config
+resolution, workflow structure, and helper-function behavior without requiring a
+cluster or a complete real-data e2e suite.
+
 ## Invariants
 
 The following are treated as compatibility constraints during refactoring:

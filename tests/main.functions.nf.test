@@ -1,0 +1,46 @@
+nextflow_function {
+
+    name "Pipeline helper functions"
+    tag "functions"
+
+    script "../main.nf"
+
+    test("generate_sample_metadata_single_sample returns normalized accession metadata") {
+        function "generate_sample_metadata_single_sample"
+
+        when {
+            function {
+                """
+                input[0] = "SAMPLE_A"
+                input[1] = "SRR1;SRR2"
+                """
+            }
+        }
+
+        then {
+            assert function.success
+            assert function.result.sample == "SAMPLE_A"
+            assert function.result.accessions == ["SRR1", "SRR2"]
+            assert function.result.meta == null
+        }
+    }
+
+    test("generate_row_tuple_local splits semicolon-delimited local paths") {
+        function "generate_row_tuple_local"
+
+        when {
+            function {
+                """
+                input[0] = [sample_id: "SAMPLE_B", file_paths: "/tmp/a.fastq.gz;/tmp/b.fastq.gz"]
+                """
+            }
+        }
+
+        then {
+            assert function.success
+            assert function.result.sample == "SAMPLE_B"
+            assert function.result.fpaths == ["/tmp/a.fastq.gz", "/tmp/b.fastq.gz"]
+            assert function.result.meta.sample_id == "SAMPLE_B"
+        }
+    }
+}

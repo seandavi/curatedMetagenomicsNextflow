@@ -1,0 +1,40 @@
+nextflow_pipeline {
+
+    name "Top-level pipeline structure"
+    tag "pipeline"
+    tag "stub"
+
+    script "../main.nf"
+
+    test("Single-sample stub run completes through MARK_COMPLETE") {
+
+        when {
+            params {
+                sample_id = "TEST_SAMPLE"
+                run_ids = "SRR000001"
+                skip_humann = true
+            }
+        }
+
+        then {
+            assert workflow.success
+            assert workflow.failed == false
+            assert workflow.exitStatus == 0
+            assert workflow.errorReport == null || workflow.errorReport.isEmpty()
+        }
+    }
+
+    test("Missing sample arguments fails fast with a clear error") {
+
+        when {
+            params {
+                skip_humann = true
+            }
+        }
+
+        then {
+            assert workflow.failed
+            assert workflow.errorReport.contains("Either metadata_tsv or run_ids/sample_id must be provided")
+        }
+    }
+}

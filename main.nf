@@ -2,6 +2,19 @@
 
 nextflow.enable.dsl=2
 
+/*
+ * Curated Metagenomic Data pipeline
+ *
+ * Refactor invariant:
+ * - Published directory names and file names must remain unchanged.
+ * - Process output file names must remain unchanged.
+ * - Workflow branching semantics must remain unchanged.
+ *
+ * This file should remain readable as the canonical pipeline definition.
+ * Operational policy such as retries, resource scaling, and executor-specific
+ * settings are better expressed in configuration where possible.
+ */
+
 
 process fasterq_dump {
     publishDir "${params.publish_dir}/${meta.sample}/fasterq_dump", pattern: "{fastq_line_count.txt,*_fastqc/fastqc_data.txt,sampleinfo.txt,.command*}", mode: "${params.publish_mode}"
@@ -172,7 +185,7 @@ process kneaddata {
         --trimmomatic-options 'SLIDINGWINDOW:4:20 MINLEN:30' \
         --bypass-trf \
 	--bowtie2-options='--very-fast' \
-	-t 16 -p 8
+	-t ${task.cpus} -p ${task.cpus}
 
     cd kneaddata_output
     cat out_kneaddata.fastq | sed 's/^+.RR.*/+/g' > out.fastq
@@ -667,7 +680,7 @@ process humann {
         --nucleotide-database ${chocophlan_db} \
         --taxonomic-profile ${marker_rel_ab_w_read_stats} \
         --protein-database ${uniref_db} \
-        --utility-database ${utility_mapping_db}
+        --utility-database ${utility_mapping_db} \
         --threads ${task.cpus}
 
     humann_renorm_table \
@@ -733,6 +746,12 @@ process MARK_COMPLETE {
 }
 
 
+/*
+ * Metadata helpers normalize both TSV-driven and single-sample invocations
+ * into a common metadata structure used throughout the pipeline:
+ *
+ *   [sample: <sample_id>, accessions|fpaths: [...], meta: <source row or null>]
+ */
 def generate_row_tuple(row) {
     accessions = row.NCBI_accession.split(';');
     sample_id = row.sample_id;
@@ -753,7 +772,11 @@ def generate_sample_metadata_single_sample(sample_id, run_ids) {
 workflow {
 
     samples = null
-    // Allow EITHER metadata_tsv or run_ids/sample_id
+    /*
+     * Input contract:
+     * - Either provide a metadata TSV
+     * - Or provide both run_ids and sample_id for a single sample
+     */
     if (params.metadata_tsv == null) {
         if (params.run_ids == null) or (params.sample_id == null) {
             error "Either metadata_tsv or run_ids/sample_id must be provided"
@@ -791,10 +814,12 @@ workflow {
     chocophlan_db()
     utility_mapping_db()
 
-    // kneaddata, as written now, requires both 
-    // human and mouse database functions to run
-    // in order to access output in next few
-    // lines below.
+    /*
+     * Current behavior note:
+     * both kneaddata database setup processes are invoked because downstream
+     * wiring currently expects both channels to exist. This is a refactor
+     * target, but the behavior is preserved here intentionally.
+     */
     kneaddata_human_database()
     kneaddata_mouse_database()
     
@@ -837,15 +862,17 @@ workflow {
            utility_mapping_db.out.utility_mapping_db)
     }
 
-    // Build a per-sample channel that fires only after metaphlan_markers
-    // and sample_to_markers have both completed for the same sample.
+    /*
+     * Build a per-sample completion channel that only emits once both
+     * MetaPhlAn-derived branches have completed for the same sample.
+     */
     finished_ch = metaphlan_markers.out.meta
         .map { meta -> tuple(meta.sample, meta) }
         .join(sample_to_markers.out.meta.map { meta -> tuple(meta.sample, meta) })
         .map { sample_id, meta1, meta2 -> meta1 }
 
     if (!params.skip_humann) {
-        // Also wait for humann to complete for the sample.
+        // Also gate completion on HUMAnN when that branch is enabled.
         finished_ch = finished_ch
             .map { meta -> tuple(meta.sample, meta) }
             .join(humann.out.meta.map { meta -> tuple(meta.sample, meta) })

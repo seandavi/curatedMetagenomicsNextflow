@@ -8,3 +8,7 @@ swarm_*
 pipeline_trace*
 curatedmetagenomicdata-*.json
 venv/
+databases/
+test-results/
+report-*.html
+timeline-*.html

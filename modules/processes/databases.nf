@@ -1,0 +1,201 @@
+/*
+ * Reference database setup processes
+ *
+ * These tasks populate storeDir-backed assets so expensive downloads and
+ * indexing work can be reused across runs.
+ */
+
+process install_metaphlan_db {
+    label 'db_setup'
+    label 'download_retry'
+
+    cpus 4
+    memory "8g"
+
+    storeDir "${params.store_dir}"
+
+    output:
+    path 'metaphlan', emit: metaphlan_db, type: 'dir'
+    path ".command*"
+    path "versions.yml"
+
+    stub:
+    """
+    mkdir -p metaphlan
+    touch metaphlan/db.fake
+    touch .command.run
+    touch versions.yml
+    """
+
+    script:
+    """
+    echo ${PWD}
+    metaphlan --install --index ${params.metaphlan_index} --db_dir metaphlan
+
+    cat <<-END_VERSIONS > versions.yml
+    versions:
+        metaphlan: \$( echo \$(metaphlan --version 2>&1 ) | awk '{print \$3}')
+        bowtie2: \$( echo \$(bowtie2 --version 2>&1 ) | awk '{print \$3}')
+    END_VERSIONS
+
+    """
+}
+
+process chocophlan_db {
+    label 'db_setup'
+    label 'download_retry'
+
+    cpus 1
+    memory "1g"
+
+    storeDir "${params.store_dir}"
+
+    output:
+    path "chocophlan", emit: chocophlan_db, type: 'dir'
+    path ".command*"
+    path "versions.yml"
+
+    stub:
+    """
+    mkdir -p chocophlan
+    touch chocophlan/db.fake
+    touch .command.run
+    touch versions.yml
+    """
+
+    script:
+    """
+    echo ${PWD}
+    humann_databases --update-config no --download chocophlan ${params.chocophlan} .
+
+    cat <<-END_VERSIONS > versions.yml
+    versions:
+        humann: \$( echo \$(humann --version 2>&1 ) | awk '{print \$2}')
+    END_VERSIONS
+    """
+}
+
+process utility_mapping_db {
+    label 'db_setup'
+    label 'download_retry'
+
+    cpus 1
+    memory "1g"
+
+    storeDir "${params.store_dir}"
+
+    output:
+    path "utility_mapping", emit: utility_mapping_db, type: 'dir'
+    path ".command*"
+    path "versions.yml"
+
+    stub:
+    """
+    mkdir -p utility_mapping
+    touch utility_mapping/db.fake
+    touch .command.run
+    touch versions.yml
+    """
+
+    script:
+    """
+    echo ${PWD}
+    humann_databases --update-config no --download utility_mapping full .
+
+    cat <<-END_VERSIONS > versions.yml
+    versions:
+        humann: \$( echo \$(humann --version 2>&1 ) | awk '{print \$2}')
+    END_VERSIONS
+    """
+}
+
+process uniref_db {
+    label 'db_setup'
+    label 'download_retry'
+
+    cpus 1
+    memory "1g"
+
+    storeDir "${params.store_dir}"
+
+    output:
+    path "uniref", emit: uniref_db, type: 'dir'
+    path ".command*"
+    path "versions.yml"
+
+    stub:
+    """
+    mkdir -p uniref
+    touch uniref/db.fake
+    touch .command.run
+    touch versions.yml
+    """
+
+
+    script:
+    """
+    echo ${PWD}
+    humann_databases --update-config no --download uniref ${params.uniref} .
+
+    cat <<-END_VERSIONS > versions.yml
+    versions:
+        humann: \$( echo \$(humann --version 2>&1 ) | awk '{print \$2}')
+    END_VERSIONS
+    """
+}
+
+process kneaddata_human_database {
+    label 'db_setup'
+    label 'download_retry'
+
+    cpus 1
+    memory "4g"
+
+    storeDir "${params.store_dir}"
+
+    output:
+    path "human_genome", emit: kd_genome, type: "dir"
+    path ".command*"
+
+    stub:
+    """
+    mkdir -p human_genome
+    touch human_genome/hg37dec_v0.1.1.bt2
+    touch .command.run
+    """
+
+    script:
+    """
+    echo ${PWD}
+    mkdir -p human_genome
+    kneaddata_database --download human_genome bowtie2 human_genome
+    """
+}
+
+process kneaddata_mouse_database {
+    label 'db_setup'
+    label 'download_retry'
+
+    cpus 1
+    memory "4g"
+
+    storeDir "${params.store_dir}"
+
+    output:
+    path "mouse_C57BL", emit: kd_mouse, type: "dir"
+    path ".command*"
+
+    stub:
+    """
+    mkdir -p mouse_C57BL
+    touch mouse_C57BL/mouse_C57BL_6NJ_Bowtie2_v0.1.bt2
+    touch .command.run
+    """
+
+    script:
+    """
+    echo ${PWD}
+    mkdir -p mouse_C57BL
+    kneaddata_database --download mouse_C57BL bowtie2 mouse_C57BL
+    """
+}

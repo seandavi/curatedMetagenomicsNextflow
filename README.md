@@ -115,7 +115,7 @@ Results will be organized by sample in the `publish_dir` directory:
 ```
 <publish_base_dir>/
 ├── cmgd_nextflow/
-│   ├── 1.5.0/
+│   ├── 1.6.0/
 │   │   ├── sample1/
 │   │   │   ├── fasterq_dump/
 │   │   │   ├── kneaddata/

@@ -1,9 +1,30 @@
 set shell := ["bash", "-euo", "pipefail", "-c"]
 
+nf_test := "./tools/bin/nf-test"
+
 [group('test')]
 [default]
 test:
     @just --list --unsorted
+
+[group('test')]
+test-bootstrap:
+    mkdir -p tools/bin
+    if [[ ! -x {{nf_test}} ]]; then \
+      echo "Installing nf-test into tools/bin"; \
+      curl -fsSL https://get.nf-test.com | bash; \
+      mv nf-test {{nf_test}}; \
+      chmod +x {{nf_test}}; \
+    else \
+      echo "nf-test already installed at {{nf_test}}"; \
+    fi
+
+[group('test')]
+test-nf-install: test-bootstrap
+
+[group('test')]
+test-nf-version: test-bootstrap
+    {{nf_test}} version
 
 [group('test')]
 test-config-local:
@@ -26,16 +47,16 @@ test-stub:
       --run_ids SRR000001
 
 [group('test')]
-test-nf-list:
-    nf-test list
+test-nf-list: test-bootstrap
+    {{nf_test}} list
 
 [group('test')]
-test-nf:
-    nf-test test
+test-nf: test-bootstrap
+    {{nf_test}} test
 
 [group('test')]
-test-nf-verbose:
-    nf-test test --verbose
+test-nf-verbose: test-bootstrap
+    {{nf_test}} test --verbose
 
 [group('test')]
 test-clean:

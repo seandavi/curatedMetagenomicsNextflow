@@ -202,6 +202,7 @@ just --list --unsorted
 
 The most important recipes are:
 
+- `just test-bootstrap`
 - `just test-config-local`
 - `just test-config-all`
 - `just test-stub`
@@ -222,16 +223,27 @@ function validation rather than full end-to-end execution:
 - `tests/main.functions.nf.test`
   - helper-function unit tests
 
-`nf-test` is not bundled with Nextflow. Install it separately before running
-`just test-nf` or `nf-test test`.
+`nf-test` is not bundled with Nextflow and it is not a Nextflow plugin. This
+repository treats it as a repo-local developer tool and installs it into
+`tools/bin/nf-test`.
+
+Bootstrap it with:
+
+```bash
+just test-bootstrap
+```
+
+After that, use the `just` recipes rather than relying on a separately managed
+global `nf-test` binary.
 
 ### Recommended local workflow
 
 For routine development, use this order:
 
-1. `just test-config-local`
-2. `just test-stub`
-3. `just test-nf`
+1. `just test-bootstrap`
+2. `just test-config-local`
+3. `just test-stub`
+4. `just test-nf`
 
 That sequence is intentionally lightweight. It gives fast feedback on config
 resolution, workflow structure, and helper-function behavior without requiring a

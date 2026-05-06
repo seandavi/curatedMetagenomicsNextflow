@@ -26,11 +26,15 @@ include {
 } from './modules/processes/databases'
 include {
     kneaddata
-    metaphlan_unknown_viruses_lists
+    metaphlan_unknown_viruses_lists as metaphlan_unknown_viruses_lists_full
+    metaphlan_unknown_viruses_lists as metaphlan_unknown_viruses_lists_rarefied
     metaphlan_unknown_list
-    metaphlan_markers
-    sample_to_markers
+    metaphlan_markers as metaphlan_markers_full
+    metaphlan_markers as metaphlan_markers_rarefied
+    sample_to_markers as sample_to_markers_full
+    sample_to_markers as sample_to_markers_rarefied
 } from './modules/processes/profiling'
+include { rarefy_fastq } from './modules/processes/rarefaction'
 include { humann } from './modules/processes/humann'
 include { MARK_COMPLETE } from './modules/processes/finalize'
 
@@ -111,6 +115,15 @@ workflow {
 
     /*
      * Core preprocessing and profiling section
+     *
+     * When skip_rarefied is false (the default), both a full and a rarefied
+     * profiling branch run in parallel. The branch is identified by the
+     * meta.branch key ('full_data' or 'rarefied_data'), which is used by the
+     * profiling processes to write outputs into distinct subdirectories.
+     *
+     * When skip_rarefied is true, only the full branch runs and meta.branch is
+     * not set, so publishDir paths remain identical to previous pipeline
+     * versions (backward-compatible output layout).
      */
     if (params.local_input) {
         kneaddata(
@@ -126,42 +139,103 @@ workflow {
             kneaddata_mouse_database.out.kd_mouse.collect())
     }
 
-    metaphlan_unknown_viruses_lists(
-        kneaddata.out.meta,
+    /*
+     * Determine the meta channel for the full branch.
+     *
+     * When the rarefied branch is also active we tag meta with branch='full_data'
+     * so that the profiling processes publish outputs into a branch-specific
+     * subdirectory.  When skip_rarefied is true the meta is left unmodified so
+     * that output paths remain identical to the pre-dual-branch layout.
+     */
+    if (!params.skip_rarefied) {
+        full_meta_ch = kneaddata.out.meta.map { meta -> meta + [branch: 'full_data'] }
+    } else {
+        full_meta_ch = kneaddata.out.meta
+    }
+
+    metaphlan_unknown_viruses_lists_full(
+        full_meta_ch,
         kneaddata.out.fastq,
         install_metaphlan_db.out.metaphlan_db.collect())
 
-    metaphlan_markers(
-        metaphlan_unknown_viruses_lists.out.meta,
-        metaphlan_unknown_viruses_lists.out.metaphlan_bt2,
+    metaphlan_markers_full(
+        metaphlan_unknown_viruses_lists_full.out.meta,
+        metaphlan_unknown_viruses_lists_full.out.metaphlan_bt2,
         install_metaphlan_db.out.metaphlan_db.collect())
 
-    sample_to_markers(
-        metaphlan_unknown_viruses_lists.out.meta,
-        metaphlan_unknown_viruses_lists.out.metaphlan_sam,
+    sample_to_markers_full(
+        metaphlan_unknown_viruses_lists_full.out.meta,
+        metaphlan_unknown_viruses_lists_full.out.metaphlan_sam,
         install_metaphlan_db.out.metaphlan_db.collect())
 
     /*
-     * Optional HUMAnN branch
+     * Optional rarefied branch
+     *
+     * Downsample reads with seqtk then run the same profiling steps under the
+     * 'rarefied_data' subdirectory so the outputs can be compared side-by-side
+     * with the full-depth results.
+     */
+    if (!params.skip_rarefied) {
+        rarefied_meta_ch = kneaddata.out.meta.map { meta -> meta + [branch: 'rarefied_data'] }
+
+        rarefy_fastq(
+            rarefied_meta_ch,
+            kneaddata.out.fastq)
+
+        metaphlan_unknown_viruses_lists_rarefied(
+            rarefy_fastq.out.meta,
+            rarefy_fastq.out.fastq,
+            install_metaphlan_db.out.metaphlan_db.collect())
+
+        metaphlan_markers_rarefied(
+            metaphlan_unknown_viruses_lists_rarefied.out.meta,
+            metaphlan_unknown_viruses_lists_rarefied.out.metaphlan_bt2,
+            install_metaphlan_db.out.metaphlan_db.collect())
+
+        sample_to_markers_rarefied(
+            metaphlan_unknown_viruses_lists_rarefied.out.meta,
+            metaphlan_unknown_viruses_lists_rarefied.out.metaphlan_sam,
+            install_metaphlan_db.out.metaphlan_db.collect())
+    }
+
+    /*
+     * Optional HUMAnN branch (uses full-depth data only)
      */
     if (!params.skip_humann) {
         humann(
-           kneaddata.out.meta,
+           metaphlan_unknown_viruses_lists_full.out.meta,
            kneaddata.out.fastq,
-           metaphlan_markers.out.marker_rel_ab_w_read_stats,
+           metaphlan_markers_full.out.marker_rel_ab_w_read_stats,
            chocophlan_db.out.chocophlan_db,
            uniref_db.out.uniref_db,
            utility_mapping_db.out.utility_mapping_db)
     }
 
     /*
-     * Build a per-sample completion channel that only emits once both
-     * MetaPhlAn-derived branches have completed for the same sample.
+     * Build a per-sample completion channel that fires only once all active
+     * branches have finished for a given sample.
+     *
+     * Full branch: join metaphlan_markers_full and sample_to_markers_full.
+     * Rarefied branch (when enabled): also join metaphlan_markers_rarefied and
+     * sample_to_markers_rarefied.
+     * HUMAnN branch (when enabled): additionally gate on humann output.
      */
-    finished_ch = metaphlan_markers.out.meta
+    finished_ch = metaphlan_markers_full.out.meta
         .map { meta -> tuple(meta.sample, meta) }
-        .join(sample_to_markers.out.meta.map { meta -> tuple(meta.sample, meta) })
+        .join(sample_to_markers_full.out.meta.map { meta -> tuple(meta.sample, meta) })
         .map { sample_id, meta1, meta2 -> meta1 }
+
+    if (!params.skip_rarefied) {
+        finished_rarefied_ch = metaphlan_markers_rarefied.out.meta
+            .map { meta -> tuple(meta.sample, meta) }
+            .join(sample_to_markers_rarefied.out.meta.map { meta -> tuple(meta.sample, meta) })
+            .map { sample_id, meta1, meta2 -> meta1 }
+
+        finished_ch = finished_ch
+            .map { meta -> tuple(meta.sample, meta) }
+            .join(finished_rarefied_ch.map { meta -> tuple(meta.sample, meta) })
+            .map { sample_id, meta1, meta2 -> meta1 }
+    }
 
     if (!params.skip_humann) {
         // Also gate completion on HUMAnN when that branch is enabled.

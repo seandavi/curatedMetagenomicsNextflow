@@ -7,8 +7,9 @@ A NextFlow pipeline for processing metagenomics data, implementing the curatedMe
 This pipeline processes raw sequencing data through multiple steps:
 1. FASTQ extraction with `fasterq-dump`
 2. Quality control with `KneadData`
-3. Taxonomic profiling with `MetaPhlAn`
-4. Functional profiling with `HUMAnN` (optional)
+3. Rarefaction to 1 M reads with `seqtk sample` (optional, enabled by default)
+4. Taxonomic profiling with `MetaPhlAn` — run on both the full and rarefied reads in parallel
+5. Functional profiling with `HUMAnN` (optional, uses full-depth reads)
 
 ## Repository Structure
 
@@ -59,14 +60,40 @@ nextflow run main.nf --metadata_tsv samples.tsv --skip_humann --publish_base_dir
 
 ### Process Control Parameters
 
-| Parameter     | Description                      | Default |
-| ------------- | -------------------------------- | ------- |
-| `skip_humann` | Skip HUMAnN functional profiling | `true` |
+| Parameter        | Description                      | Default |
+| ---------------- | -------------------------------- | ------- |
+| `skip_humann`    | Skip HUMAnN functional profiling | `true` |
+| `skip_rarefied`  | Skip the rarefied profiling branch | `false` |
 
 `skip_humann=true` is the current supported default. The `skip_humann=false`
 path is kept in the pipeline for future use, but it is not expected to work
 correctly at present because the active MetaPhlAn database/version combination
 is not aligned with the HUMAnN branch.
+
+### Rarefaction Parameters
+
+| Parameter      | Description                                       | Default   |
+| -------------- | ------------------------------------------------- | --------- |
+| `skip_rarefied`| Disable the rarefied branch (restores legacy layout) | `false` |
+| `rarefy_reads` | Target read depth for rarefaction                 | `1000000` |
+| `rarefy_seed`  | Random seed for reproducible rarefaction          | `42`      |
+
+When `skip_rarefied=false` (the default) the pipeline runs a rarefied profiling
+branch in parallel with the full-depth branch.  Both sets of outputs appear
+under the sample directory, distinguished by a branch subdirectory:
+
+```
+<sample>/full_data/metaphlan_lists/
+<sample>/full_data/metaphlan_markers/
+<sample>/full_data/strainphlan_markers/
+<sample>/rarefied_data/rarefaction/
+<sample>/rarefied_data/metaphlan_lists/
+<sample>/rarefied_data/metaphlan_markers/
+<sample>/rarefied_data/strainphlan_markers/
+```
+
+Set `--skip_rarefied` to suppress the rarefied branch and restore the original
+single-branch layout (without the `full_data/` subdirectory prefix).
 
 ### MetaPhlAn Parameters
 
@@ -111,18 +138,41 @@ sample1      /data/sample1_R1.fastq.gz;/data/sample1_R2.fastq.gz
 
 ## Output
 
-Results will be organized by sample in the `publish_dir` directory:
+Results will be organized by sample in the `publish_dir` directory.
+
+### Dual-branch layout (default, `skip_rarefied=false`)
+
 ```
 <publish_base_dir>/
 ├── cmgd_nextflow/
 │   ├── 1.6.0/
 │   │   ├── sample1/
-│   │   │   ├── fasterq_dump/
+│   │   │   ├── kneaddata/
+│   │   │   ├── full_data/
+│   │   │   │   ├── metaphlan_lists/
+│   │   │   │   ├── metaphlan_markers/
+│   │   │   │   └── strainphlan_markers/
+│   │   │   └── rarefied_data/
+│   │   │       ├── rarefaction/
+│   │   │       ├── metaphlan_lists/
+│   │   │       ├── metaphlan_markers/
+│   │   │       └── strainphlan_markers/
+│   │   ├── sample2/
+│   │   │   └── ...
+```
+
+### Single-branch layout (`--skip_rarefied`, backward-compatible)
+
+```
+<publish_base_dir>/
+├── cmgd_nextflow/
+│   ├── 1.6.0/
+│   │   ├── sample1/
 │   │   │   ├── kneaddata/
 │   │   │   ├── metaphlan_lists/
 │   │   │   ├── metaphlan_markers/
 │   │   │   ├── strainphlan_markers/
-│   │   │   └── humann/
+│   │   │   └── humann/         (only when --skip_humann false)
 │   │   ├── sample2/
 │   │   │   └── ...
 ```

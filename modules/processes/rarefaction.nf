@@ -29,6 +29,6 @@ process rarefy_fastq {
 
     script:
     """
-    seqtk sample -s${params.rarefy_seed} ${fastq} ${params.rarefy_reads} > rarefied.fastq
+    seqtk sample -s ${params.rarefy_seed} ${fastq} ${params.rarefy_reads} > rarefied.fastq
     """
 }

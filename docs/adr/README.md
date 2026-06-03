@@ -55,3 +55,4 @@ other. This preserves the historical record rather than rewriting it.
 | [0005](0005-per-sample-manifest.md) | Per-sample provenance & read-accounting manifest | Accepted |
 | [0006](0006-kraken2-bracken-complementary-profiler.md) | Complementary read-based profiling with Kraken2 + Bracken | Accepted |
 | [0007](0007-resistome-rgi-card.md) | Resistome profiling with RGI against CARD | Accepted |
+| [0008](0008-per-sample-qc-reporting.md) | Per-sample post-decontamination FastQC | Accepted |

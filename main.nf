@@ -49,6 +49,7 @@ include {
     bracken as bracken_rarefied
 } from './modules/processes/kraken'
 include { resistome } from './modules/processes/resistome'
+include { fastqc } from './modules/processes/qc'
 include { humann } from './modules/processes/humann'
 include { sample_manifest } from './modules/processes/manifest'
 include { MARK_COMPLETE } from './modules/processes/finalize'
@@ -236,6 +237,16 @@ workflow {
     }
 
     /*
+     * Per-sample QC: FastQC on the host-decontaminated reads (raw-read FastQC
+     * already runs in fasterq_dump/local_fastqc).
+     */
+    if (!params.skip_fastqc) {
+        fastqc(
+            kneaddata.out.meta,
+            kneaddata.out.fastq)
+    }
+
+    /*
      * Per-sample manifest
      *
      * Join (by sample) the raw reads + their versions, the host-decontaminated
@@ -364,6 +375,14 @@ workflow {
         finished_ch = finished_ch
             .map { meta -> tuple(meta.sample, meta) }
             .join(resistome.out.meta.map { meta -> tuple(meta.sample, meta) })
+            .map { sample_id, meta1, meta2 -> meta1 }
+    }
+
+    if (!params.skip_fastqc) {
+        // Gate completion on the post-decontamination FastQC.
+        finished_ch = finished_ch
+            .map { meta -> tuple(meta.sample, meta) }
+            .join(fastqc.out.meta.map { meta -> tuple(meta.sample, meta) })
             .map { sample_id, meta1, meta2 -> meta1 }
     }
 

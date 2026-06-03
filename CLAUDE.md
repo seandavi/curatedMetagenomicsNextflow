@@ -41,6 +41,7 @@ nextflow run main.nf -profile local --metadata_tsv samples.tsv
 | `gtdb.nf` | `metaphlan_to_gtdb` (SGB→GTDB profile conversion) |
 | `kraken.nf` | `kraken2`, `bracken` (complementary read-based profiling) |
 | `resistome.nf` | `resistome` (RGI/CARD read-based AMR profiling, full branch only) |
+| `qc.nf` | `fastqc` (post-decontamination FastQC) |
 | `manifest.nf` | `sample_manifest` (per-sample provenance + read-accounting `manifest.json`) |
 | `databases.nf` | Reference database downloads (MetaPhlAn, KneadData, HUMAnN, SGB→GTDB, Kraken2, CARD DBs) |
 | `humann.nf` | HUMAnN gene/pathway abundance (disabled by default) |
@@ -53,6 +54,8 @@ GTDB conversion uses the vendored `bin/sgb_to_gtdb_profile.py` (Nextflow stages 
 `kraken2`/`bracken` (module `kraken.nf`, gated by `skip_kraken`) add a complementary read-based profile under each branch's `kraken/` subdirectory. They use per-process StaPH-B containers and set all directives (container, resources, `maxForks`) **in the process body** rather than `conf/base.config`, because they are imported under aliases. The Kraken2 DB is loaded into RAM (default mode, not memory-mapped or staged to scratch) for cluster portability; `kraken_maxforks` throttles concurrent reads of the DB off shared storage. See ADR-0006.
 
 `resistome` (module `resistome.nf`, gated by `skip_resistome`) runs RGI's read-based `bwt` workflow against CARD, publishing AMR gene/allele mapping tables under a `resistome/` subdirectory. It runs on the **full branch only** (ARGs are sparse at the rarefied depth) but keeps the branch-aware publishDir, so with rarefaction active it lands in `full_data/resistome/`. Container/resources are set in the process body. The RGI command sequence is not exercised by stub tests; validate it on a real sample. See ADR-0007.
+
+`fastqc` (module `qc.nf`, gated by `skip_fastqc`) runs FastQC on the **decontaminated** reads (`<sample>/fastqc/`); raw-read FastQC already runs in `fasterq_dump`/`local_fastqc`, so this gives a before/after view. It runs in the base image (no new container). A per-sample MultiQC report was considered but dropped to avoid introducing another container (see ADR-0008). Per-sample only.
 
 ### Architecture Decision Records
 

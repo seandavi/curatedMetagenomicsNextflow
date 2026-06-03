@@ -234,7 +234,7 @@ Results will be organized by sample in the `publish_dir` directory.
 ```
 <publish_base_dir>/
 ├── cmgd_nextflow/
-│   ├── 1.6.0/
+│   ├── 2.0.0/
 │   │   ├── sample1/
 │   │   │   ├── manifest.json     (provenance + read accounting)
 │   │   │   ├── MARK_COMPLETE
@@ -263,7 +263,7 @@ Results will be organized by sample in the `publish_dir` directory.
 ```
 <publish_base_dir>/
 ├── cmgd_nextflow/
-│   ├── 1.6.0/
+│   ├── 2.0.0/
 │   │   ├── sample1/
 │   │   │   ├── manifest.json   (provenance + read accounting)
 │   │   │   ├── MARK_COMPLETE

@@ -1,6 +1,6 @@
 # 0007. Resistome profiling with RGI against CARD
 
-- **Status:** Accepted (not yet implemented)
+- **Status:** Accepted (implemented)
 - **Date:** 2026-06-03
 - **Deciders:** Sean Davis
 
@@ -38,10 +38,32 @@ container per [0001](0001-container-strategy.md).
 - Virulence-factor profiling (e.g. VFDB) is a natural sibling and could reuse the
   same read-based pattern, but is out of scope here.
 
+## Update (implementation, 2026-06-03)
+
+- **Full-depth branch only.** Unlike MetaPhlAn/GTDB/Kraken (which run on both
+  the full and rarefied branches), the resistome runs only on the full-depth
+  reads: ARGs are rare and the rarefied 1M-read depth yields a sparse,
+  low-value resistome. It still uses the conventional **branch-aware**
+  publishDir (`<sample>/<branch>/resistome`), so with the rarefied branch active
+  it publishes under `full_data/resistome/`.
+- **Opt-out (default on)** via `skip_resistome`, consistent with `skip_gtdb` /
+  `skip_kraken`.
+- **RGI `bwt` read-based workflow.** `rgi load --local` + `rgi card_annotation`
+  + `rgi bwt --read_one ... --local`. The reads are single-end (the pipeline is
+  unpaired throughout), so only `--read_one` is supplied. `rgi_aligner`
+  (default `bowtie2`) selects the bwt aligner. Container:
+  `quay.io/biocontainers/rgi:6.0.5` (set in the process body, alias-irrelevant
+  here but consistent with the Kraken processes).
+- **Caveat:** the RGI command sequence follows CARD documentation but is **not
+  exercised by stub tests** (which do not run containers) — the first real run
+  is the true validation, as with the Kraken DB/container specifics. The exact
+  biocontainer build suffix should be confirmed against current quay.io tags.
+
 ## References
 
 - CARD / RGI: https://card.mcmaster.ca/
 - ADR [0001](0001-container-strategy.md) (per-process container), `store_dir`
   database pattern.
-- To be implemented: `modules/processes/resistome.nf`, `databases.nf` (CARD
-  download), `main.nf` wiring.
+- Implemented in: `modules/processes/resistome.nf`,
+  `modules/processes/databases.nf` (`card_db`), `main.nf` wiring,
+  `nextflow.config` parameters.

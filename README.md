@@ -66,6 +66,7 @@ nextflow run main.nf --metadata_tsv samples.tsv --skip_humann --publish_base_dir
 | `skip_rarefied`  | Skip the rarefied profiling branch | `false` |
 | `skip_gtdb`      | Skip MetaPhlAn-to-GTDB profile conversion | `false` |
 | `skip_kraken`    | Skip Kraken2 + Bracken read-based profiling | `false` |
+| `skip_resistome` | Skip RGI/CARD resistome profiling (full branch only) | `false` |
 
 `skip_humann=true` is the current supported default. The `skip_humann=false`
 path is kept in the pipeline for future use, but it is not expected to work
@@ -156,6 +157,26 @@ memory-mapped or staged to node-local scratch) for cluster portability;
 `kraken_maxforks` limits how many tasks read it off shared storage at once. See
 [`docs/adr/0006-kraken2-bracken-complementary-profiler.md`](docs/adr/0006-kraken2-bracken-complementary-profiler.md).
 
+### Resistome (RGI/CARD) Parameters
+
+| Parameter        | Description                                          | Default |
+| ---------------- | ---------------------------------------------------- | ------- |
+| `skip_resistome` | Disable RGI/CARD resistome profiling                 | `false` |
+| `card_db_url`    | Canonical CARD data tarball URL                      | `https://card.mcmaster.ca/latest/data` |
+| `rgi_aligner`    | RGI `bwt` read aligner (`bowtie2`, `bwa`, or `kma`)  | `bowtie2` |
+
+When `skip_resistome=false` (the default), the host-decontaminated reads are
+profiled for antimicrobial-resistance genes with [RGI](https://github.com/arpcard/rgi)'s
+read-based `bwt` workflow against the [CARD](https://card.mcmaster.ca/) database,
+emitting per-sample gene- and allele-level mapping tables (`rgi_bwt.gene_mapping_data.txt.gz`,
+`rgi_bwt.allele_mapping_data.txt.gz`) plus mapping statistics under a `resistome/`
+subdirectory. CARD is downloaded once into `store_dir`.
+
+This step runs on the **full-depth branch only** — ARGs are rare and the rarefied
+1M-read depth yields a sparse, low-value resistome — so with the rarefied branch
+active it publishes under `full_data/resistome/`. See
+[`docs/adr/0007-resistome-rgi-card.md`](docs/adr/0007-resistome-rgi-card.md).
+
 ### HUMAnN Parameters
 
 | Parameter    | Description                 | Default            |
@@ -209,7 +230,8 @@ Results will be organized by sample in the `publish_dir` directory.
 │   │   │   │   ├── metaphlan_markers/
 │   │   │   │   ├── strainphlan_markers/
 │   │   │   │   ├── gtdb/         (only when --skip_gtdb false)
-│   │   │   │   └── kraken/       (only when --skip_kraken false)
+│   │   │   │   ├── kraken/       (only when --skip_kraken false)
+│   │   │   │   └── resistome/    (only when --skip_resistome false; full depth only)
 │   │   │   └── rarefied_data/
 │   │   │       ├── rarefaction/
 │   │   │       ├── metaphlan_lists/
@@ -236,6 +258,7 @@ Results will be organized by sample in the `publish_dir` directory.
 │   │   │   ├── strainphlan_markers/
 │   │   │   ├── gtdb/           (only when --skip_gtdb false)
 │   │   │   ├── kraken/         (only when --skip_kraken false)
+│   │   │   ├── resistome/      (only when --skip_resistome false)
 │   │   │   └── humann/         (only when --skip_humann false)
 │   │   ├── sample2/
 │   │   │   └── ...

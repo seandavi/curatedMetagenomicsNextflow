@@ -25,6 +25,7 @@ include {
     kneaddata_mouse_database
     sgb_to_gtdb_db
     kraken_db
+    card_db
 } from './modules/processes/databases'
 include {
     kneaddata
@@ -47,6 +48,7 @@ include {
     bracken as bracken_full
     bracken as bracken_rarefied
 } from './modules/processes/kraken'
+include { resistome } from './modules/processes/resistome'
 include { humann } from './modules/processes/humann'
 include { sample_manifest } from './modules/processes/manifest'
 include { MARK_COMPLETE } from './modules/processes/finalize'
@@ -130,6 +132,9 @@ workflow {
     }
     if (!params.skip_kraken) {
         kraken_db()
+    }
+    if (!params.skip_resistome) {
+        card_db()
     }
 
     /*
@@ -217,6 +222,17 @@ workflow {
             kraken2_full.out.meta,
             kraken2_full.out.report,
             kraken_db.out.kraken_db.collect())
+    }
+
+    /*
+     * Resistome profiling (RGI/CARD) on the full-depth host-decontaminated
+     * reads. Full branch only — ARGs are too sparse at the rarefied depth.
+     */
+    if (!params.skip_resistome) {
+        resistome(
+            full_meta_ch,
+            kneaddata.out.fastq,
+            card_db.out.card_db.collect())
     }
 
     /*
@@ -340,6 +356,14 @@ workflow {
         finished_ch = finished_ch
             .map { meta -> tuple(meta.sample, meta) }
             .join(bracken_full.out.meta.map { meta -> tuple(meta.sample, meta) })
+            .map { sample_id, meta1, meta2 -> meta1 }
+    }
+
+    if (!params.skip_resistome) {
+        // Gate completion on the full-branch resistome profiling.
+        finished_ch = finished_ch
+            .map { meta -> tuple(meta.sample, meta) }
+            .join(resistome.out.meta.map { meta -> tuple(meta.sample, meta) })
             .map { sample_id, meta1, meta2 -> meta1 }
     }
 

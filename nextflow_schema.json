@@ -104,6 +104,21 @@
             "default": 100,
             "description": "Bracken read length; must have a matching kmer distribution in the Kraken2 DB."
         },
+        "skip_resistome": {
+            "type": "boolean",
+            "default": false,
+            "description": "Skip RGI/CARD read-based resistome profiling."
+        },
+        "card_db_url": {
+            "type": "string",
+            "default": "https://card.mcmaster.ca/latest/data",
+            "description": "URL of the canonical CARD data tarball for RGI."
+        },
+        "rgi_aligner": {
+            "type": "string",
+            "default": "bowtie2",
+            "description": "Read aligner used by RGI bwt (bowtie2, bwa, or kma)."
+        },
         "metadata_tsv": {
             "type": "string",
             "description": "The path to a tab-delimited sample sheet. This file MUST have columns: `study_name`, `sample_id`, and `NCBI_accessions`. The `NCBI_accessions` column should have SRA run accessions separated by `;`."

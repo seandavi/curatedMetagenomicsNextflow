@@ -49,6 +49,7 @@ include {
     bracken as bracken_rarefied
 } from './modules/processes/kraken'
 include { resistome } from './modules/processes/resistome'
+include { fastqc; multiqc } from './modules/processes/qc'
 include { humann } from './modules/processes/humann'
 include { sample_manifest } from './modules/processes/manifest'
 include { MARK_COMPLETE } from './modules/processes/finalize'
@@ -153,6 +154,7 @@ workflow {
         raw_fastq_ch = local_fastqc.out.fastq
         raw_versions_ch = local_fastqc.out.versions
         raw_meta_ch = local_fastqc.out.meta
+        raw_fastqc_ch = local_fastqc.out.fastqc_data
         kneaddata(
             local_fastqc.out.meta,
             local_fastqc.out.fastq,
@@ -162,6 +164,7 @@ workflow {
         raw_fastq_ch = fasterq_dump.out.fastq
         raw_versions_ch = fasterq_dump.out.versions
         raw_meta_ch = fasterq_dump.out.meta
+        raw_fastqc_ch = fasterq_dump.out.fastqc_data
         kneaddata(
             fasterq_dump.out.meta,
             fasterq_dump.out.fastq,
@@ -233,6 +236,31 @@ workflow {
             full_meta_ch,
             kneaddata.out.fastq,
             card_db.out.card_db.collect())
+    }
+
+    /*
+     * Per-sample QC reporting: FastQC on the decontaminated reads, then a
+     * MultiQC report aggregating the raw and post-decontamination FastQC.
+     * Joined by sample so each MultiQC run sees exactly its sample's two reports.
+     */
+    if (!params.skip_multiqc) {
+        fastqc(
+            kneaddata.out.meta,
+            kneaddata.out.fastq)
+
+        raw_fastqc_by_sample = raw_meta_ch
+            .merge(raw_fastqc_ch)
+            .map { m, fqc -> tuple(m.sample, fqc) }
+
+        clean_fastqc_by_sample = fastqc.out.meta
+            .merge(fastqc.out.fastqc_data)
+            .map { m, fqc -> tuple(m.sample, m, fqc) }
+
+        multiqc_input = clean_fastqc_by_sample
+            .join(raw_fastqc_by_sample)
+            .map { sample, meta, clean_fqc, raw_fqc -> tuple(meta, raw_fqc, clean_fqc) }
+
+        multiqc(multiqc_input)
     }
 
     /*
@@ -364,6 +392,14 @@ workflow {
         finished_ch = finished_ch
             .map { meta -> tuple(meta.sample, meta) }
             .join(resistome.out.meta.map { meta -> tuple(meta.sample, meta) })
+            .map { sample_id, meta1, meta2 -> meta1 }
+    }
+
+    if (!params.skip_multiqc) {
+        // Gate completion on the per-sample MultiQC report.
+        finished_ch = finished_ch
+            .map { meta -> tuple(meta.sample, meta) }
+            .join(multiqc.out.meta.map { meta -> tuple(meta.sample, meta) })
             .map { sample_id, meta1, meta2 -> meta1 }
     }
 

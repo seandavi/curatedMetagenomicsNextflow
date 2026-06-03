@@ -119,6 +119,11 @@
             "default": "bowtie2",
             "description": "Read aligner used by RGI bwt (bowtie2, bwa, or kma)."
         },
+        "skip_multiqc": {
+            "type": "boolean",
+            "default": false,
+            "description": "Skip post-decontamination FastQC and the per-sample MultiQC report."
+        },
         "metadata_tsv": {
             "type": "string",
             "description": "The path to a tab-delimited sample sheet. This file MUST have columns: `study_name`, `sample_id`, and `NCBI_accessions`. The `NCBI_accessions` column should have SRA run accessions separated by `;`."

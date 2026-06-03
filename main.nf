@@ -24,6 +24,7 @@ include {
     kneaddata_human_database
     kneaddata_mouse_database
     sgb_to_gtdb_db
+    kraken_db
 } from './modules/processes/databases'
 include {
     kneaddata
@@ -40,6 +41,12 @@ include {
     metaphlan_to_gtdb as metaphlan_to_gtdb_full
     metaphlan_to_gtdb as metaphlan_to_gtdb_rarefied
 } from './modules/processes/gtdb'
+include {
+    kraken2 as kraken2_full
+    kraken2 as kraken2_rarefied
+    bracken as bracken_full
+    bracken as bracken_rarefied
+} from './modules/processes/kraken'
 include { humann } from './modules/processes/humann'
 include { sample_manifest } from './modules/processes/manifest'
 include { MARK_COMPLETE } from './modules/processes/finalize'
@@ -121,6 +128,9 @@ workflow {
     if (!params.skip_gtdb) {
         sgb_to_gtdb_db()
     }
+    if (!params.skip_kraken) {
+        kraken_db()
+    }
 
     /*
      * Core preprocessing and profiling section
@@ -194,6 +204,22 @@ workflow {
     }
 
     /*
+     * Complementary read-based profiling (Kraken2 + Bracken) on the full-depth
+     * host-decontaminated reads.
+     */
+    if (!params.skip_kraken) {
+        kraken2_full(
+            full_meta_ch,
+            kneaddata.out.fastq,
+            kraken_db.out.kraken_db.collect())
+
+        bracken_full(
+            kraken2_full.out.meta,
+            kraken2_full.out.report,
+            kraken_db.out.kraken_db.collect())
+    }
+
+    /*
      * Per-sample manifest
      *
      * Join (by sample) the raw reads + their versions, the host-decontaminated
@@ -258,6 +284,18 @@ workflow {
                 metaphlan_unknown_viruses_lists_rarefied.out.metaphlan_unknown_list,
                 sgb_to_gtdb_db.out.sgb2gtdb_db.collect())
         }
+
+        if (!params.skip_kraken) {
+            kraken2_rarefied(
+                rarefy_fastq.out.meta,
+                rarefy_fastq.out.fastq,
+                kraken_db.out.kraken_db.collect())
+
+            bracken_rarefied(
+                kraken2_rarefied.out.meta,
+                kraken2_rarefied.out.report,
+                kraken_db.out.kraken_db.collect())
+        }
     }
 
     /*
@@ -294,6 +332,14 @@ workflow {
         finished_ch = finished_ch
             .map { meta -> tuple(meta.sample, meta) }
             .join(metaphlan_to_gtdb_full.out.meta.map { meta -> tuple(meta.sample, meta) })
+            .map { sample_id, meta1, meta2 -> meta1 }
+    }
+
+    if (!params.skip_kraken) {
+        // Gate completion on the full-branch Kraken2/Bracken profiling.
+        finished_ch = finished_ch
+            .map { meta -> tuple(meta.sample, meta) }
+            .join(bracken_full.out.meta.map { meta -> tuple(meta.sample, meta) })
             .map { sample_id, meta1, meta2 -> meta1 }
     }
 

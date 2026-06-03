@@ -53,5 +53,5 @@ other. This preserves the historical record rather than rewriting it.
 | [0003](0003-dual-branch-rarefied-profiling.md) | Dual-branch profiling: full depth + rarefied | Accepted |
 | [0004](0004-gtdb-conversion-vendored-mapping.md) | GTDB conversion via a vendored, store_dir-backed mapping table | Accepted |
 | [0005](0005-per-sample-manifest.md) | Per-sample provenance & read-accounting manifest | Accepted |
-| [0006](0006-kraken2-bracken-complementary-profiler.md) | Complementary read-based profiling with Kraken2 + Bracken | Accepted (not yet implemented) |
+| [0006](0006-kraken2-bracken-complementary-profiler.md) | Complementary read-based profiling with Kraken2 + Bracken | Accepted |
 | [0007](0007-resistome-rgi-card.md) | Resistome profiling with RGI against CARD | Accepted (not yet implemented) |

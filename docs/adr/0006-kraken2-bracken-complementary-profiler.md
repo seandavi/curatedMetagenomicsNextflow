@@ -1,6 +1,6 @@
 # 0006. Complementary read-based profiling with Kraken2 + Bracken
 
-- **Status:** Accepted (not yet implemented)
+- **Status:** Accepted (implemented)
 - **Date:** 2026-06-03
 - **Deciders:** Sean Davis
 
@@ -66,9 +66,33 @@ branches as MetaPhlAn (full and rarefied).
 - New tool ⇒ per-process container per [0001](0001-container-strategy.md); DB
   download follows the `store_dir` pattern.
 
+## Update (implementation, 2026-06-03)
+
+Reconciling the decision with what is actually available and practical:
+
+- **DB cap is 16 GB, not 32 GB.** The prebuilt PlusPF indexes
+  (https://benlangmead.github.io/aws-indexes/k2) are offered only at 8 GB,
+  16 GB, or full — there is no 32 GB build, contrary to the original Decision.
+  The default `kraken_db_url` therefore points at the **16 GB** PlusPF cap
+  (release `20260226`); the parameter lets a user select the full (better
+  rare-tail sensitivity) or 8 GB build. The 16 GB cap is the closest available
+  match to the intent and loads comfortably into the provisioned RAM.
+- **Two processes, two StaPH-B containers.** Implemented as `kraken2`
+  (`staphb/kraken2:2.1.3`) feeding `bracken` (`staphb/bracken:2.9`) rather than
+  one combined container, because a single image confirmed to carry both tools
+  could not be verified. At abundance-estimation time Bracken needs only the DB
+  (which ships the kmer distributions) and the Kraken2 report, so it does not
+  need Kraken2 in its container.
+- **Directives in the process body, not `conf/base.config`.** Because the
+  processes are imported under aliases (`*_full`/`*_rarefied`), container, cpus,
+  memory (with `task.attempt` scaling), and `maxForks` are set in the process
+  bodies so they apply regardless of how selectors match aliases.
+- Memory tier is ~32 GB for the 16 GB DB (loaded into RAM); bump it if pointing
+  at the full DB.
+
 ## References
 
 - ADR [0001](0001-container-strategy.md) (per-process container).
 - Bracken read-length rationale: predominantly ~100 bp historical reads.
-- To be implemented: `modules/processes/kraken.nf`, `databases.nf`
-  (`kraken_db`), `main.nf` wiring, `conf/base.config` resource tier + `maxForks`.
+- Implemented in: `modules/processes/kraken.nf`, `modules/processes/databases.nf`
+  (`kraken_db`), `main.nf` wiring, `nextflow.config` parameters.

@@ -65,6 +65,7 @@ nextflow run main.nf --metadata_tsv samples.tsv --skip_humann --publish_base_dir
 | `skip_humann`    | Skip HUMAnN functional profiling | `true` |
 | `skip_rarefied`  | Skip the rarefied profiling branch | `false` |
 | `skip_gtdb`      | Skip MetaPhlAn-to-GTDB profile conversion | `false` |
+| `skip_kraken`    | Skip Kraken2 + Bracken read-based profiling | `false` |
 
 `skip_humann=true` is the current supported default. The `skip_humann=false`
 path is kept in the pipeline for future use, but it is not expected to work
@@ -88,11 +89,13 @@ under the sample directory, distinguished by a branch subdirectory:
 <sample>/full_data/metaphlan_markers/
 <sample>/full_data/strainphlan_markers/
 <sample>/full_data/gtdb/
+<sample>/full_data/kraken/
 <sample>/rarefied_data/rarefaction/
 <sample>/rarefied_data/metaphlan_lists/
 <sample>/rarefied_data/metaphlan_markers/
 <sample>/rarefied_data/strainphlan_markers/
 <sample>/rarefied_data/gtdb/
+<sample>/rarefied_data/kraken/
 ```
 
 Set `--skip_rarefied` to suppress the rarefied branch and restore the original
@@ -124,6 +127,34 @@ taxon, and aggregates abundances up the GTDB lineage. Output is published as
 `sgb2gtdb_url` must be kept in lockstep with `metaphlan_index`: if the MetaPhlAn
 index changes, point `sgb2gtdb_url` at the assignment table that ships with the
 new index.
+
+### Kraken2 / Bracken Parameters
+
+| Parameter             | Description                                                        | Default |
+| --------------------- | ------------------------------------------------------------------ | ------- |
+| `skip_kraken`         | Disable Kraken2 + Bracken read-based profiling                     | `false` |
+| `kraken_db_url`       | Prebuilt Kraken2 index tarball (bundles Bracken kmer distributions) | PlusPF 16 GB cap |
+| `kraken_confidence`   | Kraken2 `--confidence` threshold (0.0–1.0)                         | `0.0`   |
+| `kraken_maxforks`     | Max concurrent Kraken2 tasks (throttles shared-storage DB reads)   | `4`     |
+| `bracken_read_length` | Bracken read length (must have a matching kmer distribution)       | `100`   |
+
+When `skip_kraken=false` (the default), the host-decontaminated reads are
+classified with [Kraken2](https://ccb.jhu.edu/software/kraken2/) and re-estimated
+with [Bracken](https://ccb.jhu.edu/software/bracken/) at species and genus level,
+complementing MetaPhlAn's marker-based view with a whole-community, read-count
+profile. Outputs (`kraken2.report.txt.gz`, `bracken.species.txt.gz`,
+`bracken.genus.txt.gz`, and the Bracken-adjusted reports) are published under a
+`kraken/` subdirectory in each branch.
+
+The default database is the **16 GB capped PlusPF** index (RefSeq bacteria/
+archaea/viral + protozoa + fungi + human decoy) — broad enough for a multi-body-
+site cohort, including the skin/airway mycobiome. Prebuilt PlusPF indexes come
+in 8 GB, 16 GB, or full sizes (no 32 GB); point `kraken_db_url` at the full
+tarball for better rare-taxon sensitivity at higher RAM/I/O cost. The database is
+downloaded once into `store_dir` and **loaded into RAM** at run time (not
+memory-mapped or staged to node-local scratch) for cluster portability;
+`kraken_maxforks` limits how many tasks read it off shared storage at once. See
+[`docs/adr/0006-kraken2-bracken-complementary-profiler.md`](docs/adr/0006-kraken2-bracken-complementary-profiler.md).
 
 ### HUMAnN Parameters
 
@@ -177,13 +208,15 @@ Results will be organized by sample in the `publish_dir` directory.
 │   │   │   │   ├── metaphlan_lists/
 │   │   │   │   ├── metaphlan_markers/
 │   │   │   │   ├── strainphlan_markers/
-│   │   │   │   └── gtdb/         (only when --skip_gtdb false)
+│   │   │   │   ├── gtdb/         (only when --skip_gtdb false)
+│   │   │   │   └── kraken/       (only when --skip_kraken false)
 │   │   │   └── rarefied_data/
 │   │   │       ├── rarefaction/
 │   │   │       ├── metaphlan_lists/
 │   │   │       ├── metaphlan_markers/
 │   │   │       ├── strainphlan_markers/
-│   │   │       └── gtdb/         (only when --skip_gtdb false)
+│   │   │       ├── gtdb/         (only when --skip_gtdb false)
+│   │   │       └── kraken/       (only when --skip_kraken false)
 │   │   ├── sample2/
 │   │   │   └── ...
 ```
@@ -202,6 +235,7 @@ Results will be organized by sample in the `publish_dir` directory.
 │   │   │   ├── metaphlan_markers/
 │   │   │   ├── strainphlan_markers/
 │   │   │   ├── gtdb/           (only when --skip_gtdb false)
+│   │   │   ├── kraken/         (only when --skip_kraken false)
 │   │   │   └── humann/         (only when --skip_humann false)
 │   │   ├── sample2/
 │   │   │   └── ...

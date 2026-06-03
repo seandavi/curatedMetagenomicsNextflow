@@ -28,9 +28,10 @@ WORKDIR /installed
 RUN wget https://github.com/BenLangmead/bowtie2/releases/download/v2.5.4/bowtie2-2.5.4-linux-x86_64.zip && unzip bowtie2-2.5.4-linux-x86_64.zip && chmod +x bowtie2-2.5.4-linux-x86_64/bowtie2*
 ENV PATH=$PATH:/installed/bowtie2-2.5.4-linux-x86_64/
 
-## install humann, metaphlan, and awscli
-RUN pip install humann --no-binary :all: 
-RUN pip install metaphlan==4.2.2 
+## install metaphlan
+RUN pip install metaphlan==4.2.2
+
+## install awscli
 RUN pip install awscli
 
 ## install SAMtools-1.21
@@ -48,15 +49,24 @@ RUN curl -L https://github.com/lh3/minimap2/releases/download/v2.30/minimap2-2.3
 ENV PATH=$PATH:/installed/minimap2-2.30_x64-linux/
 
 ## install kneaddata
-RUN pip install kneaddata --install-option='--bypass-dependencies-install'
+RUN pip install kneaddata==0.12.3 --install-option='--bypass-dependencies-install'
 
 ## install trimmomatic for kneaddata
 RUN wget http://www.usadellab.org/cms/uploads/supplementary/Trimmomatic/Trimmomatic-0.39.zip && unzip Trimmomatic-0.39.zip
 
+## install humann, metaphlan, and awscli
+RUN pip install humann==4.0.0a1
+
+WORKDIR /installed
+
 ## display versions
-RUN fastq-dump --version
-RUN metaphlan --version
-RUN humann --version
+RUN echo 'VERSIONS' > versions.txt
+RUN echo 'fastq-dump' >> versions.txt
+RUN fastq-dump --version >> versions.txt
+RUN echo 'metaphlan' >> versions.txt
+RUN metaphlan --version >> versions.txt
+RUN echo 'humann' >> versions.txt
+RUN humann --version >> versions.txt
 
 ## root directory for databases
 ENV mpa_dir=/usr/local/miniconda3/lib/python3.7/site-packages/metaphlan

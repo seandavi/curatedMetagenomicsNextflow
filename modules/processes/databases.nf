@@ -210,6 +210,38 @@ process kraken_db {
     """
 }
 
+process card_db {
+    label 'db_setup'
+    label 'download_retry'
+
+    cpus 1
+    memory "2g"
+
+    storeDir "${params.store_dir}"
+
+    output:
+    path "card_db", emit: card_db, type: 'dir'
+    path ".command*"
+
+    stub:
+    """
+    mkdir -p card_db
+    touch card_db/card.json
+    touch .command.run
+    """
+
+    script:
+    """
+    echo ${PWD}
+    mkdir -p card_db
+    # The canonical CARD data is a bzip2 tarball containing card.json and the
+    # ontology index files; extract it all into card_db/.
+    curl -fsSL "${params.card_db_url}" -o card_data.tar.bz2
+    tar -xjf card_data.tar.bz2 -C card_db
+    rm -f card_data.tar.bz2
+    """
+}
+
 process kneaddata_human_database {
     label 'db_setup'
     label 'download_retry'

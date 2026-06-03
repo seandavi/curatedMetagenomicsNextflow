@@ -64,6 +64,7 @@ nextflow run main.nf --metadata_tsv samples.tsv --skip_humann --publish_base_dir
 | ---------------- | -------------------------------- | ------- |
 | `skip_humann`    | Skip HUMAnN functional profiling | `true` |
 | `skip_rarefied`  | Skip the rarefied profiling branch | `false` |
+| `skip_gtdb`      | Skip MetaPhlAn-to-GTDB profile conversion | `false` |
 
 `skip_humann=true` is the current supported default. The `skip_humann=false`
 path is kept in the pipeline for future use, but it is not expected to work
@@ -86,10 +87,12 @@ under the sample directory, distinguished by a branch subdirectory:
 <sample>/full_data/metaphlan_lists/
 <sample>/full_data/metaphlan_markers/
 <sample>/full_data/strainphlan_markers/
+<sample>/full_data/gtdb/
 <sample>/rarefied_data/rarefaction/
 <sample>/rarefied_data/metaphlan_lists/
 <sample>/rarefied_data/metaphlan_markers/
 <sample>/rarefied_data/strainphlan_markers/
+<sample>/rarefied_data/gtdb/
 ```
 
 Set `--skip_rarefied` to suppress the rarefied branch and restore the original
@@ -101,6 +104,26 @@ single-branch layout (without the `full_data/` subdirectory prefix).
 | ----------------- | ---------------------- | -------- |
 | `metaphlan_index` | MetaPhlAn index to use | `mpa_vJan25_CHOCOPhlAnSGB_202503` |
 | `organism_database` | KneadData reference database | `human_genome` |
+
+### GTDB Parameters
+
+| Parameter      | Description                                          | Default |
+| -------------- | ---------------------------------------------------- | ------- |
+| `skip_gtdb`    | Disable MetaPhlAn-to-GTDB profile conversion         | `false` |
+| `sgb2gtdb_url` | URL of the SGB-to-GTDB assignment table (must match `metaphlan_index`) | MetaPhlAn `mpa_vJan25_CHOCOPhlAnSGB_202503` table |
+
+When `skip_gtdb=false` (the default), each MetaPhlAn relative-abundance profile
+is translated into a [GTDB-taxonomy](https://gtdb.ecogenomic.org/) profile using
+MetaPhlAn's official SGB-to-GTDB assignment table. The table is downloaded once
+into `store_dir` (process `sgb_to_gtdb_db`) and reused across runs. Conversion
+is performed by the vendored `bin/sgb_to_gtdb_profile.py` helper, which
+substitutes 1:1 mappings directly, bins (sums) n:1 mappings into the shared GTDB
+taxon, and aggregates abundances up the GTDB lineage. Output is published as
+`gtdb_profile.tsv.gz` under a `gtdb/` subdirectory in each branch.
+
+`sgb2gtdb_url` must be kept in lockstep with `metaphlan_index`: if the MetaPhlAn
+index changes, point `sgb2gtdb_url` at the assignment table that ships with the
+new index.
 
 ### HUMAnN Parameters
 
@@ -151,12 +174,14 @@ Results will be organized by sample in the `publish_dir` directory.
 │   │   │   ├── full_data/
 │   │   │   │   ├── metaphlan_lists/
 │   │   │   │   ├── metaphlan_markers/
-│   │   │   │   └── strainphlan_markers/
+│   │   │   │   ├── strainphlan_markers/
+│   │   │   │   └── gtdb/         (only when --skip_gtdb false)
 │   │   │   └── rarefied_data/
 │   │   │       ├── rarefaction/
 │   │   │       ├── metaphlan_lists/
 │   │   │       ├── metaphlan_markers/
-│   │   │       └── strainphlan_markers/
+│   │   │       ├── strainphlan_markers/
+│   │   │       └── gtdb/         (only when --skip_gtdb false)
 │   │   ├── sample2/
 │   │   │   └── ...
 ```
@@ -172,6 +197,7 @@ Results will be organized by sample in the `publish_dir` directory.
 │   │   │   ├── metaphlan_lists/
 │   │   │   ├── metaphlan_markers/
 │   │   │   ├── strainphlan_markers/
+│   │   │   ├── gtdb/           (only when --skip_gtdb false)
 │   │   │   └── humann/         (only when --skip_humann false)
 │   │   ├── sample2/
 │   │   │   └── ...

@@ -37,9 +37,13 @@ nextflow run main.nf -profile local --metadata_tsv samples.tsv
 |------|-----------|
 | `preprocessing.nf` | `fasterq_dump`, `local_fastqc` |
 | `profiling.nf` | `kneaddata`, `metaphlan_*`, `sample_to_markers` |
-| `databases.nf` | Reference database downloads (MetaPhlAn, KneadData, HUMAnN DBs) |
+| `rarefaction.nf` | `rarefy_fastq` (seqtk downsampling) |
+| `gtdb.nf` | `metaphlan_to_gtdb` (SGB→GTDB profile conversion) |
+| `databases.nf` | Reference database downloads (MetaPhlAn, KneadData, HUMAnN, SGB→GTDB DBs) |
 | `humann.nf` | HUMAnN gene/pathway abundance (disabled by default) |
 | `finalize.nf` | `MARK_COMPLETE` sentinel |
+
+GTDB conversion uses the vendored `bin/sgb_to_gtdb_profile.py` (Nextflow stages `bin/` onto `PATH`), a self-contained adaptation of MetaPhlAn's official `sgb_to_gtdb_profile.py` parameterized to read the assignment table from `store_dir` rather than the container's bundled copy.
 
 ### Configuration layers
 

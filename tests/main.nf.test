@@ -24,6 +24,25 @@ nextflow_pipeline {
         }
     }
 
+    test("Single-sample stub run completes with GTDB conversion disabled") {
+
+        when {
+            params {
+                sample_id = "TEST_SAMPLE"
+                run_ids = "SRR000001"
+                skip_humann = true
+                skip_gtdb = true
+            }
+        }
+
+        then {
+            assert workflow.success
+            assert workflow.failed == false
+            assert workflow.exitStatus == 0
+            assert workflow.errorReport == null || workflow.errorReport.isEmpty()
+        }
+    }
+
     test("Missing sample arguments fails fast with a clear error") {
 
         when {
@@ -34,7 +53,9 @@ nextflow_pipeline {
 
         then {
             assert workflow.failed
-            assert workflow.errorReport.contains("Either metadata_tsv or run_ids/sample_id must be provided")
+            // The input-contract guard is a workflow-level error(), so the
+            // message surfaces on stdout rather than in a process errorReport.
+            assert workflow.stdout.any { it.contains("Either metadata_tsv or run_ids/sample_id must be provided") }
         }
     }
 }

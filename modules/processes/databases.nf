@@ -144,6 +144,36 @@ process uniref_db {
     """
 }
 
+process sgb_to_gtdb_db {
+    label 'db_setup'
+    label 'download_retry'
+
+    cpus 1
+    memory "1g"
+
+    storeDir "${params.store_dir}"
+
+    output:
+    path "sgb_to_gtdb", emit: sgb2gtdb_db, type: 'dir'
+    path ".command*"
+
+    stub:
+    """
+    mkdir -p sgb_to_gtdb
+    touch sgb_to_gtdb/${file(params.sgb2gtdb_url).name}
+    touch .command.run
+    """
+
+    script:
+    """
+    echo ${PWD}
+    mkdir -p sgb_to_gtdb
+    # Download with the Python stdlib so we do not depend on curl/wget being
+    # present in the container (the MetaPhlAn image always ships Python).
+    python -c "import urllib.request; urllib.request.urlretrieve('${params.sgb2gtdb_url}', 'sgb_to_gtdb/${file(params.sgb2gtdb_url).name}')"
+    """
+}
+
 process kneaddata_human_database {
     label 'db_setup'
     label 'download_retry'

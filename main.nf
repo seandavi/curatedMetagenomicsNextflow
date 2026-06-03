@@ -23,6 +23,7 @@ include {
     uniref_db
     kneaddata_human_database
     kneaddata_mouse_database
+    sgb_to_gtdb_db
 } from './modules/processes/databases'
 include {
     kneaddata
@@ -35,6 +36,10 @@ include {
     sample_to_markers as sample_to_markers_rarefied
 } from './modules/processes/profiling'
 include { rarefy_fastq } from './modules/processes/rarefaction'
+include {
+    metaphlan_to_gtdb as metaphlan_to_gtdb_full
+    metaphlan_to_gtdb as metaphlan_to_gtdb_rarefied
+} from './modules/processes/gtdb'
 include { humann } from './modules/processes/humann'
 include { MARK_COMPLETE } from './modules/processes/finalize'
 
@@ -71,7 +76,7 @@ workflow {
      * - Or provide both run_ids and sample_id for a single sample
      */
     if (params.metadata_tsv == null) {
-        if (params.run_ids == null) or (params.sample_id == null) {
+        if (params.run_ids == null || params.sample_id == null) {
             error "Either metadata_tsv or run_ids/sample_id must be provided"
         } else {
             samples = generate_sample_metadata_single_sample(
@@ -112,6 +117,9 @@ workflow {
     utility_mapping_db()
     kneaddata_human_database()
     kneaddata_mouse_database()
+    if (!params.skip_gtdb) {
+        sgb_to_gtdb_db()
+    }
 
     /*
      * Core preprocessing and profiling section
@@ -169,6 +177,16 @@ workflow {
         install_metaphlan_db.out.metaphlan_db.collect())
 
     /*
+     * GTDB-taxonomy conversion of the full-depth MetaPhlAn profile.
+     */
+    if (!params.skip_gtdb) {
+        metaphlan_to_gtdb_full(
+            metaphlan_unknown_viruses_lists_full.out.meta,
+            metaphlan_unknown_viruses_lists_full.out.metaphlan_unknown_list,
+            sgb_to_gtdb_db.out.sgb2gtdb_db.collect())
+    }
+
+    /*
      * Optional rarefied branch
      *
      * Downsample reads with seqtk then run the same profiling steps under the
@@ -196,6 +214,13 @@ workflow {
             metaphlan_unknown_viruses_lists_rarefied.out.meta,
             metaphlan_unknown_viruses_lists_rarefied.out.metaphlan_sam,
             install_metaphlan_db.out.metaphlan_db.collect())
+
+        if (!params.skip_gtdb) {
+            metaphlan_to_gtdb_rarefied(
+                metaphlan_unknown_viruses_lists_rarefied.out.meta,
+                metaphlan_unknown_viruses_lists_rarefied.out.metaphlan_unknown_list,
+                sgb_to_gtdb_db.out.sgb2gtdb_db.collect())
+        }
     }
 
     /*
@@ -219,11 +244,21 @@ workflow {
      * Rarefied branch (when enabled): also join metaphlan_markers_rarefied and
      * sample_to_markers_rarefied.
      * HUMAnN branch (when enabled): additionally gate on humann output.
+     * GTDB branch (when enabled): additionally gate on the full-branch GTDB
+     * conversion.
      */
     finished_ch = metaphlan_markers_full.out.meta
         .map { meta -> tuple(meta.sample, meta) }
         .join(sample_to_markers_full.out.meta.map { meta -> tuple(meta.sample, meta) })
         .map { sample_id, meta1, meta2 -> meta1 }
+
+    if (!params.skip_gtdb) {
+        // Gate completion on the full-branch GTDB conversion when enabled.
+        finished_ch = finished_ch
+            .map { meta -> tuple(meta.sample, meta) }
+            .join(metaphlan_to_gtdb_full.out.meta.map { meta -> tuple(meta.sample, meta) })
+            .map { sample_id, meta1, meta2 -> meta1 }
+    }
 
     if (!params.skip_rarefied) {
         finished_rarefied_ch = metaphlan_markers_rarefied.out.meta

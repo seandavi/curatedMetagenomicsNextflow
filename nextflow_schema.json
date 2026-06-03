@@ -69,6 +69,16 @@
             "type": "string",
             "default": "latest"
         },
+        "skip_gtdb": {
+            "type": "boolean",
+            "default": false,
+            "description": "Skip translation of MetaPhlAn SGB profiles into GTDB-taxonomy profiles."
+        },
+        "sgb2gtdb_url": {
+            "type": "string",
+            "default": "https://raw.githubusercontent.com/biobakery/MetaPhlAn/master/metaphlan/utils/mpa_vJan25_CHOCOPhlAnSGB_202503_SGB2GTDB.tsv",
+            "description": "URL of the SGB-to-GTDB assignment table; must match metaphlan_index."
+        },
         "metadata_tsv": {
             "type": "string",
             "description": "The path to a tab-delimited sample sheet. This file MUST have columns: `study_name`, `sample_id`, and `NCBI_accessions`. The `NCBI_accessions` column should have SRA run accessions separated by `;`."

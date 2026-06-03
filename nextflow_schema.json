@@ -119,10 +119,10 @@
             "default": "bowtie2",
             "description": "Read aligner used by RGI bwt (bowtie2, bwa, or kma)."
         },
-        "skip_multiqc": {
+        "skip_fastqc": {
             "type": "boolean",
             "default": false,
-            "description": "Skip post-decontamination FastQC and the per-sample MultiQC report."
+            "description": "Skip FastQC on the host-decontaminated reads."
         },
         "metadata_tsv": {
             "type": "string",

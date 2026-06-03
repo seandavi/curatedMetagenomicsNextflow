@@ -41,7 +41,7 @@ nextflow run main.nf -profile local --metadata_tsv samples.tsv
 | `gtdb.nf` | `metaphlan_to_gtdb` (SGB→GTDB profile conversion) |
 | `kraken.nf` | `kraken2`, `bracken` (complementary read-based profiling) |
 | `resistome.nf` | `resistome` (RGI/CARD read-based AMR profiling, full branch only) |
-| `qc.nf` | `fastqc` (post-decontamination), `multiqc` (per-sample QC report) |
+| `qc.nf` | `fastqc` (post-decontamination FastQC) |
 | `manifest.nf` | `sample_manifest` (per-sample provenance + read-accounting `manifest.json`) |
 | `databases.nf` | Reference database downloads (MetaPhlAn, KneadData, HUMAnN, SGB→GTDB, Kraken2, CARD DBs) |
 | `humann.nf` | HUMAnN gene/pathway abundance (disabled by default) |
@@ -55,7 +55,7 @@ GTDB conversion uses the vendored `bin/sgb_to_gtdb_profile.py` (Nextflow stages 
 
 `resistome` (module `resistome.nf`, gated by `skip_resistome`) runs RGI's read-based `bwt` workflow against CARD, publishing AMR gene/allele mapping tables under a `resistome/` subdirectory. It runs on the **full branch only** (ARGs are sparse at the rarefied depth) but keeps the branch-aware publishDir, so with rarefaction active it lands in `full_data/resistome/`. Container/resources are set in the process body. The RGI command sequence is not exercised by stub tests; validate it on a real sample. See ADR-0007.
 
-`fastqc`/`multiqc` (module `qc.nf`, gated by `skip_multiqc`) add per-sample QC reporting: raw-read FastQC already runs in `fasterq_dump`/`local_fastqc`, so `fastqc` here covers the **decontaminated** reads (`<sample>/fastqc/`), and `multiqc` aggregates the raw + decontaminated FastQC into `<sample>/multiqc/multiqc_report.html`. The two FastQC reports are staged into `raw/` and `clean/` and MultiQC is run with `--dirs` to keep their identical sample names distinct. Per-sample only (no cross-sample aggregation). MultiQC uses a pinned biocontainer (verify the tag on a real run). See ADR-0008.
+`fastqc` (module `qc.nf`, gated by `skip_fastqc`) runs FastQC on the **decontaminated** reads (`<sample>/fastqc/`); raw-read FastQC already runs in `fasterq_dump`/`local_fastqc`, so this gives a before/after view. It runs in the base image (no new container). A per-sample MultiQC report was considered but dropped to avoid introducing another container (see ADR-0008). Per-sample only.
 
 ### Architecture Decision Records
 

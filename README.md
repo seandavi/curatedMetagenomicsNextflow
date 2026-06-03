@@ -67,7 +67,7 @@ nextflow run main.nf --metadata_tsv samples.tsv --skip_humann --publish_base_dir
 | `skip_gtdb`      | Skip MetaPhlAn-to-GTDB profile conversion | `false` |
 | `skip_kraken`    | Skip Kraken2 + Bracken read-based profiling | `false` |
 | `skip_resistome` | Skip RGI/CARD resistome profiling (full branch only) | `false` |
-| `skip_multiqc`   | Skip post-decontamination FastQC + per-sample MultiQC report | `false` |
+| `skip_fastqc`    | Skip FastQC on the host-decontaminated reads | `false` |
 
 `skip_humann=true` is the current supported default. The `skip_humann=false`
 path is kept in the pipeline for future use, but it is not expected to work
@@ -178,21 +178,17 @@ This step runs on the **full-depth branch only** — ARGs are rare and the raref
 active it publishes under `full_data/resistome/`. See
 [`docs/adr/0007-resistome-rgi-card.md`](docs/adr/0007-resistome-rgi-card.md).
 
-### QC Reporting Parameters
+### QC Parameters
 
-| Parameter      | Description                                                       | Default |
-| -------------- | ----------------------------------------------------------------- | ------- |
-| `skip_multiqc` | Disable post-decontamination FastQC and the per-sample MultiQC report | `false` |
+| Parameter     | Description                                          | Default |
+| ------------- | ---------------------------------------------------- | ------- |
+| `skip_fastqc` | Disable FastQC on the host-decontaminated reads      | `false` |
 
 Raw-read FastQC already runs in both input modes (inside `fasterq_dump` /
-`local_fastqc`). When `skip_multiqc=false` (the default), the pipeline also runs
-FastQC on the **host-decontaminated** reads (published under `<sample>/fastqc/`)
-and a per-sample [MultiQC](https://multiqc.info/) report aggregating the raw and
-post-decontamination FastQC into `<sample>/multiqc/multiqc_report.html`. The two
-FastQC reports are staged into `raw/` and `clean/` and MultiQC is run with
-`--dirs` so their (otherwise identical) sample names stay distinct.
-
-This is **per-sample only** — no cross-sample aggregation. See
+`local_fastqc`). When `skip_fastqc=false` (the default), the pipeline also runs
+FastQC on the **host-decontaminated** reads, published under `<sample>/fastqc/`,
+giving a before/after view of what QC did to the reads. It runs in the base
+image, so no additional container is required. Per-sample only. See
 [`docs/adr/0008-per-sample-qc-reporting.md`](docs/adr/0008-per-sample-qc-reporting.md).
 
 ### HUMAnN Parameters
@@ -243,8 +239,7 @@ Results will be organized by sample in the `publish_dir` directory.
 │   │   │   ├── manifest.json     (provenance + read accounting)
 │   │   │   ├── MARK_COMPLETE
 │   │   │   ├── kneaddata/
-│   │   │   ├── fastqc/           (decontaminated-read FastQC; only when --skip_multiqc false)
-│   │   │   ├── multiqc/          (per-sample report; only when --skip_multiqc false)
+│   │   │   ├── fastqc/           (decontaminated-read FastQC; only when --skip_fastqc false)
 │   │   │   ├── full_data/
 │   │   │   │   ├── metaphlan_lists/
 │   │   │   │   ├── metaphlan_markers/
@@ -273,8 +268,7 @@ Results will be organized by sample in the `publish_dir` directory.
 │   │   │   ├── manifest.json   (provenance + read accounting)
 │   │   │   ├── MARK_COMPLETE
 │   │   │   ├── kneaddata/
-│   │   │   ├── fastqc/         (decontaminated-read FastQC; only when --skip_multiqc false)
-│   │   │   ├── multiqc/        (per-sample report; only when --skip_multiqc false)
+│   │   │   ├── fastqc/         (decontaminated-read FastQC; only when --skip_fastqc false)
 │   │   │   ├── metaphlan_lists/
 │   │   │   ├── metaphlan_markers/
 │   │   │   ├── strainphlan_markers/

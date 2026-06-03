@@ -1,4 +1,4 @@
-# 0008. Per-sample QC reporting: post-decontamination FastQC + MultiQC
+# 0008. Per-sample post-decontamination FastQC
 
 - **Status:** Accepted (implemented)
 - **Date:** 2026-06-03
@@ -8,54 +8,38 @@
 
 Before a full-scale run we want a quick, per-sample quality-control view. Raw-read
 FastQC already runs in **both** input modes (embedded in `fasterq_dump` and
-`local_fastqc`), so that is not the gap. What is missing:
-
-1. No FastQC on the reads that actually feed profiling — i.e. after
-   KneadData host decontamination and trimming. Without it there is no
-   before/after view of what QC did to the reads.
-2. No consolidated, human-readable per-sample QC report; the FastQC outputs and
-   logs are scattered across subdirectories.
+`local_fastqc`), so that is not the gap. What is missing is FastQC on the reads
+that actually feed profiling — i.e. after KneadData host decontamination and
+trimming — so there is no before/after view of what QC did to the reads.
 
 ## Decision
 
-Add two steps, both **per-sample only** (no cross-sample aggregation — that is a
-separate downstream concern and explicitly out of scope here):
-
-1. A **FastQC pass on the host-decontaminated reads** (`fastqc` in
-   `modules/processes/qc.nf`), published under `<sample>/fastqc/`.
-2. A **per-sample MultiQC** (`multiqc`) that aggregates the raw and
-   post-decontamination FastQC into one `multiqc_report.html` (+ data) under
-   `<sample>/multiqc/`. The two FastQC reports are staged into `raw/` and
-   `clean/` subdirectories and MultiQC is run with `--dirs` so the otherwise
-   identical FastQC sample names are disambiguated.
-
-Both are gated by `skip_multiqc` (default false, opt-out, consistent with the
-other optional steps). FastQC runs in the base image; MultiQC uses a pinned
-biocontainer (per [0001](0001-container-strategy.md)).
+Add a **FastQC pass on the host-decontaminated reads** (`fastqc` in
+`modules/processes/qc.nf`), published under `<sample>/fastqc/`. It runs in the
+base image (FastQC is already present), so **no additional container** is
+introduced. Gated by `skip_fastqc` (default false, opt-out). Per-sample only.
 
 ## Alternatives considered
 
-- **Cross-sample MultiQC** (the usual way MultiQC is used) — explicitly out of
-  scope: this is a per-sample pipeline; any across-sample reporting is handled
-  later, downstream.
-- **Re-run raw FastQC inside the QC module** for symmetry — wasteful; the raw
-  FastQC already exists, so MultiQC consumes it directly rather than recomputing.
-- **Feed Kraken2/Bracken/MetaPhlAn into MultiQC now** — deferred. v1 keeps the
-  report to the FastQC before/after to stay low-risk; the MultiQC input set can
-  be widened later (MultiQC has Kraken modules).
+- **Add a per-sample MultiQC report** aggregating the raw + post-decontamination
+  FastQC. Considered and **rejected for now**: MultiQC is not in the base image,
+  and adding another container is not worth it for a per-sample report over just
+  two FastQC outputs. The raw and post-decontamination FastQC reports remain
+  available individually under the sample directory.
+- **Cross-sample MultiQC** — out of scope; this is a per-sample pipeline.
+- **Re-run raw FastQC inside this module for symmetry** — wasteful; raw FastQC
+  already exists upstream.
 
 ## Consequences
 
-- Each sample gets a before/after read-QC report in one HTML, plus a FastQC
-  profile of the decontaminated reads.
-- New MultiQC container; its exact biocontainer tag is **not exercised by stub
-  tests** (no containers run there), so confirm it on the first real run — same
-  caveat class as the Kraken/RGI containers.
-- The MultiQC input set is intentionally minimal for now; widening it (Kraken,
-  etc.) is future work, not a new architectural decision.
+- Each sample gets a FastQC profile of the decontaminated reads alongside the
+  existing raw-read FastQC, giving a before/after without any new dependency.
+- No consolidated single-file QC report; consumers read the two FastQC outputs
+  (or aggregate them downstream). Revisiting MultiQC later would mean accepting a
+  new container.
 
 ## References
 
 - ADR [0001](0001-container-strategy.md) (per-process container).
-- Implemented in: `modules/processes/qc.nf` (`fastqc`, `multiqc`), `main.nf`
-  wiring, `nextflow.config` (`skip_multiqc`).
+- Implemented in: `modules/processes/qc.nf` (`fastqc`), `main.nf` wiring,
+  `nextflow.config` (`skip_fastqc`).

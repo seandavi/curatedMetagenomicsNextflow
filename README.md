@@ -170,6 +170,8 @@ Results will be organized by sample in the `publish_dir` directory.
 ├── cmgd_nextflow/
 │   ├── 1.6.0/
 │   │   ├── sample1/
+│   │   │   ├── manifest.json     (provenance + read accounting)
+│   │   │   ├── MARK_COMPLETE
 │   │   │   ├── kneaddata/
 │   │   │   ├── full_data/
 │   │   │   │   ├── metaphlan_lists/
@@ -193,6 +195,8 @@ Results will be organized by sample in the `publish_dir` directory.
 ├── cmgd_nextflow/
 │   ├── 1.6.0/
 │   │   ├── sample1/
+│   │   │   ├── manifest.json   (provenance + read accounting)
+│   │   │   ├── MARK_COMPLETE
 │   │   │   ├── kneaddata/
 │   │   │   ├── metaphlan_lists/
 │   │   │   ├── metaphlan_markers/
@@ -202,6 +206,24 @@ Results will be organized by sample in the `publish_dir` directory.
 │   │   ├── sample2/
 │   │   │   └── ...
 ```
+
+### Per-sample manifest
+
+Every sample gets a single `manifest.json` at its published root that compiles:
+
+- **provenance** — pipeline/Nextflow versions, container image, command line,
+  run name, git commit, key parameters, and input accessions/paths;
+- **read accounting** — raw and host-decontaminated read counts, base counts,
+  read-length statistics (min/median/max/mean) and GC%, plus the surviving
+  read/base fractions;
+- **rarefaction** parameters (when the rarefied branch is active);
+- **software_versions** — the per-process `versions.yml` files consolidated
+  into one tool→version map.
+
+Read statistics are computed by `bin/build_manifest.py` (pure Python, single
+streaming pass, no extra container). `MARK_COMPLETE` is gated on the manifest,
+so a sample directory is never marked complete before `manifest.json` exists.
+See [`docs/adr/0005-per-sample-manifest.md`](docs/adr/0005-per-sample-manifest.md).
 
 The sample-level directory name is the normalized `meta.sample` value used for
 task tags. That comes from `--sample_id` in single-sample mode or the

@@ -23,6 +23,7 @@ process kneaddata {
     path "kneaddata_output/out.fastq", emit: fastq
     path "kneaddata_output/kneaddata_fastq_linecounts.txt"
     path "kneaddata_output/out_kneaddata.log"
+    path "versions.yml", emit: versions
     path ".command*"
 
     stub:
@@ -31,6 +32,7 @@ process kneaddata {
     touch kneaddata_output/out.fastq
     touch kneaddata_output/kneaddata_fastq_linecounts.txt
     touch kneaddata_output/out_kneaddata.log
+    touch versions.yml
     """
 
     script:
@@ -48,6 +50,13 @@ process kneaddata {
     cat out_kneaddata.fastq | sed 's/^+.RR.*/+/g' > out.fastq
     rm out_kneaddata.fastq
     wc -l * | grep fastq > kneaddata_fastq_linecounts.txt
+    cd ..
+
+    cat <<-END_VERSIONS > versions.yml
+    versions:
+        kneaddata: \$( echo \$(kneaddata --version 2>&1 ) | awk '{print \$NF}')
+        trimmomatic: 0.39
+    END_VERSIONS
     """
 }
 
@@ -76,7 +85,7 @@ process metaphlan_unknown_viruses_lists {
     path 'metaphlan_viruses_list.tsv.gz', emit: metaphlan_viruses_list_gz
     path 'metaphlan.sam', emit: metaphlan_sam
     path ".command*"
-    path "versions.yml"
+    path "versions.yml", emit: versions
 
     stub:
     """

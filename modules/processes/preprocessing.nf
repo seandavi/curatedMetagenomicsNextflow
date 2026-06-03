@@ -28,7 +28,7 @@ process fasterq_dump {
     path "fastq_line_count.txt"
     path ".command*"
     path "sampleinfo.txt"
-    path "versions.yml"
+    path "versions.yml", emit: versions
 
     stub:
     """
@@ -99,7 +99,7 @@ process local_fastqc {
     path "fastq_line_count.txt"
     path ".command*"
     path "sampleinfo.txt"
-    path "versions.yml"
+    path "versions.yml", emit: versions
 
     stub:
     """

@@ -351,6 +351,12 @@ nextflow run . \
 That test path disables telemetry, reports, trace output, containers, and cloud
 publishing so the full DAG can be validated in restricted local environments.
 
+> **Before a full-scale run**, stub tests do not pull containers or download
+> databases — work through
+> [`docs/verify-before-full-run.md`](docs/verify-before-full-run.md) to confirm
+> the pinned container tags and database URLs resolve and the real tool
+> invocations behave.
+
 ## Development Test Harness
 
 The recommended developer test entrypoint is `just`, with Nextflow-native tests

@@ -41,6 +41,7 @@ include {
     metaphlan_to_gtdb as metaphlan_to_gtdb_rarefied
 } from './modules/processes/gtdb'
 include { humann } from './modules/processes/humann'
+include { sample_manifest } from './modules/processes/manifest'
 include { MARK_COMPLETE } from './modules/processes/finalize'
 
 /*
@@ -134,12 +135,18 @@ workflow {
      * versions (backward-compatible output layout).
      */
     if (params.local_input) {
+        raw_fastq_ch = local_fastqc.out.fastq
+        raw_versions_ch = local_fastqc.out.versions
+        raw_meta_ch = local_fastqc.out.meta
         kneaddata(
             local_fastqc.out.meta,
             local_fastqc.out.fastq,
             kneaddata_human_database.out.kd_genome.collect(),
             kneaddata_mouse_database.out.kd_mouse.collect())
     } else {
+        raw_fastq_ch = fasterq_dump.out.fastq
+        raw_versions_ch = fasterq_dump.out.versions
+        raw_meta_ch = fasterq_dump.out.meta
         kneaddata(
             fasterq_dump.out.meta,
             fasterq_dump.out.fastq,
@@ -185,6 +192,36 @@ workflow {
             metaphlan_unknown_viruses_lists_full.out.metaphlan_unknown_list,
             sgb_to_gtdb_db.out.sgb2gtdb_db.collect())
     }
+
+    /*
+     * Per-sample manifest
+     *
+     * Join (by sample) the raw reads + their versions, the host-decontaminated
+     * reads + versions, and the full-branch MetaPhlAn versions, then compile a
+     * single manifest.json per sample. Each output channel is merged from the
+     * same originating process so positions stay task-aligned before the join.
+     */
+    raw_for_manifest = raw_meta_ch
+        .merge(raw_fastq_ch)
+        .merge(raw_versions_ch)
+        .map { m, fq, ver -> tuple(m.sample, m, fq, ver) }
+
+    kneaddata_for_manifest = kneaddata.out.meta
+        .merge(kneaddata.out.fastq)
+        .merge(kneaddata.out.versions)
+        .map { m, fq, ver -> tuple(m.sample, fq, ver) }
+
+    metaphlan_versions_for_manifest = metaphlan_unknown_viruses_lists_full.out.meta
+        .merge(metaphlan_unknown_viruses_lists_full.out.versions)
+        .map { m, ver -> tuple(m.sample, ver) }
+
+    manifest_input = raw_for_manifest
+        .join(kneaddata_for_manifest)
+        .join(metaphlan_versions_for_manifest)
+        .map { sample, meta, raw_fq, raw_ver, kd_fq, kd_ver, mp_ver ->
+            tuple(meta, raw_fq, raw_ver, kd_fq, kd_ver, mp_ver) }
+
+    sample_manifest(manifest_input)
 
     /*
      * Optional rarefied branch
@@ -279,6 +316,13 @@ workflow {
             .join(humann.out.meta.map { meta -> tuple(meta.sample, meta) })
             .map { sample_id, meta1, meta2 -> meta1 }
     }
+
+    // Gate completion on the per-sample manifest so the published sample
+    // directory is not marked complete before manifest.json exists.
+    finished_ch = finished_ch
+        .map { meta -> tuple(meta.sample, meta) }
+        .join(sample_manifest.out.meta.map { meta -> tuple(meta.sample, meta) })
+        .map { sample_id, meta1, meta2 -> meta1 }
 
     MARK_COMPLETE(finished_ch)
 }

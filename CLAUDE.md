@@ -39,14 +39,17 @@ nextflow run main.nf -profile local --metadata_tsv samples.tsv
 | `profiling.nf` | `kneaddata`, `metaphlan_*`, `sample_to_markers` |
 | `rarefaction.nf` | `rarefy_fastq` (seqtk downsampling) |
 | `gtdb.nf` | `metaphlan_to_gtdb` (SGB→GTDB profile conversion) |
+| `kraken.nf` | `kraken2`, `bracken` (complementary read-based profiling) |
 | `manifest.nf` | `sample_manifest` (per-sample provenance + read-accounting `manifest.json`) |
-| `databases.nf` | Reference database downloads (MetaPhlAn, KneadData, HUMAnN, SGB→GTDB DBs) |
+| `databases.nf` | Reference database downloads (MetaPhlAn, KneadData, HUMAnN, SGB→GTDB, Kraken2 DBs) |
 | `humann.nf` | HUMAnN gene/pathway abundance (disabled by default) |
 | `finalize.nf` | `MARK_COMPLETE` sentinel |
 
 GTDB conversion uses the vendored `bin/sgb_to_gtdb_profile.py` (Nextflow stages `bin/` onto `PATH`), a self-contained adaptation of MetaPhlAn's official `sgb_to_gtdb_profile.py` parameterized to read the assignment table from `store_dir` rather than the container's bundled copy.
 
 `sample_manifest` writes one `manifest.json` at each sample's published root via `bin/build_manifest.py` (pure Python, no extra container). It compiles provenance, raw-vs-decontaminated read accounting, rarefaction parameters, and the consolidated per-process `versions.yml`. `MARK_COMPLETE` is gated on it so a sample directory is never marked complete before its manifest exists.
+
+`kraken2`/`bracken` (module `kraken.nf`, gated by `skip_kraken`) add a complementary read-based profile under each branch's `kraken/` subdirectory. They use per-process StaPH-B containers and set all directives (container, resources, `maxForks`) **in the process body** rather than `conf/base.config`, because they are imported under aliases. The Kraken2 DB is loaded into RAM (default mode, not memory-mapped or staged to scratch) for cluster portability; `kraken_maxforks` throttles concurrent reads of the DB off shared storage. See ADR-0006.
 
 ### Architecture Decision Records
 

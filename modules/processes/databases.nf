@@ -174,6 +174,42 @@ process sgb_to_gtdb_db {
     """
 }
 
+process kraken_db {
+    label 'db_setup'
+    label 'download_retry'
+
+    cpus 1
+    memory "4g"
+
+    storeDir "${params.store_dir}"
+
+    output:
+    path "kraken_db", emit: kraken_db, type: 'dir'
+    path ".command*"
+
+    stub:
+    """
+    mkdir -p kraken_db
+    touch kraken_db/hash.k2d
+    touch kraken_db/opts.k2d
+    touch kraken_db/taxo.k2d
+    touch kraken_db/database${params.bracken_read_length}mers.kmer_distrib
+    touch .command.run
+    """
+
+    script:
+    """
+    echo ${PWD}
+    mkdir -p kraken_db
+    # Prebuilt Kraken2 index tarballs bundle the Bracken kmer distributions and
+    # extract their .k2d files directly (no top-level directory), so unpack into
+    # kraken_db/. Stream the download to disk to avoid buffering a large file.
+    curl -fsSL "${params.kraken_db_url}" -o kraken_db.tar.gz
+    tar -xzf kraken_db.tar.gz -C kraken_db
+    rm -f kraken_db.tar.gz
+    """
+}
+
 process kneaddata_human_database {
     label 'db_setup'
     label 'download_retry'

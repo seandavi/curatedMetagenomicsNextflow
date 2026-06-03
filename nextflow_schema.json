@@ -79,6 +79,31 @@
             "default": "https://raw.githubusercontent.com/biobakery/MetaPhlAn/master/metaphlan/utils/mpa_vJan25_CHOCOPhlAnSGB_202503_SGB2GTDB.tsv",
             "description": "URL of the SGB-to-GTDB assignment table; must match metaphlan_index."
         },
+        "skip_kraken": {
+            "type": "boolean",
+            "default": false,
+            "description": "Skip complementary Kraken2 + Bracken read-based profiling."
+        },
+        "kraken_db_url": {
+            "type": "string",
+            "default": "https://genome-idx.s3.amazonaws.com/kraken/k2_pluspf_16_GB_20260226.tar.gz",
+            "description": "URL of a prebuilt Kraken2 index tarball (bundles Bracken kmer distributions). Prebuilt PlusPF caps are 8 GB, 16 GB, or full."
+        },
+        "kraken_confidence": {
+            "type": "number",
+            "default": 0.0,
+            "description": "Kraken2 --confidence threshold (0.0-1.0)."
+        },
+        "kraken_maxforks": {
+            "type": "integer",
+            "default": 4,
+            "description": "Max concurrent Kraken2 tasks; throttles reads of the DB off shared storage."
+        },
+        "bracken_read_length": {
+            "type": "integer",
+            "default": 100,
+            "description": "Bracken read length; must have a matching kmer distribution in the Kraken2 DB."
+        },
         "metadata_tsv": {
             "type": "string",
             "description": "The path to a tab-delimited sample sheet. This file MUST have columns: `study_name`, `sample_id`, and `NCBI_accessions`. The `NCBI_accessions` column should have SRA run accessions separated by `;`."

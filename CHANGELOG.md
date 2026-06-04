@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 The version is the git tag, the `manifest.version` in `nextflow.config`, and the
 workflow revision the orchestrator dispatches — keep all three in lockstep.
 
+## [2.0.5] - 2026-06-04
+
+### Fixed
+- `metaphlan_to_gtdb` no longer wrongly reports "no SGB2GTDB mapping table
+  found". It now references the downloaded table directly by its known name
+  (the basename of `sgb2gtdb_url`) instead of `find`-ing the staged db dir —
+  which Nextflow stages as a symlink that `find` won't descend, so the lookup
+  found nothing. The new `-s` check also catches an empty/failed download.
+  (Latent since the GTDB step was added; first hit now that 2.0.4 runs reach
+  this stage.)
+
 ## [2.0.4] - 2026-06-04
 
 ### Changed
@@ -68,6 +79,7 @@ Baseline of the 2.x line. Core metagenomic pipeline, with decisions recorded in
 - HUMAnN functional profiling is deferred pending MetaPhlAn/HUMAnN version
   alignment (ADR-0002).
 
+[2.0.5]: https://github.com/seandavi/curatedMetagenomicsNextflow/compare/2.0.4...2.0.5
 [2.0.4]: https://github.com/seandavi/curatedMetagenomicsNextflow/compare/2.0.3...2.0.4
 [2.0.3]: https://github.com/seandavi/curatedMetagenomicsNextflow/compare/2.0.2...2.0.3
 [2.0.2]: https://github.com/seandavi/curatedMetagenomicsNextflow/compare/2.0.1...2.0.2

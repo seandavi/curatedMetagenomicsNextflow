@@ -56,4 +56,6 @@ other. This preserves the historical record rather than rewriting it.
 | [0006](0006-kraken2-bracken-complementary-profiler.md) | Complementary read-based profiling with Kraken2 + Bracken | Accepted |
 | [0007](0007-resistome-rgi-card.md) | Resistome profiling with RGI against CARD | Accepted |
 | [0008](0008-per-sample-qc-reporting.md) | Per-sample post-decontamination FastQC | Accepted |
-| [0009](0009-retry-and-failure-handling-policy.md) | Retry and failure-handling policy | Accepted |
+| [0009](0009-retry-and-failure-handling-policy.md) | Retry and failure-handling policy | Accepted (error-action superseded by 0010) |
+| [0010](0010-error-strategy-finish.md) | Use errorStrategy 'finish' instead of 'terminate' | Accepted |
+| [0011](0011-gcs-storage-profile-split.md) | Split the GCS storage profile (publish vs work) | Accepted |

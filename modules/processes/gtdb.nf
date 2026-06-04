@@ -46,9 +46,13 @@ process metaphlan_to_gtdb {
 
     script:
     """
-    mapping_file=\$(find ${sgb2gtdb_db} -name '*SGB2GTDB.tsv' | head -n 1)
-    if [ -z "\$mapping_file" ]; then
-        echo "ERROR: no SGB2GTDB mapping table found in ${sgb2gtdb_db}" >&2
+    # sgb_to_gtdb_db downloads the table to a known name (the basename of
+    # params.sgb2gtdb_url), so reference it directly — no need to search the
+    # staged dir (which is a symlink `find` won't descend anyway). -s also
+    # catches an empty/failed download.
+    mapping_file="${sgb2gtdb_db}/${file(params.sgb2gtdb_url).name}"
+    if [ ! -s "\$mapping_file" ]; then
+        echo "ERROR: SGB2GTDB mapping table missing or empty: \$mapping_file" >&2
         exit 1
     fi
 

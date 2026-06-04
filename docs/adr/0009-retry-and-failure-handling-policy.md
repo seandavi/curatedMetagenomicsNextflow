@@ -1,6 +1,6 @@
 # 0009. Retry and failure-handling policy
 
-- **Status:** Accepted
+- **Status:** Accepted (error-action choice superseded by [0010](0010-error-strategy-finish.md); retry policy still in force)
 - **Date:** 2026-06-04
 - **Deciders:** Sean Davis
 

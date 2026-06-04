@@ -12,6 +12,14 @@ process rarefy_fastq {
 
     tag "${meta.sample}"
 
+    // Set in-body (like the sibling qc processes) rather than via a
+    // conf/base.config withName, so the directive holds even if this process
+    // is later imported under an alias. seqtk sample is light; the headroom is
+    // for large inputs. Memory escalates on retry (Alpine caps time at 24h, so
+    // no time escalation — memory only).
+    cpus 2
+    memory { 8.GB * task.attempt }
+
     input:
     val meta
     path fastq

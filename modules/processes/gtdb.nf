@@ -5,7 +5,7 @@
  * translates a MetaPhlAn relative-abundance profile into a GTDB-taxonomy
  * profile using the official SGB->GTDB assignment table (downloaded and cached
  * by the sgb_to_gtdb_db process). The conversion itself is performed by the
- * vendored bin/sgb_to_gtdb_profile.py helper, which:
+ * vendored bin/cmgd_sgb_to_gtdb.py helper, which:
  *   - substitutes 1:1 SGB->GTDB mappings directly,
  *   - bins (sums) n:1 mappings into the shared GTDB taxon,
  *   - aggregates abundances up the GTDB lineage.
@@ -56,7 +56,10 @@ process metaphlan_to_gtdb {
         exit 1
     fi
 
-    sgb_to_gtdb_profile.py \
+    # Uniquely named (not 'sgb_to_gtdb_profile.py') so the container's baked
+    # /usr/local/bin copy — an older version without -m — cannot shadow the
+    # pipeline's vendored bin/ script on PATH.
+    cmgd_sgb_to_gtdb.py \
         -i ${metaphlan_profile} \
         -o gtdb_profile.tsv \
         -m "\$mapping_file"

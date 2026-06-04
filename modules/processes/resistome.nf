@@ -16,7 +16,7 @@
  */
 
 process resistome {
-    container 'docker://quay.io/biocontainers/rgi:6.0.5--pyha8f3691_0'
+    container 'docker://quay.io/biocontainers/rgi:6.0.5--pyh05cac1d_0'
 
     label 'profiling'
 

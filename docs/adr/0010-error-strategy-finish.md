@@ -1,6 +1,6 @@
 # 0010. Use errorStrategy 'finish' instead of 'terminate'
 
-- **Status:** Accepted (supersedes the error-action choice in [0009](0009-retry-and-failure-handling-policy.md))
+- **Status:** Superseded by [0011](0011-error-strategy-ignore-with-fail-hard-exceptions.md) — `'finish'` was found not to isolate failures (it strands not-yet-launched batch-mates); 2.0.7 moves per-sample processes to `'ignore'` with fail-hard exceptions.
 - **Date:** 2026-06-04
 - **Deciders:** Sean Davis
 

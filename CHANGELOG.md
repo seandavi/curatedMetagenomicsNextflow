@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 The version is the git tag, the `manifest.version` in `nextflow.config`, and the
 workflow revision the orchestrator dispatches — keep all three in lockstep.
 
+## [2.0.7] - 2026-07-02
+
+### Changed
+- **Failure isolation: a single bad sample no longer poisons its batch.** The
+  default `errorStrategy` for per-sample compute processes now ends in `ignore`
+  instead of `finish`. `finish` halted submission of NEW tasks on any non-OOM
+  failure, so when one sample's early `fasterq_dump` failed (e.g. exit 3 on a
+  bad/unavailable SRA accession) the whole batch's downstream tasks never
+  launched — none of the batch-mates reached `MARK_COMPLETE` and all up-to-25
+  samples were dead-lettered. Live incident: 4 bad downloads took down 56
+  samples, 52 of them healthy collateral. New policy:
+  `{ (task.exitStatus in 137..140 && task.attempt <= 4) ? 'retry' : (task.attempt <= 2 ? 'retry' : 'ignore') }`
+  — retry the OOM/scheduler-kill family up to 4× (with escalating memory), retry
+  any other failure once, then `ignore` (drop just that sample).
+- Applied the same retry-then-`ignore` shape to the `google` (Google Batch)
+  profile, which previously used `terminate` — strictly worse than `finish`. The
+  exit-14 spot/preemption retry is preserved.
+
+### Fixed
+- **Shared/critical processes stay fail-hard.** Added `withLabel` fail-hard
+  overrides so failure isolation never silently ruins a run:
+  - `db_setup` — every reference/database process in
+    `modules/processes/databases.nf` (install_metaphlan_db, chocophlan_db,
+    utility_mapping_db, uniref_db, sgb_to_gtdb_db, kraken_db, card_db,
+    kneaddata_human_database, kneaddata_mouse_database). A broken shared DB must
+    stop the run loudly, not silently ruin every sample.
+  - `finalize` — MARK_COMPLETE (completion sentinel) and sample_manifest
+    (publish/manifest). `ignore`ing these would mark a sample complete without
+    outputs or drop its manifest.
+  These retry transient failures, then `finish` (never `ignore`).
+
+### Notes
+- Profile resolution: the production daemon runs `-profile alpine,gcs`. Neither
+  `alpine` nor `gcs` overrides `errorStrategy`, so the effective strategy for
+  that run is the `conf/base.config` default — which is exactly what this change
+  fixes. The `google` profile's `terminate` override only activates under
+  `-profile google` and was fixed for completeness.
+
 ## [2.0.6] - 2026-06-04
 
 ### Fixed
@@ -89,6 +127,7 @@ Baseline of the 2.x line. Core metagenomic pipeline, with decisions recorded in
 - HUMAnN functional profiling is deferred pending MetaPhlAn/HUMAnN version
   alignment (ADR-0002).
 
+[2.0.7]: https://github.com/seandavi/curatedMetagenomicsNextflow/compare/2.0.6...2.0.7
 [2.0.6]: https://github.com/seandavi/curatedMetagenomicsNextflow/compare/2.0.5...2.0.6
 [2.0.5]: https://github.com/seandavi/curatedMetagenomicsNextflow/compare/2.0.4...2.0.5
 [2.0.4]: https://github.com/seandavi/curatedMetagenomicsNextflow/compare/2.0.3...2.0.4

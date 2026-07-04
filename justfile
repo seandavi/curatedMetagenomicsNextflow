@@ -37,9 +37,12 @@ test-config-all:
       nextflow config -profile "$profile" >/dev/null; \
     done
 
+# The config parses under the current (v2) parser, but the process scripts
+# still target the v1 script grammar, so pin the parser for anything that
+# compiles main.nf/modules until that migration happens.
 [group('test')]
 test-stub:
-    env NXF_DISABLE_CHECK_LATEST=true nextflow run . \
+    env NXF_DISABLE_CHECK_LATEST=true NXF_SYNTAX_PARSER=v1 nextflow run . \
       -profile local \
       -stub-run \
       -c conf/test/disable-telemetry.config \
@@ -52,11 +55,11 @@ test-nf-list: test-bootstrap
 
 [group('test')]
 test-nf: test-bootstrap
-    {{nf_test}} test
+    NXF_SYNTAX_PARSER=v1 {{nf_test}} test
 
 [group('test')]
 test-nf-verbose: test-bootstrap
-    {{nf_test}} test --verbose
+    NXF_SYNTAX_PARSER=v1 {{nf_test}} test --verbose
 
 [group('test')]
 test-clean:

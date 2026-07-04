@@ -6,10 +6,15 @@ A NextFlow pipeline for processing metagenomics data, implementing the curatedMe
 
 This pipeline processes raw sequencing data through multiple steps:
 1. FASTQ extraction with `fasterq-dump`
-2. Quality control with `KneadData`
+2. Quality control with `KneadData` (plus FastQC on the decontaminated reads, optional)
 3. Rarefaction to 1 M reads with `seqtk sample` (optional, enabled by default)
 4. Taxonomic profiling with `MetaPhlAn` — run on both the full and rarefied reads in parallel
-5. Functional profiling with `HUMAnN` (optional, uses full-depth reads)
+5. Complementary read-based taxonomic profiling with `Kraken2` + `Bracken` (optional, both branches)
+6. Antimicrobial-resistance profiling with `KMA` against `CARD` (optional, both branches)
+7. Functional profiling with `HUMAnN` (optional, uses full-depth reads)
+
+Each sample also gets a `manifest.json` (provenance + read accounting) and a
+`MARK_COMPLETE` sentinel once all enabled branches finish.
 
 ## Repository Structure
 
@@ -65,7 +70,7 @@ nextflow run main.nf --metadata_tsv samples.tsv --skip_humann --publish_base_dir
 | `skip_humann`    | Skip HUMAnN functional profiling | `true` |
 | `skip_rarefied`  | Skip the rarefied profiling branch | `false` |
 | `skip_kraken`    | Skip Kraken2 + Bracken read-based profiling | `false` |
-| `skip_resistome` | Skip RGI/CARD resistome profiling (full branch only) | `false` |
+| `skip_resistome` | Skip KMA/CARD resistome profiling (both branches) | `false` |
 | `skip_fastqc`    | Skip FastQC on the host-decontaminated reads | `false` |
 
 `skip_humann=true` is the current supported default. The `skip_humann=false`
@@ -135,25 +140,27 @@ memory-mapped or staged to node-local scratch) for cluster portability;
 `kraken_maxforks` limits how many tasks read it off shared storage at once. See
 [`docs/adr/0006-kraken2-bracken-complementary-profiler.md`](docs/adr/0006-kraken2-bracken-complementary-profiler.md).
 
-### Resistome (RGI/CARD) Parameters
+### Resistome (KMA/CARD) Parameters
 
 | Parameter        | Description                                          | Default |
 | ---------------- | ---------------------------------------------------- | ------- |
-| `skip_resistome` | Disable RGI/CARD resistome profiling                 | `false` |
-| `card_db_url`    | Canonical CARD data tarball URL                      | `https://card.mcmaster.ca/latest/data` |
-| `rgi_aligner`    | RGI `bwt` read aligner (`bowtie2`, `bwa`, or `kma`)  | `bowtie2` |
+| `skip_resistome` | Disable KMA/CARD resistome profiling                 | `false` |
+| `card_db_url`    | CARD "broadstreet" release tarball URL               | `https://card.mcmaster.ca/download/0/broadstreet-v4.0.1.tar.bz2` |
 
 When `skip_resistome=false` (the default), the host-decontaminated reads are
-profiled for antimicrobial-resistance genes with [RGI](https://github.com/arpcard/rgi)'s
-read-based `bwt` workflow against the [CARD](https://card.mcmaster.ca/) database,
-emitting per-sample gene- and allele-level mapping tables (`rgi_bwt.gene_mapping_data.txt.gz`,
-`rgi_bwt.allele_mapping_data.txt.gz`) plus mapping statistics under a `resistome/`
-subdirectory. CARD is downloaded once into `store_dir`.
+profiled for antimicrobial-resistance genes with [KMA](https://bitbucket.org/genomicepidemiology/kma)
+against a KMA-indexed [CARD](https://card.mcmaster.ca/) reference, emitting
+per-sample template hits with depth/coverage statistics (`card_kma.res.gz`,
+`card_kma.mapstat.gz`, plus `card_kma.{aln,fsa,frag}.gz`) under a `resistome/`
+subdirectory. The CARD broadstreet release is downloaded once into `store_dir`,
+and its homolog-model nucleotide FASTA is indexed with `kma index` (also cached
+in `store_dir`) for reuse across runs.
 
-This step runs on the **full-depth branch only** — ARGs are rare and the rarefied
-1M-read depth yields a sparse, low-value resistome — so with the rarefied branch
-active it publishes under `full_data/resistome/`. See
-[`docs/adr/0007-resistome-rgi-card.md`](docs/adr/0007-resistome-rgi-card.md).
+Unlike the previous RGI/CARD step (full branch only), KMA is cheap enough to run
+on **both the full and rarefied branches**, matching MetaPhlAn and Kraken. ARGs
+are sparse at the rarefied 1M-read depth, so treat the rarefied resistome as
+low-sensitivity. See
+[`docs/adr/0012-resistome-kma-card.md`](docs/adr/0012-resistome-kma-card.md).
 
 ### QC Parameters
 
@@ -211,7 +218,7 @@ Results will be organized by sample in the `publish_dir` directory.
 ```
 <publish_base_dir>/
 ├── cmgd_nextflow/
-│   ├── 2.0.0/
+│   ├── 2.2.0/
 │   │   ├── sample1/
 │   │   │   ├── manifest.json     (provenance + read accounting)
 │   │   │   ├── MARK_COMPLETE
@@ -222,13 +229,14 @@ Results will be organized by sample in the `publish_dir` directory.
 │   │   │   │   ├── metaphlan_markers/
 │   │   │   │   ├── strainphlan_markers/
 │   │   │   │   ├── kraken/       (only when --skip_kraken false)
-│   │   │   │   └── resistome/    (only when --skip_resistome false; full depth only)
+│   │   │   │   └── resistome/    (only when --skip_resistome false)
 │   │   │   └── rarefied_data/
 │   │   │       ├── rarefaction/
 │   │   │       ├── metaphlan_lists/
 │   │   │       ├── metaphlan_markers/
 │   │   │       ├── strainphlan_markers/
-│   │   │       └── kraken/       (only when --skip_kraken false)
+│   │   │       ├── kraken/       (only when --skip_kraken false)
+│   │   │       └── resistome/    (only when --skip_resistome false)
 │   │   ├── sample2/
 │   │   │   └── ...
 ```
@@ -238,7 +246,7 @@ Results will be organized by sample in the `publish_dir` directory.
 ```
 <publish_base_dir>/
 ├── cmgd_nextflow/
-│   ├── 2.0.0/
+│   ├── 2.2.0/
 │   │   ├── sample1/
 │   │   │   ├── manifest.json   (provenance + read accounting)
 │   │   │   ├── MARK_COMPLETE

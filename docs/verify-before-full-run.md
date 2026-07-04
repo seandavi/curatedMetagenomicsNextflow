@@ -34,12 +34,12 @@ runs.
       ```sh
       singularity exec docker://staphb/bracken:2.9 bracken -v
       ```
-- [ ] **RGI** — `docker://quay.io/biocontainers/rgi:6.0.5--pyha8f3691_0`
-      (`modules/processes/resistome.nf`). The `--pyha8f3691_0` build suffix is
-      the most likely failure point; if the pull 404s, find the current build at
-      <https://quay.io/repository/biocontainers/rgi?tab=tags> and update the tag.
+- [ ] **KMA** — `docker://quay.io/biocontainers/kma:1.6.13--h118bc1c_0`
+      (`modules/processes/resistome.nf` and the `card_kma_db` index step in
+      `databases.nf`). If the pull 404s, find the current build at
+      <https://quay.io/repository/biocontainers/kma?tab=tags> and update the tag.
       ```sh
-      singularity exec docker://quay.io/biocontainers/rgi:6.0.5--pyha8f3691_0 rgi main --version
+      singularity exec docker://quay.io/biocontainers/kma:1.6.13--h118bc1c_0 kma -v
       ```
 
 ## 2. Database URLs resolve
@@ -58,10 +58,11 @@ runs.
       `database100mers.kmer_distrib` (matching `bracken_read_length = 100`). The
       PlusPF tarballs ship 50/75/100/150/200/250; if you change
       `bracken_read_length`, confirm the matching file exists.
-- [ ] **CARD data** (`nextflow.config` `card_db_url`) — should resolve and the
-      tarball should contain `card.json`.
+- [ ] **CARD data** (`nextflow.config` `card_db_url`) — the broadstreet tarball
+      should resolve and contain `nucleotide_fasta_protein_homolog_model.fasta`
+      (the FASTA that `card_kma_db` indexes with `kma index`).
       ```sh
-      curl -fsIL "https://card.mcmaster.ca/latest/data" | head -1
+      curl -fsIL "https://card.mcmaster.ca/download/0/broadstreet-v4.0.1.tar.bz2" | head -1
       ```
 
 ## 3. Tool invocations not exercised by stub
@@ -75,10 +76,11 @@ outside the stub. Validate them on **one real sample** (see §4) and confirm:
       at the full PlusPF DB).
 - [ ] **Bracken** produces `bracken.species.txt` / `bracken.genus.txt` (no
       "kmer distribution not found" error → confirms §2 read-length item).
-- [ ] **RGI bwt** completes for **single-end** input (`--read_one` only) and the
-      `card_annotation` step produces a `card_database_v*.fasta` that the glob in
-      `resistome.nf` picks up. Confirm `rgi_bwt.gene_mapping_data.txt` and
-      `rgi_bwt.allele_mapping_data.txt` are non-empty.
+- [ ] **KMA index** (`card_kma_db`) builds the CARD index (`card_kma_db.*`
+      files) from the homolog-model FASTA, and **KMA align** (`resistome_kma`)
+      completes for single-end input with `-ef`. Confirm the `resistome/`
+      outputs (`card_kma.res.gz`, `card_kma.mapstat.gz`) are non-empty. This
+      path is validated end-to-end against real CARD data; see ADR-0012.
 
 ## 4. End-to-end smoke test on one real sample
 
@@ -97,9 +99,10 @@ nextflow run . -profile <your_profile> \
       `strainphlan_markers/` populated.
 - [ ] `<sample>/full_data/kraken/` has `kraken2.report.txt.gz` and the Bracken
       tables.
-- [ ] `<sample>/full_data/resistome/` has the RGI mapping tables.
-- [ ] `<sample>/rarefied_data/...` mirrors the full branch (minus `resistome/`,
-      which is full-depth only).
+- [ ] `<sample>/full_data/resistome/` has the KMA outputs (`card_kma.res.gz`,
+      `card_kma.mapstat.gz`, …).
+- [ ] `<sample>/rarefied_data/...` mirrors the full branch (KMA resistome now
+      runs on the rarefied branch too, though ARGs are sparse at 1M reads).
 - [ ] `<sample>/MARK_COMPLETE` exists (the run gated on every enabled branch).
 
 ## If something fails

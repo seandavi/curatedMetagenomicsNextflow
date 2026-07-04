@@ -20,6 +20,38 @@ workflow revision the orchestrator dispatches — keep all three in lockstep.
   produced. See [ADR-0013](docs/adr/0013-remove-gtdb-conversion.md) (supersedes
   ADR-0004).
 
+## [2.1.0] - 2026-07-04
+
+### Added
+- **Resistome profiling with KMA against CARD**, replacing the RGI/CARD step.
+  KMA maps the host-decontaminated reads against a KMA-indexed CARD reference
+  (the broadstreet homolog-model FASTA, indexed once into `store_dir` by the new
+  `card_kma_db` process) and is cheap enough to run on **both the full and
+  rarefied branches** (RGI ran full-only). Outputs are now `card_kma.*.gz`
+  (`res`, `mapstat`, `aln`, `fsa`, `frag`) under `resistome/`, replacing the
+  `rgi_bwt.*_mapping_data.txt.gz` tables. `rgi_aligner` is removed and
+  `card_db_url` now points at the broadstreet tarball. Validated end-to-end
+  against real CARD data. See [ADR-0012](docs/adr/0012-resistome-kma-card.md)
+  (supersedes ADR-0007).
+- **Minimal CI** (`.github/workflows/ci.yml`): a config check across all
+  profiles under the current parser plus a container-free `-stub-run`, on every
+  push and pull request.
+
+### Changed
+- **`nextflow.config` now parses under the strict (v2) Nextflow config parser.**
+  The run-lifecycle telemetry hooks were reworked off top-level `import`/`def`
+  helpers (which the v2 parser rejects) into inlined `workflow.onComplete` /
+  `onError` closures. The pipeline scripts still target the v1 script grammar, so
+  runs pin `NXF_SYNTAX_PARSER=v1` (set in the `justfile` recipes and the CI stub
+  step) until that separate migration is done.
+
+### Fixed
+- **Telemetry `onComplete`/`onError` POSTs now actually fire.** They had silently
+  never worked: `ProcessBuilder` copies its arg list into a `String[]`, which
+  threw an arraycopy type-mismatch on the interpolated (GString) payload/URL and
+  was swallowed by the surrounding try/catch. Fixed by coercing the arg list with
+  `*.toString()`. (Pre-existing bug, unrelated to the parser rework.)
+
 ## [2.0.7] - 2026-07-02
 
 ### Changed

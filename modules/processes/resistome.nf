@@ -1,26 +1,28 @@
 /*
- * Resistome profiling: RGI against CARD (ADR-0007)
+ * Resistome profiling: KMA against CARD (ADR-0012, supersedes ADR-0007)
  *
- * RGI's read-based `bwt` workflow aligns the host-decontaminated reads against
- * the CARD reference and reports antimicrobial-resistance gene and allele
- * abundances, assembly-free. Runs on the full-depth branch only (ARGs are rare;
- * the rarefied depth yields a sparse, low-value resistome).
+ * KMA (k-mer alignment) maps the host-decontaminated reads directly against a
+ * KMA-indexed CARD reference (the homolog-model nucleotide FASTA; see
+ * card_kma_db in databases.nf) and reports antimicrobial-resistance gene
+ * template hits with depth/coverage statistics, assembly-free.
  *
- * Container and resources are set in the process body (not conf/base.config) to
- * stay consistent with the other tool-specific processes that override the base
- * image (e.g. kraken2/bracken).
+ * Unlike the previous RGI/CARD resistome (full-branch only), KMA is cheap
+ * enough to run on BOTH the full and rarefied branches, matching MetaPhlAn and
+ * Kraken. It is imported under per-branch aliases, so container and resource
+ * directives live in the process body (not conf/base.config) to apply
+ * regardless of alias.
  *
- * NOTE: The RGI load + bwt invocation follows the CARD documentation but is not
- * exercised by the stub tests (which do not run containers); the first real run
- * is the true validation. See docs/adr/0007-resistome-rgi-card.md.
+ * NOTE: The KMA invocation is not exercised by stub tests (which do not run
+ * containers); the first real run is the true validation. See
+ * docs/adr/0012-resistome-kma-card.md.
  */
 
-process resistome {
-    container 'docker://quay.io/biocontainers/rgi:6.0.5--pyh05cac1d_0'
+process resistome_kma {
+    container 'docker://quay.io/biocontainers/kma:1.6.13--h118bc1c_0'
 
     label 'profiling'
 
-    publishDir "${params.publish_dir ?: "${params.publish_base_dir}/${workflow.manifest.name}/${workflow.manifest.version}"}/${meta.sample}/${meta.branch ? meta.branch + '/' : ''}resistome", pattern: "{*.txt.gz,.command*}", mode: "${params.publish_mode}"
+    publishDir "${params.publish_dir ?: "${params.publish_base_dir}/${workflow.manifest.name}/${workflow.manifest.version}"}/${meta.sample}/${meta.branch ? meta.branch + '/' : ''}resistome", pattern: "{*.gz,.command*}", mode: "${params.publish_mode}"
 
     tag "${meta.sample}"
 
@@ -34,46 +36,43 @@ process resistome {
 
     output:
     val(meta), emit: meta
-    path "rgi_bwt.gene_mapping_data.txt.gz", emit: gene_mapping
-    path "rgi_bwt.allele_mapping_data.txt.gz", emit: allele_mapping
-    path "rgi_bwt.*mapping_stats.txt.gz"
+    path "card_kma.res.gz", emit: res
+    path "card_kma.mapstat.gz", emit: mapstat
+    path "card_kma.aln.gz"
+    path "card_kma.fsa.gz"
+    path "card_kma.frag.gz"
     path ".command*"
     path "versions.yml", emit: versions
 
     stub:
     """
-    touch rgi_bwt.gene_mapping_data.txt.gz
-    touch rgi_bwt.allele_mapping_data.txt.gz
-    touch rgi_bwt.overall_mapping_stats.txt.gz
+    touch card_kma.res.gz
+    touch card_kma.mapstat.gz
+    touch card_kma.aln.gz
+    touch card_kma.fsa.gz
+    touch card_kma.frag.gz
     touch .command.run
     touch versions.yml
     """
 
     script:
     """
-    # Load CARD canonical data into a run-local database (--local writes a
-    # localDB/ in the work dir, so no writable package install is required).
-    rgi load --card_json ${card_db}/card.json --local
+    # Reads are single-end throughout the pipeline. -ef adds the extended
+    # mapstat table (fragment counts, depth) that is useful for ARG
+    # quantification. KMA writes card_kma.frag.gz already gzipped.
+    kma \
+        -i ${reads} \
+        -o card_kma \
+        -t_db ${card_db}/card_kma_db \
+        -t ${task.cpus} \
+        -ef
 
-    # Build and load the bwt reference annotation; card_annotation writes a
-    # version-stamped FASTA (card_database_v<CARD version>.fasta).
-    rgi card_annotation -i ${card_db}/card.json
-    card_fasta=\$(ls card_database_v*.fasta | grep -v '_all' | head -n 1)
-    rgi load --card_json ${card_db}/card.json --card_annotation "\$card_fasta" --local
-
-    rgi bwt \
-        --read_one ${reads} \
-        --aligner ${params.rgi_aligner} \
-        --threads ${task.cpus} \
-        --output_file rgi_bwt \
-        --local \
-        --clean
-
-    gzip rgi_bwt.*.txt
+    # Compress the remaining plain-text outputs to save space.
+    gzip card_kma.res card_kma.fsa card_kma.aln card_kma.mapstat
 
     cat <<-END_VERSIONS > versions.yml
     versions:
-        rgi: \$( rgi main --version 2>&1 | tail -n 1 )
+        kma: \$( kma -v 2>&1 | head -n1 | sed 's/^KMA-//' )
     END_VERSIONS
     """
 }

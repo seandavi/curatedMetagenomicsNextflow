@@ -23,7 +23,6 @@ include {
     uniref_db
     kneaddata_human_database
     kneaddata_mouse_database
-    sgb_to_gtdb_db
     kraken_db
     card_db
     card_kma_db
@@ -39,10 +38,6 @@ include {
     sample_to_markers as sample_to_markers_rarefied
 } from './modules/processes/profiling'
 include { rarefy_fastq } from './modules/processes/rarefaction'
-include {
-    metaphlan_to_gtdb as metaphlan_to_gtdb_full
-    metaphlan_to_gtdb as metaphlan_to_gtdb_rarefied
-} from './modules/processes/gtdb'
 include {
     kraken2 as kraken2_full
     kraken2 as kraken2_rarefied
@@ -132,9 +127,6 @@ workflow {
     utility_mapping_db()
     kneaddata_human_database()
     kneaddata_mouse_database()
-    if (!params.skip_gtdb) {
-        sgb_to_gtdb_db()
-    }
     if (!params.skip_kraken) {
         kraken_db()
     }
@@ -203,16 +195,6 @@ workflow {
         metaphlan_unknown_viruses_lists_full.out.meta,
         metaphlan_unknown_viruses_lists_full.out.metaphlan_sam,
         install_metaphlan_db.out.metaphlan_db.collect())
-
-    /*
-     * GTDB-taxonomy conversion of the full-depth MetaPhlAn profile.
-     */
-    if (!params.skip_gtdb) {
-        metaphlan_to_gtdb_full(
-            metaphlan_unknown_viruses_lists_full.out.meta,
-            metaphlan_unknown_viruses_lists_full.out.metaphlan_unknown_list,
-            sgb_to_gtdb_db.out.sgb2gtdb_db.collect())
-    }
 
     /*
      * Complementary read-based profiling (Kraken2 + Bracken) on the full-depth
@@ -311,13 +293,6 @@ workflow {
             metaphlan_unknown_viruses_lists_rarefied.out.metaphlan_sam,
             install_metaphlan_db.out.metaphlan_db.collect())
 
-        if (!params.skip_gtdb) {
-            metaphlan_to_gtdb_rarefied(
-                metaphlan_unknown_viruses_lists_rarefied.out.meta,
-                metaphlan_unknown_viruses_lists_rarefied.out.metaphlan_unknown_list,
-                sgb_to_gtdb_db.out.sgb2gtdb_db.collect())
-        }
-
         if (!params.skip_kraken) {
             kraken2_rarefied(
                 rarefy_fastq.out.meta,
@@ -359,21 +334,11 @@ workflow {
      * Rarefied branch (when enabled): also join metaphlan_markers_rarefied and
      * sample_to_markers_rarefied.
      * HUMAnN branch (when enabled): additionally gate on humann output.
-     * GTDB branch (when enabled): additionally gate on the full-branch GTDB
-     * conversion.
      */
     finished_ch = metaphlan_markers_full.out.meta
         .map { meta -> tuple(meta.sample, meta) }
         .join(sample_to_markers_full.out.meta.map { meta -> tuple(meta.sample, meta) })
         .map { sample_id, meta1, meta2 -> meta1 }
-
-    if (!params.skip_gtdb) {
-        // Gate completion on the full-branch GTDB conversion when enabled.
-        finished_ch = finished_ch
-            .map { meta -> tuple(meta.sample, meta) }
-            .join(metaphlan_to_gtdb_full.out.meta.map { meta -> tuple(meta.sample, meta) })
-            .map { sample_id, meta1, meta2 -> meta1 }
-    }
 
     if (!params.skip_kraken) {
         // Gate completion on the full-branch Kraken2/Bracken profiling.

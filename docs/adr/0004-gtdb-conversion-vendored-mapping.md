@@ -1,6 +1,6 @@
 # 0004. GTDB conversion via a vendored, store_dir-backed mapping table
 
-- **Status:** Accepted
+- **Status:** Superseded by [0013](0013-remove-gtdb-conversion.md)
 - **Date:** 2026-06-03
 - **Deciders:** Sean Davis
 

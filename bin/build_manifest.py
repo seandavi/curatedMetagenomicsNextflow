@@ -143,7 +143,6 @@ def main():
     p.add_argument("--rarefy-reads", type=int, default=0)
     p.add_argument("--rarefy-seed", type=int, default=0)
     p.add_argument("--skip-humann", default="true")
-    p.add_argument("--skip-gtdb", default="false")
     p.add_argument("--raw-fastq", required=True)
     p.add_argument("--kneaddata-fastq", required=True)
     p.add_argument("--output", default="manifest.json")
@@ -172,7 +171,6 @@ def main():
             "metaphlan_index": none_if_blank(args.metaphlan_index),
             "store_dir": none_if_blank(args.store_dir),
             "skip_humann": as_bool(args.skip_humann),
-            "skip_gtdb": as_bool(args.skip_gtdb),
             "skip_rarefied": as_bool(args.skip_rarefied),
         },
         "read_accounting": read_accounting(raw, decontaminated),

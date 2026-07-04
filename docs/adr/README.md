@@ -51,7 +51,7 @@ other. This preserves the historical record rather than rewriting it.
 | [0001](0001-container-strategy.md) | Single base image, per-process biocontainers for new tools | Accepted |
 | [0002](0002-defer-humann.md) | Defer HUMAnN functional profiling pending version alignment | Accepted |
 | [0003](0003-dual-branch-rarefied-profiling.md) | Dual-branch profiling: full depth + rarefied | Accepted |
-| [0004](0004-gtdb-conversion-vendored-mapping.md) | GTDB conversion via a vendored, store_dir-backed mapping table | Accepted |
+| [0004](0004-gtdb-conversion-vendored-mapping.md) | GTDB conversion via a vendored, store_dir-backed mapping table | Superseded by [0013](0013-remove-gtdb-conversion.md) |
 | [0005](0005-per-sample-manifest.md) | Per-sample provenance & read-accounting manifest | Accepted |
 | [0006](0006-kraken2-bracken-complementary-profiler.md) | Complementary read-based profiling with Kraken2 + Bracken | Accepted |
 | [0007](0007-resistome-rgi-card.md) | Resistome profiling with RGI against CARD | Superseded by [0012](0012-resistome-kma-card.md) |
@@ -60,3 +60,4 @@ other. This preserves the historical record rather than rewriting it.
 | [0010](0010-error-strategy-finish.md) | Use errorStrategy 'finish' instead of 'terminate' | Accepted |
 | [0011](0011-gcs-storage-profile-split.md) | Split the GCS storage profile (publish vs work) | Accepted |
 | [0012](0012-resistome-kma-card.md) | Resistome profiling with KMA against CARD | Accepted |
+| [0013](0013-remove-gtdb-conversion.md) | Remove in-pipeline GTDB conversion (do it as post-processing) | Accepted |

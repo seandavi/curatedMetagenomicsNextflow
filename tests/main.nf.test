@@ -24,25 +24,6 @@ nextflow_pipeline {
         }
     }
 
-    test("Single-sample stub run completes with GTDB conversion disabled") {
-
-        when {
-            params {
-                sample_id = "TEST_SAMPLE"
-                run_ids = "SRR000001"
-                skip_humann = true
-                skip_gtdb = true
-            }
-        }
-
-        then {
-            assert workflow.success
-            assert workflow.failed == false
-            assert workflow.exitStatus == 0
-            assert workflow.errorReport == null || workflow.errorReport.isEmpty()
-        }
-    }
-
     test("Single-sample stub run completes with Kraken disabled") {
 
         when {

@@ -38,16 +38,13 @@ nextflow run main.nf -profile local --metadata_tsv samples.tsv
 | `preprocessing.nf` | `fasterq_dump`, `local_fastqc` |
 | `profiling.nf` | `kneaddata`, `metaphlan_*`, `sample_to_markers` |
 | `rarefaction.nf` | `rarefy_fastq` (seqtk downsampling) |
-| `gtdb.nf` | `metaphlan_to_gtdb` (SGB→GTDB profile conversion) |
 | `kraken.nf` | `kraken2`, `bracken` (complementary read-based profiling) |
 | `resistome.nf` | `resistome_kma` (KMA/CARD read-based AMR profiling, both branches) |
 | `qc.nf` | `fastqc` (post-decontamination FastQC) |
 | `manifest.nf` | `sample_manifest` (per-sample provenance + read-accounting `manifest.json`) |
-| `databases.nf` | Reference database downloads (MetaPhlAn, KneadData, HUMAnN, SGB→GTDB, Kraken2, CARD DBs) |
+| `databases.nf` | Reference database downloads (MetaPhlAn, KneadData, HUMAnN, Kraken2, CARD DBs) |
 | `humann.nf` | HUMAnN gene/pathway abundance (disabled by default) |
 | `finalize.nf` | `MARK_COMPLETE` sentinel |
-
-GTDB conversion uses the vendored `bin/sgb_to_gtdb_profile.py` (Nextflow stages `bin/` onto `PATH`), a self-contained adaptation of MetaPhlAn's official `sgb_to_gtdb_profile.py` parameterized to read the assignment table from `store_dir` rather than the container's bundled copy.
 
 `sample_manifest` writes one `manifest.json` at each sample's published root via `bin/build_manifest.py` (pure Python, no extra container). It compiles provenance, raw-vs-decontaminated read accounting, rarefaction parameters, and the consolidated per-process `versions.yml`. `MARK_COMPLETE` is gated on it so a sample directory is never marked complete before its manifest exists.
 
@@ -59,7 +56,7 @@ GTDB conversion uses the vendored `bin/sgb_to_gtdb_profile.py` (Nextflow stages 
 
 ### Architecture Decision Records
 
-Significant, non-obvious decisions are recorded as ADRs in `docs/adr/` (index in `docs/adr/README.md`). Consult them before changing container strategy, the HUMAnN default, the output layout, the GTDB conversion, the manifest, or the planned Kraken2/resistome steps — and add a new ADR (do not edit accepted ones) when making a comparably significant decision.
+Significant, non-obvious decisions are recorded as ADRs in `docs/adr/` (index in `docs/adr/README.md`). Consult them before changing container strategy, the HUMAnN default, the output layout, the manifest, or the Kraken2/resistome steps — and add a new ADR (do not edit accepted ones) when making a comparably significant decision.
 
 ### Configuration layers
 

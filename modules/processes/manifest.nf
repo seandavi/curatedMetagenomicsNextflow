@@ -66,7 +66,6 @@ process sample_manifest {
         --rarefy-reads ${params.rarefy_reads} \
         --rarefy-seed ${params.rarefy_seed} \
         --skip-humann ${params.skip_humann} \
-        --skip-gtdb ${params.skip_gtdb} \
         --raw-fastq ${raw_fastq} \
         --kneaddata-fastq ${kneaddata_fastq} \
         --output manifest.json

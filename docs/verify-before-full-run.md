@@ -47,11 +47,6 @@ runs.
 - [ ] **MetaPhlAn index** `mpa_vJan25_CHOCOPhlAnSGB_202503` (`nextflow.config`
       `metaphlan_index`) — installs via `metaphlan --install`; confirm the index
       name is still offered for the MetaPhlAn version in the base image.
-- [ ] **SGB→GTDB table** (`nextflow.config` `sgb2gtdb_url`) — must match
-      `metaphlan_index`.
-      ```sh
-      curl -fsIL "https://raw.githubusercontent.com/biobakery/MetaPhlAn/master/metaphlan/utils/mpa_vJan25_CHOCOPhlAnSGB_202503_SGB2GTDB.tsv" | head -1
-      ```
 - [ ] **Kraken2 PlusPF DB** (`nextflow.config` `kraken_db_url`) — dated release;
       confirm it still resolves (Langmead index releases roll over time, see
       <https://benlangmead.github.io/aws-indexes/k2>).
@@ -100,7 +95,6 @@ nextflow run . -profile <your_profile> \
 - [ ] `<sample>/fastqc/` (decontaminated-read FastQC) is populated.
 - [ ] `<sample>/full_data/metaphlan_lists/`, `metaphlan_markers/`,
       `strainphlan_markers/` populated.
-- [ ] `<sample>/full_data/gtdb/gtdb_profile.tsv.gz` is non-empty.
 - [ ] `<sample>/full_data/kraken/` has `kraken2.report.txt.gz` and the Bracken
       tables.
 - [ ] `<sample>/full_data/resistome/` has the RGI mapping tables.
@@ -117,4 +111,4 @@ nextflow run . -profile <your_profile> \
   fix is isolated to that process. Re-run §4.
 
 See the ADRs in [`docs/adr/`](adr/) for why each tool/DB was chosen
-(0004 GTDB, 0006 Kraken2/Bracken, 0007 RGI/CARD, 0008 FastQC).
+(0006 Kraken2/Bracken, 0012 KMA/CARD, 0008 FastQC).

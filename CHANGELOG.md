@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 The version is the git tag, the `manifest.version` in `nextflow.config`, and the
 workflow revision the orchestrator dispatches — keep all three in lockstep.
 
+## [2.2.0] - 2026-07-04
+
+### Removed
+- **In-pipeline GTDB conversion.** The SGB→GTDB translation is a static
+  relational mapping over the already-published MetaPhlAn profiles and needs no
+  per-run compute context, so it is now done as post-processing rather than in
+  the pipeline. Removed the `gtdb.nf` module (`metaphlan_to_gtdb`), the
+  `sgb_to_gtdb_db` database process, the vendored `bin/cmgd_sgb_to_gtdb.py`, the
+  `skip_gtdb` / `sgb2gtdb_url` parameters, and the `skip_gtdb` field in
+  `manifest.json`. The per-branch `gtdb/` output subdirectory is no longer
+  produced. See [ADR-0013](docs/adr/0013-remove-gtdb-conversion.md) (supersedes
+  ADR-0004).
+
 ## [2.0.7] - 2026-07-02
 
 ### Changed

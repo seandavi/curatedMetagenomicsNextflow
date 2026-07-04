@@ -26,6 +26,7 @@ include {
     sgb_to_gtdb_db
     kraken_db
     card_db
+    card_kma_db
 } from './modules/processes/databases'
 include {
     kneaddata
@@ -48,7 +49,10 @@ include {
     bracken as bracken_full
     bracken as bracken_rarefied
 } from './modules/processes/kraken'
-include { resistome } from './modules/processes/resistome'
+include {
+    resistome_kma as resistome_kma_full
+    resistome_kma as resistome_kma_rarefied
+} from './modules/processes/resistome'
 include { fastqc } from './modules/processes/qc'
 include { humann } from './modules/processes/humann'
 include { sample_manifest } from './modules/processes/manifest'
@@ -136,6 +140,7 @@ workflow {
     }
     if (!params.skip_resistome) {
         card_db()
+        card_kma_db(card_db.out.card_db)
     }
 
     /*
@@ -226,14 +231,15 @@ workflow {
     }
 
     /*
-     * Resistome profiling (RGI/CARD) on the full-depth host-decontaminated
-     * reads. Full branch only — ARGs are too sparse at the rarefied depth.
+     * Resistome profiling (KMA against CARD) on the full-depth
+     * host-decontaminated reads. KMA is cheap enough to run on both branches
+     * (see the rarefied section below). See ADR-0012.
      */
     if (!params.skip_resistome) {
-        resistome(
+        resistome_kma_full(
             full_meta_ch,
             kneaddata.out.fastq,
-            card_db.out.card_db.collect())
+            card_kma_db.out.card_kma_db.collect())
     }
 
     /*
@@ -323,6 +329,13 @@ workflow {
                 kraken2_rarefied.out.report,
                 kraken_db.out.kraken_db.collect())
         }
+
+        if (!params.skip_resistome) {
+            resistome_kma_rarefied(
+                rarefy_fastq.out.meta,
+                rarefy_fastq.out.fastq,
+                card_kma_db.out.card_kma_db.collect())
+        }
     }
 
     /*
@@ -374,7 +387,7 @@ workflow {
         // Gate completion on the full-branch resistome profiling.
         finished_ch = finished_ch
             .map { meta -> tuple(meta.sample, meta) }
-            .join(resistome.out.meta.map { meta -> tuple(meta.sample, meta) })
+            .join(resistome_kma_full.out.meta.map { meta -> tuple(meta.sample, meta) })
             .map { sample_id, meta1, meta2 -> meta1 }
     }
 

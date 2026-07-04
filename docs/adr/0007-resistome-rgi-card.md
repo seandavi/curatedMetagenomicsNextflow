@@ -1,6 +1,6 @@
 # 0007. Resistome profiling with RGI against CARD
 
-- **Status:** Accepted (implemented)
+- **Status:** Superseded by [0012](0012-resistome-kma-card.md)
 - **Date:** 2026-06-03
 - **Deciders:** Sean Davis
 

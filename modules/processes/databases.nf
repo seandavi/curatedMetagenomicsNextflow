@@ -226,7 +226,7 @@ process card_db {
     stub:
     """
     mkdir -p card_db
-    touch card_db/card.json
+    touch card_db/nucleotide_fasta_protein_homolog_model.fasta
     touch .command.run
     """
 
@@ -234,11 +234,58 @@ process card_db {
     """
     echo ${PWD}
     mkdir -p card_db
-    # The canonical CARD data is a bzip2 tarball containing card.json and the
-    # ontology index files; extract it all into card_db/.
+    # The CARD "broadstreet" release is a bzip2 tarball; we index the homolog-
+    # model nucleotide FASTA with KMA (see card_kma_db). Extract with Python's
+    # tarfile so we do not depend on a bzip2 binary being present in the image.
     curl -fsSL "${params.card_db_url}" -o card_data.tar.bz2
-    tar -xjf card_data.tar.bz2 -C card_db
+    python -c "import tarfile; tarfile.open('card_data.tar.bz2','r:bz2').extractall('card_db')"
     rm -f card_data.tar.bz2
+    """
+}
+
+process card_kma_db {
+    label 'db_setup'
+
+    // KMA is not in the base image; index CARD in its own pinned biocontainer
+    // (ADR-0001). This is a shared, storeDir-backed asset reused across runs.
+    container 'docker://quay.io/biocontainers/kma:1.6.13--h118bc1c_0'
+
+    cpus 2
+    memory "8g"
+
+    storeDir "${params.store_dir}"
+
+    input:
+    path card_db
+
+    output:
+    path "card_kma_db", emit: card_kma_db, type: 'dir'
+    path ".command*"
+    path "versions.yml"
+
+    stub:
+    """
+    mkdir -p card_kma_db
+    touch card_kma_db/card_kma_db.comp.b
+    touch card_kma_db/card_kma_db.length.b
+    touch card_kma_db/card_kma_db.name
+    touch card_kma_db/card_kma_db.seq.b
+    touch .command.run
+    touch versions.yml
+    """
+
+    script:
+    """
+    echo ${PWD}
+    mkdir -p card_kma_db
+    kma index \
+        -i ${card_db}/nucleotide_fasta_protein_homolog_model.fasta \
+        -o card_kma_db/card_kma_db
+
+    cat <<-END_VERSIONS > versions.yml
+    versions:
+        kma: \$( kma -v 2>&1 | head -n1 | sed 's/^KMA-//' )
+    END_VERSIONS
     """
 }
 

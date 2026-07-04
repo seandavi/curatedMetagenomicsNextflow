@@ -1,0 +1,55 @@
+name: CI
+
+# Minimal CI: prove the config parses under Nextflow's current (v2) parser and
+# that the pipeline wires up end-to-end via a fast, container-free stub run.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Cancel superseded runs on the same ref to save runner time.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Nextflow
+        run: |
+          curl -s https://get.nextflow.io | bash
+          sudo mv nextflow /usr/local/bin/
+          nextflow -version
+
+      # Config check runs under the DEFAULT (v2) parser to lock in the config
+      # cleanup and catch any regression that reintroduces v1-only syntax.
+      - name: Config check (all profiles, v2 parser)
+        run: |
+          for profile in local anvil alpine google unitn gcs dev rollback; do
+            echo "==> $profile"
+            nextflow config -profile "$profile" >/dev/null
+          done
+
+      # The process scripts still target the v1 script grammar, so the stub run
+      # pins NXF_SYNTAX_PARSER=v1 (see justfile). Migrating the modules to the
+      # strict v2 script parser is separate, larger follow-up work.
+      - name: Stub run (structural, no containers)
+        env:
+          NXF_DISABLE_CHECK_LATEST: 'true'
+          NXF_SYNTAX_PARSER: v1
+        run: |
+          nextflow run . \
+            -profile local \
+            -stub-run \
+            -c conf/test/disable-telemetry.config \
+            --sample_id TEST_SAMPLE \
+            --run_ids SRR000001

@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 The version is the git tag, the `manifest.version` in `nextflow.config`, and the
 workflow revision the orchestrator dispatches — keep all three in lockstep.
 
+## [2.2.1] - 2026-07-04
+
+### Fixed
+- **Resistome KMA failed on 100% of runs (`Error: 2 (No such file or
+  directory)`).** KMA writes scratch files under `$TMPDIR`, and the SLURM submit
+  templates export `TMPDIR` to a per-job directory that is a sibling of — and not
+  bind-mounted alongside — the Nextflow `work` dir. Nextflow propagated that
+  `TMPDIR` into the container via `SINGULARITYENV_TMPDIR`, so KMA loaded the CARD
+  DB and read the input, then died the moment it touched `$TMPDIR`. Kraken2 and
+  MetaPhlAn share the same store/binds but don't use `$TMPDIR`, so only KMA
+  tripped. `resistome_kma` now sets `TMPDIR="$PWD"` (the always-mounted task work
+  dir).
+
 ## [2.2.0] - 2026-07-04
 
 ### Removed
@@ -172,6 +185,7 @@ Baseline of the 2.x line. Core metagenomic pipeline, with decisions recorded in
 - HUMAnN functional profiling is deferred pending MetaPhlAn/HUMAnN version
   alignment (ADR-0002).
 
+[2.2.1]: https://github.com/seandavi/curatedMetagenomicsNextflow/compare/2.2.0...2.2.1
 [2.0.7]: https://github.com/seandavi/curatedMetagenomicsNextflow/compare/2.0.6...2.0.7
 [2.0.6]: https://github.com/seandavi/curatedMetagenomicsNextflow/compare/2.0.5...2.0.6
 [2.0.5]: https://github.com/seandavi/curatedMetagenomicsNextflow/compare/2.0.4...2.0.5

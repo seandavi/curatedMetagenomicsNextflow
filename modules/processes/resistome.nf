@@ -57,6 +57,13 @@ process resistome_kma {
 
     script:
     """
+    # KMA writes scratch files under \$TMPDIR. The SLURM submit template exports
+    # TMPDIR to a per-job dir that is NOT bind-mounted into the container, so
+    # KMA's temp write fails with "Error: 2 (No such file or directory)" after
+    # loading the DB and reading input. Point TMPDIR at the task work dir, which
+    # is always mounted. (Kraken/MetaPhlAn don't use TMPDIR, so only KMA tripped.)
+    export TMPDIR="\$PWD"
+
     # Reads are single-end throughout the pipeline. -ef adds the extended
     # mapstat table (fragment counts, depth) that is useful for ARG
     # quantification. KMA writes card_kma.frag.gz already gzipped.

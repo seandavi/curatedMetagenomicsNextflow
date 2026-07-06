@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 The version is the git tag, the `manifest.version` in `nextflow.config`, and the
 workflow revision the orchestrator dispatches — keep all three in lockstep.
 
-## [Unreleased]
+## [2.2.1] - 2026-07-04
 
 ### Changed
 - **Read acquisition is now ENA-first with an SRA fallback** (`fasterq_dump`).
@@ -22,8 +22,8 @@ workflow revision the orchestrator dispatches — keep all three in lockstep.
   access). No container change; the downstream output contract is unchanged.
   Note: ENA FASTQ for quality-less runs carries synthetic qualities, so the
   quality-trim step is a no-op for those samples (curation caveat). See ADR-0014.
-
-## [2.2.1] - 2026-07-04
+  Output-neutral in practice: only affects which source serves the bytes, not
+  the profiling contract.
 
 ### Fixed
 - **Resistome KMA failed on 100% of runs (`Error: 2 (No such file or

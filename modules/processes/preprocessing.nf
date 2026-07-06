@@ -45,17 +45,53 @@ process fasterq_dump {
     """
 
     echo "accessions: ${meta.accessions}" > sampleinfo.txt
-    echo "starting fasterq-dump"
+    # Read acquisition: ENA-first (published fastq), SRA fallback (curl .sra + fasterq-dump).
+    # ENA serves usable fastq even for runs whose SRA object lacks a QUALITY column
+    # (those make fasterq-dump exit 3); trying ENA first removes that whole failure class.
+    # Runs ENA does not serve (ingestion lag, submitted-only, controlled access) fall
+    # back to the original SRA path, so coverage is unchanged. See ADR-0014.
+    fetch_ena() {
+        acc=\$1
+        report=\$(curl -sf --max-time 60 "https://www.ebi.ac.uk/ena/portal/api/filereport?accession=\${acc}&result=read_run&fields=fastq_ftp,fastq_md5") || return 1
+        row=\$(printf '%s\\n' "\$report" | tail -n +2 | head -n1)
+        urls=\$(printf '%s' "\$row" | cut -f1)
+        md5s=\$(printf '%s' "\$row" | cut -f2)
+        [ -z "\$urls" ] && return 1
+        i=1
+        for u in \$(printf '%s' "\$urls" | tr ';' ' '); do
+            fn=\$(basename "\$u")
+            echo "  ENA \$fn"
+            curl -sf --max-time 3600 -o "\$fn" "https://\$u" || return 1
+            m=\$(printf '%s' "\$md5s" | cut -d';' -f\$i)
+            if [ -n "\$m" ]; then
+                echo "\$m  \$fn" | md5sum -c - || return 1
+            fi
+            i=\$((i + 1))
+        done
+        return 0
+    }
+
+    fetch_sra() {
+        acc=\$1
+        echo "  SRA \$acc"
+        curl -sf --max-time 3600 -o \$acc.sra https://sra-pub-run-odp.s3.amazonaws.com/sra/\$acc/\$acc || return 1
+        fasterq-dump --threads ${task.cpus} --skip-technical --force --split-files \$acc.sra
+    }
+
+    echo "starting read acquisition (ENA-first, SRA fallback)"
     for accession in ${meta.accessions.join(" ")}; do
-        echo "downloading \$accession"
-        curl -o \$accession.sra https://sra-pub-run-odp.s3.amazonaws.com/sra/\$accession/\$accession
-        fasterq-dump --threads ${task.cpus} \
-            --skip-technical \
-            --force \
-            --split-files \$accession.sra
+        echo "acquiring \$accession"
+        if ! fetch_ena \$accession; then
+            echo "  ENA unavailable for \$accession; falling back to SRA"
+            fetch_sra \$accession || { echo "ERROR: ENA and SRA both failed for \$accession"; exit 3; }
+        fi
     done
+
+    # ENA delivers *.fastq.gz; fasterq-dump delivers *.fastq. Unify to *.fastq.
+    for f in *.fastq.gz; do [ -e "\$f" ] && gunzip -f "\$f"; done
+
     ls -ld
-    echo "fasterq-dump done"
+    echo "read acquisition done"
     wc -l *.fastq > fastq_line_count.txt
 
     echo "combining fastq files and gzipping"

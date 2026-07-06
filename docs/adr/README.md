@@ -61,3 +61,4 @@ other. This preserves the historical record rather than rewriting it.
 | [0011](0011-gcs-storage-profile-split.md) | Split the GCS storage profile (publish vs work) | Accepted |
 | [0012](0012-resistome-kma-card.md) | Resistome profiling with KMA against CARD | Accepted |
 | [0013](0013-remove-gtdb-conversion.md) | Remove in-pipeline GTDB conversion (do it as post-processing) | Accepted |
+| [0014](0014-ena-first-read-acquisition.md) | Acquire reads ENA-first with SRA fallback | Accepted |

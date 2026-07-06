@@ -25,10 +25,8 @@ process sample_manifest {
     input:
     tuple val(meta),
           path(raw_fastq),
-          path(raw_versions, stageAs: 'versions_raw.yml'),
           path(kneaddata_fastq, stageAs: 'kneaddata.fastq'),
-          path(kneaddata_versions, stageAs: 'versions_kneaddata.yml'),
-          path(metaphlan_versions, stageAs: 'versions_metaphlan.yml')
+          path(collated_versions, stageAs: 'versions_collated.yml')
 
     output:
     val(meta), emit: meta

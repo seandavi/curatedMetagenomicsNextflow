@@ -197,6 +197,19 @@ workflow {
         install_metaphlan_db.out.metaphlan_db.collect())
 
     /*
+     * Per-sample tool versions for the manifest.
+     *
+     * Each profiling step emits a versions.yml; they are collated per sample so
+     * software_versions in manifest.json reflects every tool that actually ran.
+     * Optional steps start from an empty channel and populate their versions
+     * channel only when enabled, so a skipped step simply contributes nothing.
+     */
+    kraken_versions_ch = Channel.empty()
+    resistome_versions_ch = Channel.empty()
+    fastqc_versions_ch = Channel.empty()
+    humann_versions_ch = Channel.empty()
+
+    /*
      * Complementary read-based profiling (Kraken2 + Bracken) on the full-depth
      * host-decontaminated reads.
      */
@@ -210,6 +223,13 @@ workflow {
             kraken2_full.out.meta,
             kraken2_full.out.report,
             kraken_db.out.kraken_db.collect())
+
+        kraken_versions_ch = kraken2_full.out.meta
+            .merge(kraken2_full.out.versions)
+            .map { m, ver -> tuple(m.sample, ver) }
+            .mix(bracken_full.out.meta
+                .merge(bracken_full.out.versions)
+                .map { m, ver -> tuple(m.sample, ver) })
     }
 
     /*
@@ -222,6 +242,10 @@ workflow {
             full_meta_ch,
             kneaddata.out.fastq,
             card_kma_db.out.card_kma_db.collect())
+
+        resistome_versions_ch = resistome_kma_full.out.meta
+            .merge(resistome_kma_full.out.versions)
+            .map { m, ver -> tuple(m.sample, ver) }
     }
 
     /*
@@ -232,35 +256,69 @@ workflow {
         fastqc(
             kneaddata.out.meta,
             kneaddata.out.fastq)
+
+        fastqc_versions_ch = fastqc.out.meta
+            .merge(fastqc.out.versions)
+            .map { m, ver -> tuple(m.sample, ver) }
+    }
+
+    /*
+     * Optional HUMAnN branch (uses full-depth data only). Invoked here — ahead
+     * of the manifest — so its tool versions are captured in software_versions.
+     */
+    if (!params.skip_humann) {
+        humann(
+           metaphlan_unknown_viruses_lists_full.out.meta,
+           kneaddata.out.fastq,
+           metaphlan_markers_full.out.marker_rel_ab_w_read_stats,
+           chocophlan_db.out.chocophlan_db,
+           uniref_db.out.uniref_db,
+           utility_mapping_db.out.utility_mapping_db)
+
+        humann_versions_ch = humann.out.meta
+            .merge(humann.out.versions)
+            .map { m, ver -> tuple(m.sample, ver) }
     }
 
     /*
      * Per-sample manifest
      *
-     * Join (by sample) the raw reads + their versions, the host-decontaminated
-     * reads + versions, and the full-branch MetaPhlAn versions, then compile a
-     * single manifest.json per sample. Each output channel is merged from the
-     * same originating process so positions stay task-aligned before the join.
+     * Join (by sample) the raw reads, the host-decontaminated reads, and a
+     * per-sample collation of every step's versions.yml, then compile a single
+     * manifest.json per sample. Version files are keyed by sample and merged
+     * with collectFile into one versions_*.yml that build_manifest.py globs, so
+     * software_versions lists every tool that ran (kraken2, bracken, KMA,
+     * fastqc, and humann when enabled) rather than only the fixed core set.
      */
     raw_for_manifest = raw_meta_ch
         .merge(raw_fastq_ch)
-        .merge(raw_versions_ch)
-        .map { m, fq, ver -> tuple(m.sample, m, fq, ver) }
+        .map { m, fq -> tuple(m.sample, m, fq) }
 
     kneaddata_for_manifest = kneaddata.out.meta
         .merge(kneaddata.out.fastq)
-        .merge(kneaddata.out.versions)
-        .map { m, fq, ver -> tuple(m.sample, fq, ver) }
+        .map { m, fq -> tuple(m.sample, fq) }
 
-    metaphlan_versions_for_manifest = metaphlan_unknown_viruses_lists_full.out.meta
-        .merge(metaphlan_unknown_viruses_lists_full.out.versions)
+    collated_versions_ch = raw_meta_ch
+        .merge(raw_versions_ch)
         .map { m, ver -> tuple(m.sample, ver) }
+        .mix(kneaddata.out.meta
+            .merge(kneaddata.out.versions)
+            .map { m, ver -> tuple(m.sample, ver) })
+        .mix(metaphlan_unknown_viruses_lists_full.out.meta
+            .merge(metaphlan_unknown_viruses_lists_full.out.versions)
+            .map { m, ver -> tuple(m.sample, ver) })
+        .mix(kraken_versions_ch)
+        .mix(resistome_versions_ch)
+        .mix(fastqc_versions_ch)
+        .mix(humann_versions_ch)
+        .collectFile { sample, ver -> [ "${sample}.yml", ver ] }
+        .map { f -> tuple(f.baseName, f) }
 
     manifest_input = raw_for_manifest
         .join(kneaddata_for_manifest)
-        .join(metaphlan_versions_for_manifest)
-        .map { sample, meta, raw_fq, raw_ver, kd_fq, kd_ver, mp_ver ->
-            tuple(meta, raw_fq, raw_ver, kd_fq, kd_ver, mp_ver) }
+        .join(collated_versions_ch)
+        .map { sample, meta, raw_fq, kd_fq, versions ->
+            tuple(meta, raw_fq, kd_fq, versions) }
 
     sample_manifest(manifest_input)
 
@@ -311,19 +369,6 @@ workflow {
                 rarefy_fastq.out.fastq,
                 card_kma_db.out.card_kma_db.collect())
         }
-    }
-
-    /*
-     * Optional HUMAnN branch (uses full-depth data only)
-     */
-    if (!params.skip_humann) {
-        humann(
-           metaphlan_unknown_viruses_lists_full.out.meta,
-           kneaddata.out.fastq,
-           metaphlan_markers_full.out.marker_rel_ab_w_read_stats,
-           chocophlan_db.out.chocophlan_db,
-           uniref_db.out.uniref_db,
-           utility_mapping_db.out.utility_mapping_db)
     }
 
     /*

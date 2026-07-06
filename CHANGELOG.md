@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 The version is the git tag, the `manifest.version` in `nextflow.config`, and the
 workflow revision the orchestrator dispatches — keep all three in lockstep.
 
+## [Unreleased]
+
+### Changed
+- **Read acquisition is now ENA-first with an SRA fallback** (`fasterq_dump`).
+  A class of SRA runs is archived without a QUALITY column, which makes
+  `fasterq-dump` exit 3 (`the input data is missing the QUALITY-column`);
+  under the retry/`ignore` policy those samples were dropped and dead-lettered.
+  All 14 DLQ jobs in the 2.0.7 batch failed this way, yet the reads are
+  published and downloadable as FASTQ from EBI/ENA. The process now resolves
+  `fastq_ftp` via the ENA `filereport` API, downloads over HTTPS and verifies
+  `fastq_md5`, and falls back per run to the original `curl .sra + fasterq-dump`
+  path when ENA serves no FASTQ (ingestion lag, submitted-only, controlled
+  access). No container change; the downstream output contract is unchanged.
+  Note: ENA FASTQ for quality-less runs carries synthetic qualities, so the
+  quality-trim step is a no-op for those samples (curation caveat). See ADR-0014.
+
 ## [2.2.1] - 2026-07-04
 
 ### Fixed
@@ -64,7 +80,6 @@ workflow revision the orchestrator dispatches — keep all three in lockstep.
   threw an arraycopy type-mismatch on the interpolated (GString) payload/URL and
   was swallowed by the surrounding try/catch. Fixed by coercing the arg list with
   `*.toString()`. (Pre-existing bug, unrelated to the parser rework.)
-
 ## [2.0.7] - 2026-07-02
 
 ### Changed

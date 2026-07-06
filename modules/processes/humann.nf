@@ -43,7 +43,7 @@ process humann {
     path("out_pathcoverage_stratified.tsv.gz")
     path("out_pathcoverage.tsv.gz")
     path ".command*"
-    path "versions.yml"
+    path "versions.yml", emit: versions
 
     stub:
     """

@@ -26,6 +26,16 @@ workflow revision the orchestrator dispatches — keep all three in lockstep.
   the profiling contract.
 
 ### Fixed
+- **`manifest.json` `software_versions` was incomplete.** It only listed the
+  three tools whose `versions.yml` `sample_manifest` staged (fasterq-dump/awscli/
+  fastqc from read acquisition, kneaddata/trimmomatic/bowtie2, metaphlan) and
+  silently omitted every step added since: `kraken2`, `bracken`, the resistome
+  `kma`, the post-decontamination `fastqc`, and `humann` when enabled. Each
+  step's `versions.yml` is now collated per sample (via `collectFile`) into the
+  single file `build_manifest.py` globs, so `software_versions` reflects every
+  tool that actually ran. Skipped optional steps contribute nothing (their
+  version channels start empty), and the HUMAnN invocation moved ahead of the
+  manifest so its versions are captured when that branch is on.
 - **Resistome KMA failed on 100% of runs (`Error: 2 (No such file or
   directory)`).** KMA writes scratch files under `$TMPDIR`, and the SLURM submit
   templates export `TMPDIR` to a per-job directory that is a sibling of — and not

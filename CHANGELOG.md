@@ -9,6 +9,16 @@ workflow revision the orchestrator dispatches — keep all three in lockstep.
 
 ## [2.2.1] - 2026-07-04
 
+### Added
+- **`r2` storage profile** publishes outputs to Cloudflare R2
+  (`s3://cmgd-raw/cmgd_nextflow/<version>/<sample_id>/…`) and becomes the
+  production storage profile (`-profile alpine,r2`), replacing `gcs` per
+  nextflow_telemetry ADR 0008. Keys come from `R2_ACCOUNT_ID`,
+  `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`. Needs Nextflow >= 25.04
+  (Nextflow 24.04's nf-amazon ignores the R2 endpoint); Alpine now runs
+  25.10.8. Output contract unchanged: a test sample reproduced its GCS output
+  file-for-file. See ADR-0015 and #79.
+
 ### Changed
 - **Read acquisition is now ENA-first with an SRA fallback** (`fasterq_dump`).
   A class of SRA runs is archived without a QUALITY column, which makes

@@ -57,7 +57,7 @@ nextflow run main.nf --metadata_tsv samples.tsv --skip_humann --publish_base_dir
 | `sample_id` | Sample identifier for single-sample mode | `null` |
 | `run_ids` | Semicolon-delimited run accessions for single-sample mode | `null` |
 | `local_input` | Interpret TSV `file_paths` instead of SRA accessions | `false` |
-| `publish_base_dir`  | Base directory prefix for published results | `gs://cmgd-data/results/cMDv4` |
+| `publish_base_dir`  | Base directory prefix for published results (`r2` profile: `s3://cmgd-raw`; `gcs` profile: `gs://cmgd-data/results/cMDv4`) | `${launchDir}/results` |
 | `publish_dir`  | Optional full publish root override after workflow-name/version expansion | `null` |
 | `store_dir`    | Directory to store reference databases | `databases`   |
 | `cmgd_version` | Curated Metagenomic Data version       | `4`           |
@@ -292,6 +292,10 @@ The pipeline comes with several execution profiles:
 - `anvil`: For execution on AnVIL
 - `alpine`: For execution on Alpine HPC
 - `unitn`: For execution on UNITN PBS Pro
+
+Storage profiles (compose with a compute profile; they only change where outputs are published):
+- `r2`: Publish to Cloudflare R2 `s3://cmgd-raw` (production; needs Nextflow ≥ 25.04 and `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` in the environment; see ADR-0015)
+- `gcs`: Publish to GCS `gs://cmgd-data/results/cMDv4` (legacy; no new production writes)
 
 Example:
 ```bash

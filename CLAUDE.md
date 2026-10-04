@@ -66,7 +66,8 @@ conf/base.config         ← shared resource baselines and retry logic
 conf/profiles/           ← composable profiles for compute and storage
   local.config           ← Docker, local scheduler
   google.config          ← Google Batch compute (pair with gcs)
-  gcs.config             ← GCS storage (publish_base_dir, workDir, google.project)
+  gcs.config             ← GCS storage (publish_base_dir, workDir, google.project) — legacy
+  r2.config              ← Cloudflare R2 storage (publish_base_dir s3://cmgd-raw; keys from R2_* env) — production
   anvil.config           ← SLURM (Anvil HPC)
   alpine.config          ← PBS Pro (CU Alpine HPC)
   unitn.config           ← UNITN HPC
@@ -78,11 +79,12 @@ Profiles are composable — compute and storage concerns are separated so they c
 
 ```sh
 -profile google,gcs     # Google Batch compute + GCS output
--profile alpine,gcs     # HPC (PBS Pro) compute + GCS output
+-profile alpine,r2      # HPC (SLURM) compute + R2 output (production; Nextflow >= 25.04)
+-profile alpine,gcs     # HPC (SLURM) compute + GCS output (legacy)
 -profile local          # local Docker, output to ./results
 ```
 
-The default `publish_base_dir` is `${launchDir}/results`. The `gcs` profile overrides this to `gs://cmgd-data/results/cMDv<version>` and also sets `workDir` and `google.project`.
+The default `publish_base_dir` is `${launchDir}/results`. The `r2` profile overrides this to `s3://cmgd-raw` and reads its keys from `R2_ACCOUNT_ID` / `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` (ADR-0015). The legacy `gcs` profile overrides it to `gs://cmgd-data/results/cMDv<version>` and also sets `google.project`.
 
 ### Resource / retry policy (`conf/base.config`)
 

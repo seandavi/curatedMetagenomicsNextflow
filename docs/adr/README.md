@@ -62,3 +62,4 @@ other. This preserves the historical record rather than rewriting it.
 | [0012](0012-resistome-kma-card.md) | Resistome profiling with KMA against CARD | Accepted |
 | [0013](0013-remove-gtdb-conversion.md) | Remove in-pipeline GTDB conversion (do it as post-processing) | Accepted |
 | [0014](0014-ena-first-read-acquisition.md) | Acquire reads ENA-first with SRA fallback | Accepted |
+| [0015](0015-r2-storage-profile.md) | Publish production outputs to Cloudflare R2 (`r2` profile) | Accepted |

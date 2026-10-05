@@ -15,6 +15,10 @@ workflow revision the orchestrator dispatches — keep all three in lockstep.
   (`unrecognized arguments: --db_dir`; 4.1 calls it `--bowtie2db`). The option
   is now the bundle field `metaphlan_db_option`. Found by the Alpine pilot
   (#88).
+- `humann` passed `--utility-database`, which HUMAnN 3.9 doesn't have
+  (`unrecognized arguments`; only 4.0 alpha added it). It is now the bundle
+  field `humann_utility_db_option`, null for `humann3.9`. Found by the Alpine
+  pilot (#88).
 
 ### Added
 - **HUMAnN subworkflow driven by version-pinned bundles** (ADR-0016, #85).

@@ -111,6 +111,8 @@ process humann {
     """
 
     script:
+    def bundle = params.humann_bundles[params.humann_bundle]
+    def utility_db = bundle.humann_utility_db_option ? "${bundle.humann_utility_db_option} ${utility_mapping_db}" : ''
     """
     humann -i ${fastq} \\
         -o '.' \\
@@ -119,7 +121,7 @@ process humann {
         --nucleotide-database ${chocophlan_db} \\
         --taxonomic-profile ${taxonomic_profile} \\
         --protein-database ${uniref_db} \\
-        --utility-database ${utility_mapping_db} \\
+        ${utility_db} \\
         --threads ${task.cpus}
 
     # Renormalize the gene-family and pathway-abundance tables whatever the

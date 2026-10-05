@@ -68,7 +68,7 @@ process install_metaphlan_db {
     script:
     """
     echo ${PWD}
-    metaphlan --install --index ${params.metaphlan_index} --db_dir metaphlan
+    metaphlan --install --index ${params.metaphlan_index} --db_dir ./metaphlan
 
     cat <<-END_VERSIONS > versions.yml
     versions:

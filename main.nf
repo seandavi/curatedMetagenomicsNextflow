@@ -16,17 +16,7 @@ nextflow.enable.dsl=2
  */
 
 include { fasterq_dump; local_fastqc } from './modules/processes/preprocessing'
-include {
-    install_metaphlan_db
-    chocophlan_db
-    utility_mapping_db
-    uniref_db
-    kneaddata_human_database
-    kneaddata_mouse_database
-    kraken_db
-    card_db
-    card_kma_db
-} from './modules/processes/databases'
+include { DATABASES } from './modules/subworkflows/databases'
 include {
     kneaddata
     metaphlan_unknown_viruses_lists as metaphlan_unknown_viruses_lists_full
@@ -78,6 +68,15 @@ def generate_sample_metadata_single_sample(sample_id, run_ids) {
 
 workflow {
 
+    /*
+     * --databases_only: populate the storeDir database caches and stop. No
+     * input contract, no per-sample process.
+     */
+    if (params.databases_only) {
+        DATABASES()
+        return
+    }
+
     samples = null
 
     /*
@@ -114,26 +113,9 @@ workflow {
     }
 
     /*
-     * Database setup section
-     *
-     * Current behavior note:
-     * both kneaddata database setup processes are invoked because downstream
-     * wiring currently expects both channels to exist. This is a refactor
-     * target, but the behavior is preserved here intentionally.
+     * Reference databases (storeDir-cached); see modules/subworkflows/databases.nf
      */
-    install_metaphlan_db()
-    uniref_db()
-    chocophlan_db()
-    utility_mapping_db()
-    kneaddata_human_database()
-    kneaddata_mouse_database()
-    if (!params.skip_kraken) {
-        kraken_db()
-    }
-    if (!params.skip_resistome) {
-        card_db()
-        card_kma_db(card_db.out.card_db)
-    }
+    DATABASES()
 
     /*
      * Core preprocessing and profiling section
@@ -154,8 +136,8 @@ workflow {
         kneaddata(
             local_fastqc.out.meta,
             local_fastqc.out.fastq,
-            kneaddata_human_database.out.kd_genome.collect(),
-            kneaddata_mouse_database.out.kd_mouse.collect())
+            DATABASES.out.kd_genome.collect(),
+            DATABASES.out.kd_mouse.collect())
     } else {
         raw_fastq_ch = fasterq_dump.out.fastq
         raw_versions_ch = fasterq_dump.out.versions
@@ -163,8 +145,8 @@ workflow {
         kneaddata(
             fasterq_dump.out.meta,
             fasterq_dump.out.fastq,
-            kneaddata_human_database.out.kd_genome.collect(),
-            kneaddata_mouse_database.out.kd_mouse.collect())
+            DATABASES.out.kd_genome.collect(),
+            DATABASES.out.kd_mouse.collect())
     }
 
     /*
@@ -184,17 +166,17 @@ workflow {
     metaphlan_unknown_viruses_lists_full(
         full_meta_ch,
         kneaddata.out.fastq,
-        install_metaphlan_db.out.metaphlan_db.collect())
+        DATABASES.out.metaphlan_db.collect())
 
     metaphlan_markers_full(
         metaphlan_unknown_viruses_lists_full.out.meta,
         metaphlan_unknown_viruses_lists_full.out.metaphlan_bt2,
-        install_metaphlan_db.out.metaphlan_db.collect())
+        DATABASES.out.metaphlan_db.collect())
 
     sample_to_markers_full(
         metaphlan_unknown_viruses_lists_full.out.meta,
         metaphlan_unknown_viruses_lists_full.out.metaphlan_sam,
-        install_metaphlan_db.out.metaphlan_db.collect())
+        DATABASES.out.metaphlan_db.collect())
 
     /*
      * Per-sample tool versions for the manifest.
@@ -217,12 +199,12 @@ workflow {
         kraken2_full(
             full_meta_ch,
             kneaddata.out.fastq,
-            kraken_db.out.kraken_db.collect())
+            DATABASES.out.kraken_db.collect())
 
         bracken_full(
             kraken2_full.out.meta,
             kraken2_full.out.report,
-            kraken_db.out.kraken_db.collect())
+            DATABASES.out.kraken_db.collect())
 
         kraken_versions_ch = kraken2_full.out.meta
             .merge(kraken2_full.out.versions)
@@ -241,7 +223,7 @@ workflow {
         resistome_kma_full(
             full_meta_ch,
             kneaddata.out.fastq,
-            card_kma_db.out.card_kma_db.collect())
+            DATABASES.out.card_kma_db.collect())
 
         resistome_versions_ch = resistome_kma_full.out.meta
             .merge(resistome_kma_full.out.versions)
@@ -271,9 +253,9 @@ workflow {
            metaphlan_unknown_viruses_lists_full.out.meta,
            kneaddata.out.fastq,
            metaphlan_markers_full.out.marker_rel_ab_w_read_stats,
-           chocophlan_db.out.chocophlan_db,
-           uniref_db.out.uniref_db,
-           utility_mapping_db.out.utility_mapping_db)
+           DATABASES.out.chocophlan_db,
+           DATABASES.out.uniref_db,
+           DATABASES.out.utility_mapping_db)
 
         humann_versions_ch = humann.out.meta
             .merge(humann.out.versions)
@@ -339,35 +321,35 @@ workflow {
         metaphlan_unknown_viruses_lists_rarefied(
             rarefy_fastq.out.meta,
             rarefy_fastq.out.fastq,
-            install_metaphlan_db.out.metaphlan_db.collect())
+            DATABASES.out.metaphlan_db.collect())
 
         metaphlan_markers_rarefied(
             metaphlan_unknown_viruses_lists_rarefied.out.meta,
             metaphlan_unknown_viruses_lists_rarefied.out.metaphlan_bt2,
-            install_metaphlan_db.out.metaphlan_db.collect())
+            DATABASES.out.metaphlan_db.collect())
 
         sample_to_markers_rarefied(
             metaphlan_unknown_viruses_lists_rarefied.out.meta,
             metaphlan_unknown_viruses_lists_rarefied.out.metaphlan_sam,
-            install_metaphlan_db.out.metaphlan_db.collect())
+            DATABASES.out.metaphlan_db.collect())
 
         if (!params.skip_kraken) {
             kraken2_rarefied(
                 rarefy_fastq.out.meta,
                 rarefy_fastq.out.fastq,
-                kraken_db.out.kraken_db.collect())
+                DATABASES.out.kraken_db.collect())
 
             bracken_rarefied(
                 kraken2_rarefied.out.meta,
                 kraken2_rarefied.out.report,
-                kraken_db.out.kraken_db.collect())
+                DATABASES.out.kraken_db.collect())
         }
 
         if (!params.skip_resistome) {
             resistome_kma_rarefied(
                 rarefy_fastq.out.meta,
                 rarefy_fastq.out.fastq,
-                card_kma_db.out.card_kma_db.collect())
+                DATABASES.out.card_kma_db.collect())
         }
     }
 

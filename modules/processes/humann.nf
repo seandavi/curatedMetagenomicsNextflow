@@ -59,7 +59,7 @@ process metaphlan_for_humann {
     """
     metaphlan --input_type fastq \\
         --index ${bundle.metaphlan_index} \\
-        --db_dir ${metaphlan_db} \\
+        ${bundle.metaphlan_db_option} ${metaphlan_db} \\
         --nproc ${task.cpus} \\
         -t rel_ab_w_read_stats \\
         -o metaphlan_rel_ab_w_read_stats.tsv \\

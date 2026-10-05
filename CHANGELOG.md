@@ -9,6 +9,13 @@ workflow revision the orchestrator dispatches — keep all three in lockstep.
 
 ## [Unreleased]
 
+### Fixed
+- The HUMAnN-side MetaPhlAn steps (`metaphlan_db_humann`,
+  `metaphlan_for_humann`) passed `--db_dir`, which MetaPhlAn 4.1.x rejects
+  (`unrecognized arguments: --db_dir`; 4.1 calls it `--bowtie2db`). The option
+  is now the bundle field `metaphlan_db_option`. Found by the Alpine pilot
+  (#88).
+
 ### Added
 - **HUMAnN subworkflow driven by version-pinned bundles** (ADR-0016, #85).
   `--humann_bundle` (default `humann3.9`, registry in

@@ -283,7 +283,15 @@ version parameters; an unknown `humann_bundle` fails at start-up with the list
 of valid names (checked only when `--skip_humann false`). The `humann3.9`
 bundle uses HUMAnN 3.9 (`quay.io/biocontainers/humann:3.9--py312hdfd78af_0`)
 with MetaPhlAn 4.1.1 and the `mpa_vJun23_CHOCOPhlAnSGB_202307` index, because
-HUMAnN 3.9 rejects any profile that is not `vJun23`.
+HUMAnN 3.9 rejects any profile that is not `vJun23`. The `humann4.0.0a1`
+bundle uses HUMAnN 4.0.0a1 with MetaPhlAn 4.1.1 and the
+`mpa_vOct22_CHOCOPhlAnSGB_202403` index HUMAnN 4a requires; HUMAnN 4a is not
+on bioconda, so its image is built from
+[`docker/humann4a/Dockerfile`](docker/humann4a/Dockerfile); the bundle pins it as
+`seandavi/curatedmetagenomics:humann4.0.0a1`. Its tables keep 4a's names
+(`out_2_genefamilies`, `out_3_reactions`, `out_4_pathabundance`, plus
+`_cpm`/`_relab` and `_stratified`/`_unstratified` derivatives); 4.0.0a1 writes
+no path-coverage table and its gene families are already in adjusted CPMs.
 
 HUMAnN runs on the full-depth branch only, through its own MetaPhlAn pass, so
 the published MetaPhlAn 4.2.2 taxonomy is unaffected. Outputs are published

@@ -60,6 +60,8 @@ Reference databases are cached under `store_dir` as `<store_dir>/<db_name>/<vers
 
 `HUMANN` subworkflow (full-depth branch only, gated by `!skip_humann`) runs `metaphlan_for_humann` (MetaPhlAn 4.1.1, vJun23 index for the `humann3.9` bundle; independent of the main 4.2.2 pass, whose taxonomy and published paths are untouched) → `humann --taxonomic-profile`. Everything version-dependent — containers, MetaPhlAn version/index, ChocoPhlAn/UniRef/utility-mapping DB names — is one bundle in `conf/humann_bundles.config`, selected by `params.humann_bundle`; an unknown name fails at start (only when HUMAnN is enabled). Outputs publish to `<sample>/humann/<bundle>/` (profile in `metaphlan/`) with HUMAnN-native filenames; container/resources/`maxForks` are in the process body; manifest versions use the distinct keys `metaphlan_humann`/`bowtie2_humann`/`humann` plus `humann_bundle`. HUMAnN DB caches are keyed by bundle. See ADR-0016.
 
+Bundles: `humann3.9` (default; biocontainers) and `humann4.0.0a1` (MetaPhlAn 4.1.1 with the `mpa_vOct22_CHOCOPhlAnSGB_202403` index; HUMAnN image built from `docker/humann4a/Dockerfile` because 4.0.0a1 is not on bioconda — that Dockerfile pins MetaPhlAn 4.1.1 because HUMAnN 4a's version check cannot parse MetaPhlAn 4.1.2's two-line `--version`).
+
 ### Architecture Decision Records
 
 Significant, non-obvious decisions are recorded as ADRs in `docs/adr/` (index in `docs/adr/README.md`). Consult them before changing container strategy, the HUMAnN default, the output layout, the manifest, or the Kraken2/resistome steps — and add a new ADR (do not edit accepted ones) when making a comparably significant decision.
@@ -108,7 +110,7 @@ Outputs follow the pattern: `<publish_base_dir>/<workflow_name>/<pipeline_versio
 
 ### Containers
 
-A single Docker image covers all tools. It is built via `docker/cloudbuild.yaml` (Google Cloud Build, manual trigger). The image tag is pinned in `nextflow.config` under `process.container`.
+A single Docker image covers all tools except the per-step containers named in process bodies or HUMAnN bundles. It is built via `docker/cloudbuild.yaml` (Google Cloud Build, manual trigger). The image tag is pinned in `conf/base.config` under `process.container`. The only other image built here is `docker/humann4a/` (the `humann4.0.0a1` bundle's HUMAnN).
 
 ## Testing
 

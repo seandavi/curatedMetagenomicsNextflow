@@ -3,7 +3,45 @@
  *
  * These tasks populate storeDir-backed assets so expensive downloads and
  * indexing work can be reused across runs.
+ *
+ * Cache layout convention (issue #83)
+ * -----------------------------------
+ * storeDir only checks that a process's declared outputs exist, so a cache
+ * path that does not encode the database version silently serves stale data
+ * after a parameter change. Every parameter-dependent database therefore has
+ * its own storeDir
+ *
+ *     ${params.store_dir}/<db_name>/<version_key>/
+ *
+ * holding the database directory (named <db_name>, unchanged from before, so
+ * the staged input path is the same shape as ever) plus that task's
+ * `.command*` and `versions.yml`. The version key is:
+ *
+ *     metaphlan        params.metaphlan_index
+ *     chocophlan       params.chocophlan
+ *     uniref           params.uniref
+ *     utility_mapping  "full" (the only variant this pipeline downloads)
+ *     kraken_db        basename of params.kraken_db_url without archive extension
+ *     card_db          basename of params.card_db_url without archive extension
+ *     card_kma_db      the same key as card_db (the KMA index is built from it)
+ *
+ * Changing a parameter therefore creates a new directory beside the old one
+ * instead of reusing it, and two versions can coexist (e.g. two MetaPhlAn
+ * indexes). Downstream processes must use the staged input path, never a
+ * hardcoded directory name.
+ *
+ * Not versioned: the KneadData human_genome / mouse_C57BL databases. They take
+ * no pipeline parameter that selects a release (`kneaddata_database --download`
+ * always fetches the current prebuilt bowtie2 index), so there is no version
+ * value to key them by; their fixed paths stay as they were.
  */
+
+// Version key for a database URL: the basename without archive extensions,
+// e.g. .../k2_pluspf_16_GB_20260226.tar.gz -> k2_pluspf_16_GB_20260226.
+def db_url_key(url) {
+    def name = url.toString().split('\\?')[0].tokenize('/').last()
+    return name.replaceAll(/(\.tar)?\.(gz|bz2|xz|zip)$|\.(tgz|tbz2|tar)$/, '')
+}
 
 process install_metaphlan_db {
     label 'db_setup'
@@ -12,7 +50,7 @@ process install_metaphlan_db {
     cpus 4
     memory "8g"
 
-    storeDir "${params.store_dir}"
+    storeDir "${params.store_dir}/metaphlan/${params.metaphlan_index}"
 
     output:
     path 'metaphlan', emit: metaphlan_db, type: 'dir'
@@ -30,7 +68,7 @@ process install_metaphlan_db {
     script:
     """
     echo ${PWD}
-    metaphlan --install --index ${params.metaphlan_index} --db_dir metaphlan
+    metaphlan --install --index ${params.metaphlan_index} --db_dir ./metaphlan
 
     cat <<-END_VERSIONS > versions.yml
     versions:
@@ -48,7 +86,7 @@ process chocophlan_db {
     cpus 1
     memory "1g"
 
-    storeDir "${params.store_dir}"
+    storeDir "${params.store_dir}/chocophlan/${params.chocophlan}"
 
     output:
     path "chocophlan", emit: chocophlan_db, type: 'dir'
@@ -82,7 +120,7 @@ process utility_mapping_db {
     cpus 1
     memory "1g"
 
-    storeDir "${params.store_dir}"
+    storeDir "${params.store_dir}/utility_mapping/full"
 
     output:
     path "utility_mapping", emit: utility_mapping_db, type: 'dir'
@@ -116,7 +154,7 @@ process uniref_db {
     cpus 1
     memory "1g"
 
-    storeDir "${params.store_dir}"
+    storeDir "${params.store_dir}/uniref/${params.uniref}"
 
     output:
     path "uniref", emit: uniref_db, type: 'dir'
@@ -151,7 +189,7 @@ process kraken_db {
     cpus 1
     memory "4g"
 
-    storeDir "${params.store_dir}"
+    storeDir "${params.store_dir}/kraken_db/${db_url_key(params.kraken_db_url)}"
 
     output:
     path "kraken_db", emit: kraken_db, type: 'dir'
@@ -187,7 +225,7 @@ process card_db {
     cpus 1
     memory "2g"
 
-    storeDir "${params.store_dir}"
+    storeDir "${params.store_dir}/card_db/${db_url_key(params.card_db_url)}"
 
     output:
     path "card_db", emit: card_db, type: 'dir'
@@ -223,7 +261,7 @@ process card_kma_db {
     cpus 2
     memory "8g"
 
-    storeDir "${params.store_dir}"
+    storeDir "${params.store_dir}/card_kma_db/${db_url_key(params.card_db_url)}"
 
     input:
     path card_db

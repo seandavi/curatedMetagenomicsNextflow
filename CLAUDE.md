@@ -54,6 +54,8 @@ DB processes are invoked only from the `DATABASES` subworkflow (`modules/subwork
 
 `resistome_kma` (module `resistome.nf`, gated by `skip_resistome`) maps the decontaminated reads against a **KMA-indexed CARD** reference (`kma ... -ef`), publishing `card_kma.*.gz` outputs under a `resistome/` subdirectory. CARD is downloaded and its homolog-model FASTA indexed once into `store_dir` (`card_db` → `card_kma_db` in `databases.nf`; the index step runs in the KMA biocontainer). Unlike the former RGI step it runs on **both branches** (imported under `resistome_kma_full`/`resistome_kma_rarefied` aliases), with container/resources set in the process body. The KMA command is not exercised by stub tests; validate it on a real sample. See ADR-0012 (supersedes ADR-0007).
 
+Reference databases are cached under `store_dir` as `<store_dir>/<db_name>/<version_key>/` (the keyed directory holds the `<db_name>` dir plus that task's `.command*`/`versions.yml`; e.g. `metaphlan/<metaphlan_index>/`, `kraken_db/<url-basename-without-extension>/`, `card_db/…`, `card_kma_db/…`; KneadData `human_genome`/`mouse_C57BL` are unversioned). The key convention is documented in the `databases.nf` header; new `storeDir` database processes must follow it, and downstream processes must use the staged input path rather than a hardcoded directory name.
+
 `fastqc` (module `qc.nf`, gated by `skip_fastqc`) runs FastQC on the **decontaminated** reads (`<sample>/fastqc/`); raw-read FastQC already runs in `fasterq_dump`/`local_fastqc`, so this gives a before/after view. It runs in the base image (no new container). A per-sample MultiQC report was considered but dropped to avoid introducing another container (see ADR-0008). Per-sample only.
 
 ### Architecture Decision Records

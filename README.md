@@ -83,6 +83,79 @@ runs no database task.
 | `cmgd_version` | Curated Metagenomic Data version       | `4`           |
 | `publish_mode` | `publishDir` mode for all published outputs | `copy` |
 
+### Reference Database Cache Layout
+
+Reference databases are cached under `store_dir` with Nextflow `storeDir`,
+which reuses a task's outputs whenever they already exist. Each
+parameter-dependent database therefore lives in a directory keyed by the
+version that selects it, `<store_dir>/<db_name>/<version_key>/` (holding the
+`<db_name>` directory itself plus that task's `.command*` and `versions.yml`):
+
+| Cache path under `store_dir`                       | Version key                                        |
+| -------------------------------------------------- | -------------------------------------------------- |
+| `metaphlan/<metaphlan_index>/`                     | `metaphlan_index`                                  |
+| `kraken_db/<key>/`                                 | `kraken_db_url` basename without archive extension |
+| `card_db/<key>/`, `card_kma_db/<key>/`             | `card_db_url` basename without archive extension   |
+| `chocophlan/<chocophlan>/`, `uniref/<uniref>/`     | `chocophlan`, `uniref`                             |
+| `utility_mapping/full/`                            | fixed (`full`)                                     |
+| `human_genome/`, `mouse_C57BL/`                    | not versioned (no parameter selects a release)     |
+
+Changing `metaphlan_index`, `kraken_db_url` or `card_db_url` now creates a new
+directory beside the old one rather than silently reusing it. For example, the
+default Kraken2 URL `.../k2_pluspf_16_GB_20260226.tar.gz` caches to
+`kraken_db/k2_pluspf_16_GB_20260226/` and the default CARD URL
+`.../broadstreet-v4.0.1.tar.bz2` to `card_db/broadstreet-v4.0.1/` and
+`card_kma_db/broadstreet-v4.0.1/`.
+
+**One-time migration of an existing store.** Stores populated by earlier
+versions hold the unkeyed directories (`metaphlan/`, `kraken_db/`, `card_db/`,
+`card_kma_db/`) directly in `store_dir`, with a shared `.command.*` and
+`versions.yml`. To reuse them instead of re-downloading, move each into its
+keyed location once, before the first run of this version. `storeDir` only
+hits when every declared output (including `.command*` and, where declared,
+`versions.yml`) is present in the keyed directory, so those are copied too.
+These commands assume the store was built with the default parameters (if a
+different `metaphlan_index` / `kraken_db_url` / `card_db_url` was used,
+substitute that key); drop the block for any directory that does not exist.
+`human_genome/` and `mouse_C57BL/` need no change. The
+HUMAnN directories (`chocophlan/`, `uniref/`, `utility_mapping/`) are only
+present if HUMAnN was ever enabled; they migrate the same way, into
+`chocophlan/full/`, `uniref/uniref90_ec_filtered_diamond/` and
+`utility_mapping/full/` (all three also need `versions.yml`).
+
+Set `STORE` to the cluster's store (keep only the matching `STORE=` line),
+then run the block:
+
+```sh
+STORE=/projects/seda0001_amc/cmgd/store          # Alpine
+STORE=/anvil/projects/x-cis240955/cmgd/store     # Anvil
+
+cd "$STORE"
+mkdir -p metaphlan.new/mpa_vJan25_CHOCOPhlAnSGB_202503
+mv metaphlan metaphlan.new/mpa_vJan25_CHOCOPhlAnSGB_202503/metaphlan
+cp -p .command.* versions.yml metaphlan.new/mpa_vJan25_CHOCOPhlAnSGB_202503/
+mv metaphlan.new metaphlan
+
+mkdir -p kraken_db.new/k2_pluspf_16_GB_20260226
+mv kraken_db kraken_db.new/k2_pluspf_16_GB_20260226/kraken_db
+cp -p .command.* kraken_db.new/k2_pluspf_16_GB_20260226/
+mv kraken_db.new kraken_db
+
+mkdir -p card_db.new/broadstreet-v4.0.1
+mv card_db card_db.new/broadstreet-v4.0.1/card_db
+cp -p .command.* card_db.new/broadstreet-v4.0.1/
+mv card_db.new card_db
+
+mkdir -p card_kma_db.new/broadstreet-v4.0.1
+mv card_kma_db card_kma_db.new/broadstreet-v4.0.1/card_kma_db
+cp -p .command.* versions.yml card_kma_db.new/broadstreet-v4.0.1/
+mv card_kma_db.new card_kma_db
+```
+
+Verified with a stub run against a simulated old-layout store (the four
+databases above were reported as stored and skipped); not run against the real
+Alpine/Anvil stores.
+
 ### Process Control Parameters
 
 | Parameter        | Description                      | Default |

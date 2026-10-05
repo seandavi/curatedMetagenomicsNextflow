@@ -10,7 +10,8 @@
  *   - MetaPhlAn + KneadData (human, mouse): always
  *   - Kraken2:                              unless skip_kraken
  *   - CARD + KMA index:                     unless skip_resistome
- *   - ChocoPhlAn, UniRef, utility mapping:  only when !skip_humann
+ *   - HUMAnN bundle databases (MetaPhlAn index, ChocoPhlAn, UniRef, utility
+ *     mapping, all selected by params.humann_bundle): only when !skip_humann
  *
  * Channels for gated-off databases are empty; the main workflow only consumes
  * them under the same flag, so they are never read.
@@ -18,6 +19,7 @@
 
 include {
     install_metaphlan_db
+    metaphlan_db_humann
     chocophlan_db
     utility_mapping_db
     uniref_db
@@ -54,13 +56,16 @@ workflow DATABASES {
         card_kma_ch = card_kma_db.out.card_kma_db
     }
 
+    metaphlan_humann_ch = Channel.empty()
     chocophlan_ch = Channel.empty()
     uniref_ch = Channel.empty()
     utility_mapping_ch = Channel.empty()
     if (!params.skip_humann) {
+        metaphlan_db_humann()
         chocophlan_db()
         uniref_db()
         utility_mapping_db()
+        metaphlan_humann_ch = metaphlan_db_humann.out.metaphlan_db
         chocophlan_ch = chocophlan_db.out.chocophlan_db
         uniref_ch = uniref_db.out.uniref_db
         utility_mapping_ch = utility_mapping_db.out.utility_mapping_db
@@ -73,6 +78,7 @@ workflow DATABASES {
     kraken_db          = kraken_ch
     card_db            = card_ch
     card_kma_db        = card_kma_ch
+    metaphlan_humann_db = metaphlan_humann_ch
     chocophlan_db      = chocophlan_ch
     uniref_db          = uniref_ch
     utility_mapping_db = utility_mapping_ch

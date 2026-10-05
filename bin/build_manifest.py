@@ -143,6 +143,8 @@ def main():
     p.add_argument("--rarefy-reads", type=int, default=0)
     p.add_argument("--rarefy-seed", type=int, default=0)
     p.add_argument("--skip-humann", default="true")
+    p.add_argument("--humann-bundle", default="")
+    p.add_argument("--humann-metaphlan-index", default="")
     p.add_argument("--raw-fastq", required=True)
     p.add_argument("--kneaddata-fastq", required=True)
     p.add_argument("--output", default="manifest.json")
@@ -176,6 +178,15 @@ def main():
         "read_accounting": read_accounting(raw, decontaminated),
         "software_versions": merge_versions(),
     }
+
+    if not as_bool(args.skip_humann):
+        # HUMAnN ran with its own bundle-pinned MetaPhlAn pass; record which
+        # bundle and index so the functional profiles can be tied to the
+        # taxonomy that drove them (the main pass is parameters.metaphlan_index).
+        manifest["parameters"]["humann_bundle"] = none_if_blank(args.humann_bundle)
+        manifest["parameters"]["humann_metaphlan_index"] = none_if_blank(
+            args.humann_metaphlan_index
+        )
 
     if not as_bool(args.skip_rarefied):
         manifest["parameters"]["rarefaction"] = {

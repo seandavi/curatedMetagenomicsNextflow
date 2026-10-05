@@ -18,9 +18,13 @@
  * `.command*` and `versions.yml`. The version key is:
  *
  *     metaphlan        params.metaphlan_index
- *     chocophlan       params.chocophlan
- *     uniref           params.uniref
- *     utility_mapping  "full" (the only variant this pipeline downloads)
+ *     metaphlan (HUMAnN-side, metaphlan_db_humann)
+ *                      the selected bundle's metaphlan_index (same key space
+ *                      as the main MetaPhlAn database)
+ *     chocophlan, uniref, utility_mapping
+ *                      params.humann_bundle (the database names are bundle
+ *                      fields, and the same name can differ across HUMAnN
+ *                      releases, so the bundle is the version)
  *     kraken_db        basename of params.kraken_db_url without archive extension
  *     card_db          basename of params.card_db_url without archive extension
  *     card_kma_db      the same key as card_db (the KMA index is built from it)
@@ -79,14 +83,69 @@ process install_metaphlan_db {
     """
 }
 
+/*
+ * HUMAnN-side databases (ADR-0016)
+ *
+ * These four processes belong to the selected HUMAnN bundle
+ * (params.humann_bundles[params.humann_bundle], conf/humann_bundles.config)
+ * and run in the bundle's own containers, so the DBs are always built by the
+ * tool version that will read them. They are invoked only from DATABASES,
+ * only when !skip_humann.
+ *
+ * The MetaPhlAn index is keyed by index name (the same key as the main pass:
+ * an identical index name is an identical database). ChocoPhlAn, UniRef and
+ * utility mapping are keyed by *bundle*, not by database name, because the
+ * same names ("full", "uniref90_ec_filtered_diamond") can mean different
+ * content under different HUMAnN releases.
+ */
+
+process metaphlan_db_humann {
+    label 'db_setup'
+    label 'download_retry'
+
+    container { params.humann_bundles[params.humann_bundle].metaphlan_container }
+
+    cpus 4
+    memory { 8.GB * task.attempt }
+
+    storeDir "${params.store_dir}/metaphlan/${params.humann_bundles[params.humann_bundle].metaphlan_index}"
+
+    output:
+    path 'metaphlan', emit: metaphlan_db, type: 'dir'
+    path ".command*"
+    path "versions.yml"
+
+    stub:
+    """
+    mkdir -p metaphlan
+    touch metaphlan/db.fake
+    touch .command.run
+    touch versions.yml
+    """
+
+    script:
+    def bundle = params.humann_bundles[params.humann_bundle]
+    """
+    metaphlan --install --index ${bundle.metaphlan_index} --db_dir ./metaphlan
+
+    cat <<-END_VERSIONS > versions.yml
+    versions:
+        metaphlan_humann: \$( echo \$(metaphlan --version 2>&1 ) | awk '{print \$3}')
+        bowtie2_humann: \$( echo \$(bowtie2 --version 2>&1 ) | awk '{print \$3}')
+    END_VERSIONS
+    """
+}
+
 process chocophlan_db {
     label 'db_setup'
     label 'download_retry'
 
-    cpus 1
-    memory "1g"
+    container { params.humann_bundles[params.humann_bundle].humann_container }
 
-    storeDir "${params.store_dir}/chocophlan/${params.chocophlan}"
+    cpus 1
+    memory { 1.GB * task.attempt }
+
+    storeDir "${params.store_dir}/chocophlan/${params.humann_bundle}"
 
     output:
     path "chocophlan", emit: chocophlan_db, type: 'dir'
@@ -102,9 +161,9 @@ process chocophlan_db {
     """
 
     script:
+    def bundle = params.humann_bundles[params.humann_bundle]
     """
-    echo ${PWD}
-    humann_databases --update-config no --download chocophlan ${params.chocophlan} .
+    humann_databases --update-config no --download chocophlan ${bundle.chocophlan} .
 
     cat <<-END_VERSIONS > versions.yml
     versions:
@@ -117,10 +176,12 @@ process utility_mapping_db {
     label 'db_setup'
     label 'download_retry'
 
-    cpus 1
-    memory "1g"
+    container { params.humann_bundles[params.humann_bundle].humann_container }
 
-    storeDir "${params.store_dir}/utility_mapping/full"
+    cpus 1
+    memory { 1.GB * task.attempt }
+
+    storeDir "${params.store_dir}/utility_mapping/${params.humann_bundle}"
 
     output:
     path "utility_mapping", emit: utility_mapping_db, type: 'dir'
@@ -136,9 +197,9 @@ process utility_mapping_db {
     """
 
     script:
+    def bundle = params.humann_bundles[params.humann_bundle]
     """
-    echo ${PWD}
-    humann_databases --update-config no --download utility_mapping full .
+    humann_databases --update-config no --download utility_mapping ${bundle.utility_mapping} .
 
     cat <<-END_VERSIONS > versions.yml
     versions:
@@ -151,10 +212,12 @@ process uniref_db {
     label 'db_setup'
     label 'download_retry'
 
-    cpus 1
-    memory "1g"
+    container { params.humann_bundles[params.humann_bundle].humann_container }
 
-    storeDir "${params.store_dir}/uniref/${params.uniref}"
+    cpus 1
+    memory { 1.GB * task.attempt }
+
+    storeDir "${params.store_dir}/uniref/${params.humann_bundle}"
 
     output:
     path "uniref", emit: uniref_db, type: 'dir'
@@ -169,11 +232,10 @@ process uniref_db {
     touch versions.yml
     """
 
-
     script:
+    def bundle = params.humann_bundles[params.humann_bundle]
     """
-    echo ${PWD}
-    humann_databases --update-config no --download uniref ${params.uniref} .
+    humann_databases --update-config no --download uniref ${bundle.uniref} .
 
     cat <<-END_VERSIONS > versions.yml
     versions:

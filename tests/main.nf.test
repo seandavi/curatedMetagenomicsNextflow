@@ -206,7 +206,159 @@ nextflow_pipeline {
             def names = workflow.stdout.findAll { it.startsWith("[PROCESS ") }
                 .collect { it.replaceFirst(/^\[PROCESS [^\]]*\]\s*/, "") }
             assert names.any { it.startsWith("DATABASES:chocophlan_db") }
-            assert names.any { it.startsWith("humann ") }
+            assert names.any { it.startsWith("HUMANN:humann") }
+        }
+    }
+
+    test("Normal run with HUMAnN enabled runs the bundle subworkflow on the full branch only") {
+
+        when {
+            params {
+                sample_id = "TEST_SAMPLE"
+                run_ids = "SRR000001"
+                skip_humann = false
+            }
+        }
+
+        then {
+            assert workflow.success
+            def names = workflow.stdout.findAll { it.startsWith("[PROCESS ") }
+                .collect { it.replaceFirst(/^\[PROCESS [^\]]*\]\s*/, "") }
+            assert names.any { it.startsWith("DATABASES:metaphlan_db_humann") }
+            assert names.any { it.startsWith("DATABASES:uniref_db") }
+            assert names.any { it.startsWith("DATABASES:utility_mapping_db") }
+            assert names.count { it.startsWith("HUMANN:metaphlan_for_humann") } == 1
+            assert names.count { it.startsWith("HUMANN:humann") } == 1
+            // The main MetaPhlAn pass is unchanged: one full + one rarefied.
+            assert names.count { it.startsWith("metaphlan_unknown_viruses_lists_full") } == 1
+            assert names.count { it.startsWith("metaphlan_unknown_viruses_lists_rarefied") } == 1
+        }
+    }
+
+    test("HUMAnN publishes under humann/<bundle>/ with the MetaPhlAn profile in metaphlan/") {
+
+        when {
+            params {
+                sample_id = "TEST_SAMPLE"
+                run_ids = "SRR000001"
+                skip_humann = false
+                publish_dir = "$outputDir/pub"
+            }
+        }
+
+        then {
+            assert workflow.success
+            def root = "$outputDir/pub/TEST_SAMPLE"
+            assert file("$root/humann/humann3.9/metaphlan/metaphlan_rel_ab_w_read_stats.tsv").exists()
+            assert file("$root/humann/humann3.9/out_genefamilies.tsv.gz").exists()
+            assert file("$root/humann/humann3.9/out_pathabundance.tsv.gz").exists()
+            // Main taxonomy publish paths are unchanged.
+            assert file("$root/full_data/metaphlan_lists").isDirectory()
+            assert file("$root/full_data/metaphlan_markers").isDirectory()
+            assert file("$root/rarefied_data/metaphlan_lists").isDirectory()
+            assert !file("$root/full_data/humann").exists()
+        }
+    }
+
+    test("Unknown humann_bundle fails fast listing the valid names when HUMAnN is enabled") {
+
+        when {
+            params {
+                sample_id = "TEST_SAMPLE"
+                run_ids = "SRR000001"
+                skip_humann = false
+                humann_bundle = "no-such-bundle"
+            }
+        }
+
+        then {
+            assert workflow.failed
+            def out = (workflow.stdout + workflow.stderr).join("\n")
+            assert out.contains("Unknown humann_bundle 'no-such-bundle'")
+            assert out.contains("Valid bundles: humann3.9")
+        }
+    }
+
+    test("Unknown humann_bundle also fails databases_only when HUMAnN is enabled") {
+
+        when {
+            params {
+                databases_only = true
+                skip_humann = false
+                humann_bundle = "no-such-bundle"
+            }
+        }
+
+        then {
+            assert workflow.failed
+            assert (workflow.stdout + workflow.stderr).join("\n").contains("Valid bundles: humann3.9")
+        }
+    }
+
+    test("humann_bundle is not validated when HUMAnN is skipped") {
+
+        when {
+            params {
+                sample_id = "TEST_SAMPLE"
+                run_ids = "SRR000001"
+                skip_humann = true
+                humann_bundle = "no-such-bundle"
+            }
+        }
+
+        then {
+            assert workflow.success
+        }
+    }
+
+    test("Manifest builder keeps main and HUMAnN-pass versions distinct and records the bundle") {
+
+        when {
+            params {
+                sample_id = "TEST_SAMPLE"
+                run_ids = "SRR000001"
+                skip_humann = false
+                publish_dir = "$outputDir/pub"
+            }
+        }
+
+        then {
+            assert workflow.success
+
+            // The stub sample_manifest does not run build_manifest.py, so run it
+            // on the real collated versions the stubbed pipeline produced (which
+            // carry the HUMAnN-pass keys) plus a main-pass versions file, in the
+            // order the pipeline's glob would merge them.
+            def found = []
+            new File("$launchDir/work").eachFileRecurse(groovy.io.FileType.FILES) {
+                if (it.name == "versions_collated.yml") found << it
+            }
+            assert found.size() == 1
+
+            def dir = new File("$outputDir/manifest_check")
+            dir.mkdirs()
+            // 'versions_a_main.yml' sorts before the collated file, so a naive
+            // last-file-wins merge would let a colliding key be overwritten.
+            new File(dir, "versions_a_main.yml").text = "versions:\n    metaphlan: 4.2.2\n    bowtie2: 2.5.4\n"
+            new File(dir, "versions_z_collated.yml").text = found[0].text
+            new File(dir, "reads.fastq").text = "@r1\nACGT\n+\nIIII\n"
+
+            def proc = ["python3", "${projectDir}/bin/build_manifest.py",
+                "--sample", "TEST_SAMPLE",
+                "--skip-humann", "false",
+                "--humann-bundle", "humann3.9",
+                "--humann-metaphlan-index", "mpa_vJun23_CHOCOPhlAnSGB_202307",
+                "--raw-fastq", "reads.fastq",
+                "--kneaddata-fastq", "reads.fastq"].execute(null, dir)
+            proc.waitFor()
+            assert proc.exitValue() == 0
+            def m = new groovy.json.JsonSlurper().parse(new File(dir, "manifest.json"))
+            assert m.software_versions.metaphlan == "4.2.2"
+            assert m.software_versions.metaphlan_humann == "stub"
+            assert m.software_versions.bowtie2_humann == "stub"
+            assert m.software_versions.humann == "stub"
+            assert m.parameters.humann_bundle == "humann3.9"
+            assert m.parameters.humann_metaphlan_index == "mpa_vJun23_CHOCOPhlAnSGB_202307"
         }
     }
 }

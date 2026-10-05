@@ -39,7 +39,7 @@ include {
     resistome_kma as resistome_kma_rarefied
 } from './modules/processes/resistome'
 include { fastqc } from './modules/processes/qc'
-include { humann } from './modules/processes/humann'
+include { HUMANN } from './modules/subworkflows/humann'
 include { sample_manifest } from './modules/processes/manifest'
 include { MARK_COMPLETE } from './modules/processes/finalize'
 
@@ -66,7 +66,22 @@ def generate_sample_metadata_single_sample(sample_id, run_ids) {
     return [sample: sample_id, accessions: accessions, meta: null]
 }
 
+/*
+ * Fail fast on an unknown HUMAnN bundle, listing the valid names. Only called
+ * when HUMAnN is enabled, so a stale humann_bundle never blocks runs that skip
+ * HUMAnN. Bundles are defined in conf/humann_bundles.config.
+ */
+def validate_humann_bundle(bundle, bundles) {
+    if (!bundles.containsKey(bundle)) {
+        error "Unknown humann_bundle '${bundle}'. Valid bundles: ${bundles.keySet().join(', ')}"
+    }
+}
+
 workflow {
+
+    if (!params.skip_humann) {
+        validate_humann_bundle(params.humann_bundle, params.humann_bundles)
+    }
 
     /*
      * --databases_only: populate the storeDir database caches and stop. No
@@ -245,21 +260,21 @@ workflow {
     }
 
     /*
-     * Optional HUMAnN branch (uses full-depth data only). Invoked here — ahead
-     * of the manifest — so its tool versions are captured in software_versions.
+     * Optional HUMAnN branch (full-depth data only; ADR-0016). A self-contained
+     * subworkflow with its own bundle-pinned MetaPhlAn pass and databases.
+     * Invoked here — ahead of the manifest — so its tool versions are captured
+     * in software_versions.
      */
     if (!params.skip_humann) {
-        humann(
-           metaphlan_unknown_viruses_lists_full.out.meta,
-           kneaddata.out.fastq,
-           metaphlan_markers_full.out.marker_rel_ab_w_read_stats,
-           DATABASES.out.chocophlan_db,
-           DATABASES.out.uniref_db,
-           DATABASES.out.utility_mapping_db)
+        HUMANN(
+            full_meta_ch,
+            kneaddata.out.fastq,
+            DATABASES.out.metaphlan_humann_db,
+            DATABASES.out.chocophlan_db,
+            DATABASES.out.uniref_db,
+            DATABASES.out.utility_mapping_db)
 
-        humann_versions_ch = humann.out.meta
-            .merge(humann.out.versions)
-            .map { m, ver -> tuple(m.sample, ver) }
+        humann_versions_ch = HUMANN.out.versions
     }
 
     /*
@@ -360,7 +375,7 @@ workflow {
      * Full branch: join metaphlan_markers_full and sample_to_markers_full.
      * Rarefied branch (when enabled): also join metaphlan_markers_rarefied and
      * sample_to_markers_rarefied.
-     * HUMAnN branch (when enabled): additionally gate on humann output.
+     * HUMAnN branch (when enabled): additionally gate on the HUMANN subworkflow.
      */
     finished_ch = metaphlan_markers_full.out.meta
         .map { meta -> tuple(meta.sample, meta) }
@@ -407,7 +422,7 @@ workflow {
         // Also gate completion on HUMAnN when that branch is enabled.
         finished_ch = finished_ch
             .map { meta -> tuple(meta.sample, meta) }
-            .join(humann.out.meta.map { meta -> tuple(meta.sample, meta) })
+            .join(HUMANN.out.meta.map { meta -> tuple(meta.sample, meta) })
             .map { sample_id, meta1, meta2 -> meta1 }
     }
 

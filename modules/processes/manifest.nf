@@ -43,6 +43,8 @@ process sample_manifest {
     def cmd = workflow.commandLine ? workflow.commandLine.replaceAll('"', "'") : ''
     def ids = meta.accessions ? meta.accessions.join(',') : (meta.fpaths ? meta.fpaths.join(',') : '')
     def mode = params.local_input ? 'local' : 'sra'
+    def humann_bundle = params.skip_humann ? '' : params.humann_bundle
+    def humann_index = params.skip_humann ? '' : params.humann_bundles[params.humann_bundle].metaphlan_index
     """
     build_manifest.py \
         --sample '${meta.sample}' \
@@ -64,6 +66,8 @@ process sample_manifest {
         --rarefy-reads ${params.rarefy_reads} \
         --rarefy-seed ${params.rarefy_seed} \
         --skip-humann ${params.skip_humann} \
+        --humann-bundle '${humann_bundle}' \
+        --humann-metaphlan-index '${humann_index}' \
         --raw-fastq ${raw_fastq} \
         --kneaddata-fastq ${kneaddata_fastq} \
         --output manifest.json

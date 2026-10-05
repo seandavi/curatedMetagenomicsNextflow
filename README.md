@@ -96,8 +96,7 @@ version that selects it, `<store_dir>/<db_name>/<version_key>/` (holding the
 | `metaphlan/<metaphlan_index>/`                     | `metaphlan_index`                                  |
 | `kraken_db/<key>/`                                 | `kraken_db_url` basename without archive extension |
 | `card_db/<key>/`, `card_kma_db/<key>/`             | `card_db_url` basename without archive extension   |
-| `chocophlan/<chocophlan>/`, `uniref/<uniref>/`     | `chocophlan`, `uniref`                             |
-| `utility_mapping/full/`                            | fixed (`full`)                                     |
+| `chocophlan/<bundle>/`, `uniref/<bundle>/`, `utility_mapping/<bundle>/` | `humann_bundle` (the bundle pins the DB names) |
 | `human_genome/`, `mouse_C57BL/`                    | not versioned (no parameter selects a release)     |
 
 Changing `metaphlan_index`, `kraken_db_url` or `card_db_url` now creates a new
@@ -118,10 +117,12 @@ These commands assume the store was built with the default parameters (if a
 different `metaphlan_index` / `kraken_db_url` / `card_db_url` was used,
 substitute that key); drop the block for any directory that does not exist.
 `human_genome/` and `mouse_C57BL/` need no change. The
-HUMAnN directories (`chocophlan/`, `uniref/`, `utility_mapping/`) are only
-present if HUMAnN was ever enabled; they migrate the same way, into
-`chocophlan/full/`, `uniref/uniref90_ec_filtered_diamond/` and
-`utility_mapping/full/` (all three also need `versions.yml`).
+HUMAnN directories (`chocophlan/`, `uniref/`, `utility_mapping/`) are now keyed
+by HUMAnN bundle (default `humann3.9`) rather than by database name, because the
+same name can hold different content under different HUMAnN releases. They are
+not migrated: if HUMAnN was ever enabled, the databases are downloaded again
+into `chocophlan/humann3.9/` etc. (HUMAnN's bundle-pinned MetaPhlAn vJun23 index
+is stored under `metaphlan/mpa_vJun23_CHOCOPhlAnSGB_202307/`).
 
 Set `STORE` to the cluster's store (keep only the matching `STORE=` line),
 then run the block:
@@ -166,10 +167,10 @@ Alpine/Anvil stores.
 | `skip_resistome` | Skip KMA/CARD resistome profiling (both branches) | `false` |
 | `skip_fastqc`    | Skip FastQC on the host-decontaminated reads | `false` |
 
-`skip_humann=true` is the current supported default. The `skip_humann=false`
-path is kept in the pipeline for future use, but it is not expected to work
-correctly at present because the active MetaPhlAn database/version combination
-is not aligned with the HUMAnN branch.
+`skip_humann=true` is the default. With `--skip_humann false`, HUMAnN runs on the
+full-depth reads in its own version-matched subworkflow (see
+[HUMAnN Parameters](#humann-parameters)); enabling it by default is a separate
+decision pending real-sample validation and cost data.
 
 ### Rarefaction Parameters
 
@@ -270,14 +271,27 @@ image, so no additional container is required. Per-sample only. See
 
 ### HUMAnN Parameters
 
-| Parameter    | Description                 | Default            |
-| ------------ | --------------------------- | ------------------ |
-| `chocophlan` | ChocoPhlAn database version | `full`             |
-| `uniref`     | UniRef database version     | `uniref90_ec_filtered_diamond` |
+| Parameter         | Description                                              | Default     |
+| ----------------- | -------------------------------------------------------- | ----------- |
+| `humann_bundle`   | Named, version-pinned HUMAnN bundle (see below)          | `humann3.9` |
+| `humann_maxforks` | Max concurrent `humann` tasks (shared-storage DB reads)  | `4`         |
 
-Important: enabling the HUMAnN branch currently requires coordinated
-MetaPhlAn/HUMAnN version alignment and validation. Treat the existing HUMAnN
-path as preserved-but-dormant until that compatibility work is done.
+A *bundle* (defined in [`conf/humann_bundles.config`](conf/humann_bundles.config))
+pins the HUMAnN and MetaPhlAn containers, the MetaPhlAn version and index, and
+the ChocoPhlAn/UniRef/utility-mapping database names. There are no per-tool
+version parameters; an unknown `humann_bundle` fails at start-up with the list
+of valid names (checked only when `--skip_humann false`). The `humann3.9`
+bundle uses HUMAnN 3.9 (`quay.io/biocontainers/humann:3.9--py312hdfd78af_0`)
+with MetaPhlAn 4.1.1 and the `mpa_vJun23_CHOCOPhlAnSGB_202307` index, because
+HUMAnN 3.9 rejects any profile that is not `vJun23`.
+
+HUMAnN runs on the full-depth branch only, through its own MetaPhlAn pass, so
+the published MetaPhlAn 4.2.2 taxonomy is unaffected. Outputs are published
+under `<sample>/humann/<humann_bundle>/` using HUMAnN's native filenames, with
+the profile that drove the stratification in `<sample>/humann/<humann_bundle>/metaphlan/`.
+Functional profiles are stratified by that bundle's taxonomy, not by the
+`metaphlan_lists`/`metaphlan_markers` profiles. See
+[`docs/adr/0016-humann-bundles.md`](docs/adr/0016-humann-bundles.md).
 
 ## Input Format
 
@@ -350,7 +364,7 @@ Results will be organized by sample in the `publish_dir` directory.
 │   │   │   ├── strainphlan_markers/
 │   │   │   ├── kraken/         (only when --skip_kraken false)
 │   │   │   ├── resistome/      (only when --skip_resistome false)
-│   │   │   └── humann/         (only when --skip_humann false)
+│   │   │   └── humann/<bundle>/  (only when --skip_humann false; profile in metaphlan/)
 │   │   ├── sample2/
 │   │   │   └── ...
 ```

@@ -10,13 +10,38 @@ workflow revision the orchestrator dispatches — keep all three in lockstep.
 ## [Unreleased]
 
 ### Added
+- **HUMAnN subworkflow driven by version-pinned bundles** (ADR-0016, #85).
+  `--humann_bundle` (default `humann3.9`, registry in
+  `conf/humann_bundles.config`) selects the HUMAnN and MetaPhlAn containers,
+  the MetaPhlAn version/index and the ChocoPhlAn/UniRef/utility-mapping DB
+  names as one unit; an unknown bundle fails at start-up listing the valid
+  names (only when `--skip_humann false`). The new `HUMANN` subworkflow runs
+  `metaphlan_for_humann` (MetaPhlAn 4.1.1, `mpa_vJun23_CHOCOPhlAnSGB_202307`)
+  then `humann` on the full-depth branch only, with its own databases staged
+  by `DATABASES` (so `--databases_only --skip_humann false` fetches them).
+  Output is published to `<sample>/humann/<bundle>/` with the profile in
+  `metaphlan/`; the published MetaPhlAn 4.2.2 taxonomy is unchanged.
+  `skip_humann` stays `true` by default. The manifest records the HUMAnN-pass
+  versions under `metaphlan_humann`, `bowtie2_humann` and `humann`, plus
+  `parameters.humann_bundle` and `humann_metaphlan_index`.
+- `humann_maxforks` (default 4) throttles concurrent `humann` tasks.
 - **`--databases_only`** pre-stages the reference databases into `store_dir`
   without sample inputs or per-sample processes, so downloads no longer have
   to happen inside a production batch. Database processes are now invoked
   only from a `DATABASES` subworkflow (`modules/subworkflows/databases.nf`).
   See #84.
 
+### Removed
+- The `chocophlan` and `uniref` parameters (now bundle fields) and the
+  `withName` entries for `humann` and the HUMAnN DB processes in
+  `conf/base.config` (resources are set in the process bodies).
+
 ### Changed
+- **HUMAnN database caches are keyed by bundle** (`chocophlan/<bundle>/`,
+  `uniref/<bundle>/`, `utility_mapping/<bundle>/`) and the DB processes run in
+  the bundle's containers rather than the base image; previously cached
+  `chocophlan/full/` etc. are not reused (re-download once). ADR-0016
+  supersedes ADR-0002.
 - ChocoPhlAn, UniRef and utility-mapping databases are fetched only when
   `skip_humann=false`; previously they ran on every run regardless.
 - **Reference-database cache (`storeDir`) paths are now keyed by version**

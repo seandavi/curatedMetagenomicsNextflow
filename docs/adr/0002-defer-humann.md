@@ -1,6 +1,6 @@
 # 0002. Defer HUMAnN functional profiling pending version alignment
 
-- **Status:** Accepted
+- **Status:** Superseded by [0016](0016-humann-bundles.md)
 - **Date:** 2026-06-03
 - **Deciders:** Sean Davis
 

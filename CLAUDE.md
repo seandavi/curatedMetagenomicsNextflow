@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-This is a Nextflow pipeline for processing human gut metagenomics data. It takes SRA accessions (or local FASTQs), performs host decontamination (KneadData), and produces taxonomic profiles (MetaPhlAn 4.2.2). HUMAnN functional profiling is present but disabled by default (`skip_humann = true`) due to unresolved version compatibility issues.
+This is a Nextflow pipeline for processing human gut metagenomics data. It takes SRA accessions (or local FASTQs), performs host decontamination (KneadData), and produces taxonomic profiles (MetaPhlAn 4.2.2). HUMAnN functional profiling runs as a version-pinned bundle (ADR-0016) with its own MetaPhlAn pass, and is disabled by default (`skip_humann = true`) pending real-sample validation and cost data.
 
 ## Commands
 
@@ -43,10 +43,10 @@ nextflow run main.nf -profile local --metadata_tsv samples.tsv
 | `qc.nf` | `fastqc` (post-decontamination FastQC) |
 | `manifest.nf` | `sample_manifest` (per-sample provenance + read-accounting `manifest.json`) |
 | `databases.nf` | Reference database downloads (MetaPhlAn, KneadData, HUMAnN, Kraken2, CARD DBs) |
-| `humann.nf` | HUMAnN gene/pathway abundance (disabled by default) |
+| `humann.nf` | `metaphlan_for_humann` + `humann` in the selected bundle's containers (disabled by default); wired by the `HUMANN` subworkflow, `modules/subworkflows/humann.nf` |
 | `finalize.nf` | `MARK_COMPLETE` sentinel |
 
-DB processes are invoked only from the `DATABASES` subworkflow (`modules/subworkflows/databases.nf`), which gates them per feature (Kraken2 unless `skip_kraken`, CARD/KMA unless `skip_resistome`, HUMAnN DBs only when `!skip_humann`) and emits the DB channels `main.nf` consumes. `--databases_only` (`params.databases_only`) runs just `DATABASES` — no input contract, no per-sample process — to pre-stage `store_dir`.
+DB processes are invoked only from the `DATABASES` subworkflow (`modules/subworkflows/databases.nf`), which gates them per feature (Kraken2 unless `skip_kraken`, CARD/KMA unless `skip_resistome`, HUMAnN DBs only when `!skip_humann`) and emits the DB channels `main.nf` consumes. HUMAnN DBs (bundle-pinned MetaPhlAn index, ChocoPhlAn, UniRef, utility mapping) run in the selected bundle's containers. `--databases_only` (`params.databases_only`) runs just `DATABASES` — no input contract, no per-sample process — to pre-stage `store_dir`.
 
 `sample_manifest` writes one `manifest.json` at each sample's published root via `bin/build_manifest.py` (pure Python, no extra container). It compiles provenance, raw-vs-decontaminated read accounting, rarefaction parameters, and the consolidated per-process `versions.yml`. `MARK_COMPLETE` is gated on it so a sample directory is never marked complete before its manifest exists.
 
@@ -57,6 +57,8 @@ DB processes are invoked only from the `DATABASES` subworkflow (`modules/subwork
 Reference databases are cached under `store_dir` as `<store_dir>/<db_name>/<version_key>/` (the keyed directory holds the `<db_name>` dir plus that task's `.command*`/`versions.yml`; e.g. `metaphlan/<metaphlan_index>/`, `kraken_db/<url-basename-without-extension>/`, `card_db/…`, `card_kma_db/…`; KneadData `human_genome`/`mouse_C57BL` are unversioned). The key convention is documented in the `databases.nf` header; new `storeDir` database processes must follow it, and downstream processes must use the staged input path rather than a hardcoded directory name.
 
 `fastqc` (module `qc.nf`, gated by `skip_fastqc`) runs FastQC on the **decontaminated** reads (`<sample>/fastqc/`); raw-read FastQC already runs in `fasterq_dump`/`local_fastqc`, so this gives a before/after view. It runs in the base image (no new container). A per-sample MultiQC report was considered but dropped to avoid introducing another container (see ADR-0008). Per-sample only.
+
+`HUMANN` subworkflow (full-depth branch only, gated by `!skip_humann`) runs `metaphlan_for_humann` (MetaPhlAn 4.1.1, vJun23 index for the `humann3.9` bundle; independent of the main 4.2.2 pass, whose taxonomy and published paths are untouched) → `humann --taxonomic-profile`. Everything version-dependent — containers, MetaPhlAn version/index, ChocoPhlAn/UniRef/utility-mapping DB names — is one bundle in `conf/humann_bundles.config`, selected by `params.humann_bundle`; an unknown name fails at start (only when HUMAnN is enabled). Outputs publish to `<sample>/humann/<bundle>/` (profile in `metaphlan/`) with HUMAnN-native filenames; container/resources/`maxForks` are in the process body; manifest versions use the distinct keys `metaphlan_humann`/`bowtie2_humann`/`humann` plus `humann_bundle`. HUMAnN DB caches are keyed by bundle. See ADR-0016.
 
 ### Architecture Decision Records
 

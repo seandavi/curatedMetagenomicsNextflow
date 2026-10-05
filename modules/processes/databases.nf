@@ -126,7 +126,7 @@ process metaphlan_db_humann {
     script:
     def bundle = params.humann_bundles[params.humann_bundle]
     """
-    metaphlan --install --index ${bundle.metaphlan_index} --db_dir ./metaphlan
+    metaphlan --install --index ${bundle.metaphlan_index} ${bundle.metaphlan_db_option} ./metaphlan
 
     cat <<-END_VERSIONS > versions.yml
     versions:

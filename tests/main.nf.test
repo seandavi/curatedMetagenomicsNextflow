@@ -96,4 +96,117 @@ nextflow_pipeline {
             assert workflow.stdout.any { it.contains("Either metadata_tsv or run_ids/sample_id must be provided") }
         }
     }
+
+    test("databases_only runs only database processes and needs no sample input") {
+
+        when {
+            params {
+                databases_only = true
+                skip_humann = true
+            }
+        }
+
+        then {
+            assert workflow.success
+            assert workflow.exitStatus == 0
+            // Tracing is disabled in nf-test; process names come from the
+            // pipeline's "[PROCESS xx/yyyyyy] <name> (<tag>)" stdout lines.
+            def names = workflow.stdout.findAll { it.startsWith("[PROCESS ") }
+                .collect { it.replaceFirst(/^\[PROCESS [^\]]*\]\s*/, "") }
+            assert names.size() > 0
+            assert names.every { it.startsWith("DATABASES:") }
+            assert names.any { it.startsWith("DATABASES:install_metaphlan_db") }
+            assert names.any { it.startsWith("DATABASES:kraken_db") }
+            assert names.any { it.startsWith("DATABASES:card_kma_db") }
+            // HUMAnN databases are gated on skip_humann (default true)
+            assert !names.any { it.contains("chocophlan_db") || it.contains("uniref_db") || it.contains("utility_mapping_db") }
+            assert !names.any { it.contains("fasterq_dump") || it.startsWith("kneaddata ") || it.contains("MARK_COMPLETE") }
+        }
+    }
+
+    test("databases_only respects skip_kraken and skip_resistome") {
+
+        when {
+            params {
+                databases_only = true
+                skip_humann = true
+                skip_kraken = true
+                skip_resistome = true
+            }
+        }
+
+        then {
+            assert workflow.success
+            // Tracing is disabled in nf-test; process names come from the
+            // pipeline's "[PROCESS xx/yyyyyy] <name> (<tag>)" stdout lines.
+            def names = workflow.stdout.findAll { it.startsWith("[PROCESS ") }
+                .collect { it.replaceFirst(/^\[PROCESS [^\]]*\]\s*/, "") }
+            assert names.any { it.startsWith("DATABASES:install_metaphlan_db") }
+            assert names.any { it.startsWith("DATABASES:kneaddata_human_database") }
+            assert names.any { it.startsWith("DATABASES:kneaddata_mouse_database") }
+            assert !names.any { it.contains("kraken_db") || it.contains("card_db") || it.contains("card_kma_db") }
+        }
+    }
+
+    test("databases_only stages HUMAnN databases only when skip_humann is false") {
+
+        when {
+            params {
+                databases_only = true
+                skip_humann = false
+            }
+        }
+
+        then {
+            assert workflow.success
+            // Tracing is disabled in nf-test; process names come from the
+            // pipeline's "[PROCESS xx/yyyyyy] <name> (<tag>)" stdout lines.
+            def names = workflow.stdout.findAll { it.startsWith("[PROCESS ") }
+                .collect { it.replaceFirst(/^\[PROCESS [^\]]*\]\s*/, "") }
+            assert names.any { it.startsWith("DATABASES:chocophlan_db") }
+            assert names.any { it.startsWith("DATABASES:uniref_db") }
+            assert names.any { it.startsWith("DATABASES:utility_mapping_db") }
+        }
+    }
+
+    test("Normal run skips HUMAnN databases when skip_humann is true") {
+
+        when {
+            params {
+                sample_id = "TEST_SAMPLE"
+                run_ids = "SRR000001"
+                skip_humann = true
+            }
+        }
+
+        then {
+            assert workflow.success
+            // Tracing is disabled in nf-test; process names come from the
+            // pipeline's "[PROCESS xx/yyyyyy] <name> (<tag>)" stdout lines.
+            def names = workflow.stdout.findAll { it.startsWith("[PROCESS ") }
+                .collect { it.replaceFirst(/^\[PROCESS [^\]]*\]\s*/, "") }
+            assert !names.any { it.contains("chocophlan_db") || it.contains("uniref_db") || it.contains("utility_mapping_db") }
+        }
+    }
+
+    test("Normal run with HUMAnN enabled stubs through the DATABASES wiring") {
+
+        when {
+            params {
+                sample_id = "TEST_SAMPLE"
+                run_ids = "SRR000001"
+                skip_humann = false
+            }
+        }
+
+        then {
+            assert workflow.success
+            // Tracing is disabled in nf-test; process names come from the
+            // pipeline's "[PROCESS xx/yyyyyy] <name> (<tag>)" stdout lines.
+            def names = workflow.stdout.findAll { it.startsWith("[PROCESS ") }
+                .collect { it.replaceFirst(/^\[PROCESS [^\]]*\]\s*/, "") }
+            assert names.any { it.startsWith("DATABASES:chocophlan_db") }
+            assert names.any { it.startsWith("humann ") }
+        }
+    }
 }

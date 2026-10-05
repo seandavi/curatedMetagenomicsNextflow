@@ -47,6 +47,25 @@ With specific parameters:
 nextflow run main.nf --metadata_tsv samples.tsv --skip_humann --publish_base_dir results
 ```
 
+### Stage databases before a batch
+
+Reference databases (MetaPhlAn, KneadData, Kraken2, CARD/KMA, and HUMAnN's
+ChocoPhlAn/UniRef/utility mapping when `--skip_humann false`) are downloaded
+into `store_dir` on first use, which can take hours. Pre-stage them with
+`--databases_only`, which needs no sample inputs, runs only the database
+processes (no per-sample step) and exits 0:
+
+```bash
+nextflow run main.nf -profile alpine,r2 --databases_only --store_dir /scratch/alpine/$USER/cmgd_db
+```
+
+The same skip flags apply, so only the databases a normal run would need are
+staged (`--skip_kraken`, `--skip_resistome`, `--skip_humann`). Run it as its
+own job (for example an `sbatch` script wrapping the command above) with a
+time limit long enough for the downloads, and use the same `store_dir` for the
+later batch run: a second invocation finds every database in `store_dir` and
+runs no database task.
+
 ## Parameters
 
 ### General Pipeline Parameters
@@ -57,6 +76,7 @@ nextflow run main.nf --metadata_tsv samples.tsv --skip_humann --publish_base_dir
 | `sample_id` | Sample identifier for single-sample mode | `null` |
 | `run_ids` | Semicolon-delimited run accessions for single-sample mode | `null` |
 | `local_input` | Interpret TSV `file_paths` instead of SRA accessions | `false` |
+| `databases_only` | Stage reference databases into `store_dir` and exit (no sample inputs needed) | `false` |
 | `publish_base_dir`  | Base directory prefix for published results (`r2` profile: `s3://cmgd-raw`; `gcs` profile: `gs://cmgd-data/results/cMDv4`) | `${launchDir}/results` |
 | `publish_dir`  | Optional full publish root override after workflow-name/version expansion | `null` |
 | `store_dir`    | Directory to store reference databases | `databases`   |

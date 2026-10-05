@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 The version is the git tag, the `manifest.version` in `nextflow.config`, and the
 workflow revision the orchestrator dispatches — keep all three in lockstep.
 
+## [Unreleased]
+
+### Added
+- **`--databases_only`** pre-stages the reference databases into `store_dir`
+  without sample inputs or per-sample processes, so downloads no longer have
+  to happen inside a production batch. Database processes are now invoked
+  only from a `DATABASES` subworkflow (`modules/subworkflows/databases.nf`).
+  See #84.
+
+### Changed
+- ChocoPhlAn, UniRef and utility-mapping databases are fetched only when
+  `skip_humann=false`; previously they ran on every run regardless.
+
 ## [2.2.1] - 2026-07-04
 
 ### Added

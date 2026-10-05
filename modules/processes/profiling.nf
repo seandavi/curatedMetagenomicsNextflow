@@ -105,7 +105,7 @@ process metaphlan_unknown_viruses_lists {
     find .
     metaphlan --input_type fastq \
         --index ${params.metaphlan_index} \
-        --db_dir metaphlan \
+        --db_dir ${metaphlan_db} \
         --mapout bowtie2.out \
         --nproc ${task.cpus} \
         --profile_vsc \
@@ -164,7 +164,7 @@ process metaphlan_unknown_list {
     metaphlan \
         --input_type mapout \
         --index ${params.metaphlan_index} \
-        --db_dir metaphlan \
+        --db_dir ${metaphlan_db} \
         --nproc ${task.cpus} \
         -o metaphlan_unknown_list.tsv \
         <( gunzip -c ${metaphlan_bt2} )
@@ -217,21 +217,21 @@ process metaphlan_markers {
     """
     metaphlan --input_type mapout \
         --index ${params.metaphlan_index} \
-        --db_dir metaphlan \
+        --db_dir ${metaphlan_db} \
         -t marker_pres_table \
         --nproc ${task.cpus} \
         -o marker_presence.tsv \
         <( gunzip -c ${metaphlan_bt2} )
     metaphlan --input_type mapout \
         --index ${params.metaphlan_index} \
-        --db_dir metaphlan \
+        --db_dir ${metaphlan_db} \
         --nproc ${task.cpus} \
         -t marker_ab_table \
         -o marker_abundance.tsv \
         <( gunzip -c ${metaphlan_bt2} )
     metaphlan --input_type mapout \
         --index ${params.metaphlan_index} \
-        --db_dir metaphlan \
+        --db_dir ${metaphlan_db} \
         -t rel_ab_w_read_stats \
         --nproc ${task.cpus} \
         -o marker_rel_ab_w_read_stats.tsv \

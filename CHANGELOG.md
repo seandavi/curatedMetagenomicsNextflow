@@ -19,6 +19,54 @@ workflow revision the orchestrator dispatches — keep all three in lockstep.
 ### Changed
 - ChocoPhlAn, UniRef and utility-mapping databases are fetched only when
   `skip_humann=false`; previously they ran on every run regardless.
+- **Reference-database cache (`storeDir`) paths are now keyed by version**
+  (#83). Previously every database lived at a fixed name (`metaphlan`,
+  `kraken_db`, `card_db`, `card_kma_db`, …), so changing `metaphlan_index`,
+  `kraken_db_url` or `card_db_url` silently reused whatever was cached. Layout
+  is now `<store_dir>/<db_name>/<version_key>/` (MetaPhlAn: the index; Kraken2
+  and CARD: URL basename without archive extension; `card_kma_db` shares the
+  CARD key; ChocoPhlAn/UniRef: their params; utility mapping: `full`). The
+  KneadData `human_genome`/`mouse_C57BL` paths are unchanged (no version
+  parameter selects them). See the `databases.nf` header and the README
+  "Reference Database Cache Layout".
+- `metaphlan_unknown_viruses_lists`, `metaphlan_unknown_list` and
+  `metaphlan_markers` now pass the staged `${metaphlan_db}` to `--db_dir`
+  instead of the hardcoded literal `metaphlan`.
+
+### Migration (one-time, before the first run of this version)
+Existing stores must be moved into the keyed layout or the databases will be
+re-downloaded. Defaults assumed (substitute the key if a different
+index/URL was used; skip directories that do not exist). `.command.*` and
+`versions.yml` are copied because `storeDir` requires every declared output in
+the keyed directory. Verified against a simulated old-layout store with a stub
+run (the four databases below were reported as stored/skipped). See the README
+"Reference Database Cache Layout" for HUMAnN directories.
+
+```sh
+STORE=/projects/seda0001_amc/cmgd/store          # Alpine
+STORE=/anvil/projects/x-cis240955/cmgd/store     # Anvil (keep only one STORE= line)
+
+cd "$STORE"
+mkdir -p metaphlan.new/mpa_vJan25_CHOCOPhlAnSGB_202503
+mv metaphlan metaphlan.new/mpa_vJan25_CHOCOPhlAnSGB_202503/metaphlan
+cp -p .command.* versions.yml metaphlan.new/mpa_vJan25_CHOCOPhlAnSGB_202503/
+mv metaphlan.new metaphlan
+
+mkdir -p kraken_db.new/k2_pluspf_16_GB_20260226
+mv kraken_db kraken_db.new/k2_pluspf_16_GB_20260226/kraken_db
+cp -p .command.* kraken_db.new/k2_pluspf_16_GB_20260226/
+mv kraken_db.new kraken_db
+
+mkdir -p card_db.new/broadstreet-v4.0.1
+mv card_db card_db.new/broadstreet-v4.0.1/card_db
+cp -p .command.* card_db.new/broadstreet-v4.0.1/
+mv card_db.new card_db
+
+mkdir -p card_kma_db.new/broadstreet-v4.0.1
+mv card_kma_db card_kma_db.new/broadstreet-v4.0.1/card_kma_db
+cp -p .command.* versions.yml card_kma_db.new/broadstreet-v4.0.1/
+mv card_kma_db.new card_kma_db
+```
 
 ## [2.2.1] - 2026-07-04
 

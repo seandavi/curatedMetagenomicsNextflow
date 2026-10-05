@@ -54,7 +54,8 @@ runs.
       curl -fsIL "https://genome-idx.s3.amazonaws.com/kraken/k2_pluspf_16_GB_20260226.tar.gz" | head -1
       ```
 - [ ] **Kraken DB has the Bracken distribution for the read length.** After the
-      DB is fetched, the extracted `kraken_db/` must contain
+      DB is fetched, the extracted `kraken_db/<key>/` (e.g.
+      `kraken_db/k2_pluspf_16_GB_20260226/`) must contain
       `database100mers.kmer_distrib` (matching `bracken_read_length = 100`). The
       PlusPF tarballs ship 50/75/100/150/200/250; if you change
       `bracken_read_length`, confirm the matching file exists.

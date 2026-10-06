@@ -51,6 +51,7 @@ jobs:
           docker run --rm humann4a:ci bash -c '
             set -euo pipefail
             humann --version 2>&1 | grep -q "v4.0.0.alpha.1"
+            metaphlan --version
             diamond --version
             bowtie2 --version | head -1
             humann_test

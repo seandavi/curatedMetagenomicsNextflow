@@ -33,6 +33,13 @@ workflow revision the orchestrator dispatches — keep all three in lockstep.
   are reused.
 
 ### Fixed
+- **`humann4.0.0a1` computed reactions and pathways against HUMAnN's bundled
+  DEMO mapping**, not the downloaded utility DB, so pathway tables came out
+  near-empty (0 to 183 pathways vs 268 to 458 for `humann3.9` on the same
+  samples). HUMAnN 4.0.0a1 resolves its pathway files from the config file's
+  utility folder at import time, and `--utility-database` doesn't update them.
+  The bundle field `humann_pathways_files` now passes the utility DB's
+  `metacyc_*` files as `--pathways-database`. Found by the #98 comparison.
 - The HUMAnN-side MetaPhlAn steps (`metaphlan_db_humann`,
   `metaphlan_for_humann`) passed `--db_dir`, which MetaPhlAn 4.1.x rejects
   (`unrecognized arguments: --db_dir`; 4.1 calls it `--bowtie2db`). The option

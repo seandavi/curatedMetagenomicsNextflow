@@ -149,6 +149,7 @@ process humann {
     script:
     def bundle = params.humann_bundles[params.humann_bundle]
     def utility_db = bundle.humann_utility_db_option ? "${bundle.humann_utility_db_option} ${utility_mapping_db}" : ''
+    def pathways_db = bundle.humann_pathways_files ? "--pathways-database " + bundle.humann_pathways_files.collect { "${utility_mapping_db}/${it}" }.join(',') : ''
     """
     humann -i ${fastq} \\
         -o '.' \\
@@ -158,6 +159,7 @@ process humann {
         --taxonomic-profile ${taxonomic_profile} \\
         --protein-database ${uniref_db} \\
         ${utility_db} \\
+        ${pathways_db} \\
         --threads ${task.cpus}
 
     # Renormalize the gene-family and pathway-abundance tables whatever the

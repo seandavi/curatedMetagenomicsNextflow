@@ -167,7 +167,7 @@ process chocophlan_db {
 
     cat <<-END_VERSIONS > versions.yml
     versions:
-        humann: \$( echo \$(humann --version 2>&1 ) | awk '{print \$2}')
+        humann: \$( humann --version 2>&1 | awk '\$1 == "humann" {print \$2; exit}' )
     END_VERSIONS
     """
 }
@@ -203,7 +203,7 @@ process utility_mapping_db {
 
     cat <<-END_VERSIONS > versions.yml
     versions:
-        humann: \$( echo \$(humann --version 2>&1 ) | awk '{print \$2}')
+        humann: \$( humann --version 2>&1 | awk '\$1 == "humann" {print \$2; exit}' )
     END_VERSIONS
     """
 }
@@ -239,7 +239,7 @@ process uniref_db {
 
     cat <<-END_VERSIONS > versions.yml
     versions:
-        humann: \$( echo \$(humann --version 2>&1 ) | awk '{print \$2}')
+        humann: \$( humann --version 2>&1 | awk '\$1 == "humann" {print \$2; exit}' )
     END_VERSIONS
     """
 }

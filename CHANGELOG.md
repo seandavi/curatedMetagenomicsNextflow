@@ -15,6 +15,13 @@ workflow revision the orchestrator dispatches — keep all three in lockstep.
   (`unrecognized arguments: --db_dir`; 4.1 calls it `--bowtie2db`). The option
   is now the bundle field `metaphlan_db_option`. Found by the Alpine pilot
   (#88).
+- `humann` passed `--utility-database`, which HUMAnN 3.9 doesn't have
+  (`unrecognized arguments`; only 4.0 alpha added it). It is now the bundle
+  field `humann_utility_db_option`, null for `humann3.9`. Found by the Alpine
+  pilot (#88).
+- The recorded HUMAnN version was `SyntaxWarning:`: the 3.9 container prints
+  Python 3.12 `SyntaxWarning`s before `humann v3.9`, and the version capture
+  took the second word of the merged output. It now reads the `humann` line.
 
 ### Added
 - **HUMAnN subworkflow driven by version-pinned bundles** (ADR-0016, #85).

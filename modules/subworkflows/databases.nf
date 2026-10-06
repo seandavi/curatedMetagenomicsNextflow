@@ -7,19 +7,23 @@
  * populated ahead of a batch.
  *
  * Databases are gated by the same feature flags as the profiling steps:
- *   - MetaPhlAn + KneadData (human, mouse): always
+ *   - MetaPhlAn (params.metaphlan_profile) + KneadData (human, mouse): always
  *   - Kraken2:                              unless skip_kraken
  *   - CARD + KMA index:                     unless skip_resistome
- *   - HUMAnN bundle databases (MetaPhlAn index, ChocoPhlAn, UniRef, utility
- *     mapping, all selected by params.humann_bundle): only when !skip_humann
+ *   - HUMAnN bundle databases (ChocoPhlAn, UniRef, utility mapping, selected
+ *     by params.humann_bundle): only when !skip_humann
+ *   - The bundle's MetaPhlAn index: only when !skip_humann and the bundle's
+ *     metaphlan_profile differs from params.metaphlan_profile (otherwise the
+ *     main index is reused; ADR-0018)
  *
  * Channels for gated-off databases are empty; the main workflow only consumes
  * them under the same flag, so they are never read.
  */
 
+include { humann_reuses_main_metaphlan } from '../lib/metaphlan_profiles'
 include {
     install_metaphlan_db
-    metaphlan_db_humann
+    install_metaphlan_db as metaphlan_db_humann
     chocophlan_db
     utility_mapping_db
     uniref_db
@@ -33,7 +37,7 @@ include {
 workflow DATABASES {
 
     main:
-    install_metaphlan_db()
+    install_metaphlan_db(params.metaphlan_profile)
 
     // Both kneaddata database setup processes are invoked because downstream
     // wiring expects both channels to exist. The selected reference remains
@@ -61,11 +65,13 @@ workflow DATABASES {
     uniref_ch = Channel.empty()
     utility_mapping_ch = Channel.empty()
     if (!params.skip_humann) {
-        metaphlan_db_humann()
+        if (!humann_reuses_main_metaphlan()) {
+            metaphlan_db_humann(params.humann_bundles[params.humann_bundle].metaphlan_profile)
+            metaphlan_humann_ch = metaphlan_db_humann.out.metaphlan_db
+        }
         chocophlan_db()
         uniref_db()
         utility_mapping_db()
-        metaphlan_humann_ch = metaphlan_db_humann.out.metaphlan_db
         chocophlan_ch = chocophlan_db.out.chocophlan_db
         uniref_ch = uniref_db.out.uniref_db
         utility_mapping_ch = utility_mapping_db.out.utility_mapping_db

@@ -17,10 +17,11 @@
  * the staged input path is the same shape as ever) plus that task's
  * `.command*` and `versions.yml`. The version key is:
  *
- *     metaphlan        params.metaphlan_index
- *     metaphlan (HUMAnN-side, metaphlan_db_humann)
- *                      the selected bundle's metaphlan_index (same key space
- *                      as the main MetaPhlAn database)
+ *     metaphlan        the `index` of the MetaPhlAn profile being installed
+ *                      (params.metaphlan_profile for the main pass, the
+ *                      selected bundle's metaphlan_profile for HUMAnN; the
+ *                      same index is the same database whichever profile
+ *                      names it)
  *     chocophlan, uniref, utility_mapping
  *                      params.humann_bundle (the database names are bundle
  *                      fields, and the same name can differ across HUMAnN
@@ -47,14 +48,27 @@ def db_url_key(url) {
     return name.replaceAll(/(\.tar)?\.(gz|bz2|xz|zip)$|\.(tgz|tbz2|tar)$/, '')
 }
 
+/*
+ * One process installs the MetaPhlAn index of any profile in
+ * conf/metaphlan_profiles.config (ADR-0018). It runs in the profile's own
+ * container with the profile's own database option, so the index is always
+ * built by the MetaPhlAn version that will read it. DATABASES invokes it once
+ * for the main profile and, when a HUMAnN bundle needs a different profile,
+ * once more (as metaphlan_db_humann) for that one.
+ */
 process install_metaphlan_db {
     label 'db_setup'
     label 'download_retry'
 
-    cpus 4
-    memory "8g"
+    container { params.metaphlan_profiles[profile_name].container }
 
-    storeDir "${params.store_dir}/metaphlan/${params.metaphlan_index}"
+    cpus 4
+    memory { 8.GB * task.attempt }
+
+    storeDir "${params.store_dir}/metaphlan/${params.metaphlan_profiles[profile_name].index}"
+
+    input:
+    val profile_name
 
     output:
     path 'metaphlan', emit: metaphlan_db, type: 'dir'
@@ -70,9 +84,9 @@ process install_metaphlan_db {
     """
 
     script:
+    def profile = params.metaphlan_profiles[profile_name]
     """
-    echo ${PWD}
-    metaphlan --install --index ${params.metaphlan_index} --db_dir ./metaphlan
+    metaphlan --install --index ${profile.index} ${profile.db_option} ./metaphlan
 
     cat <<-END_VERSIONS > versions.yml
     versions:
@@ -86,55 +100,18 @@ process install_metaphlan_db {
 /*
  * HUMAnN-side databases (ADR-0016)
  *
- * These four processes belong to the selected HUMAnN bundle
+ * These three processes belong to the selected HUMAnN bundle
  * (params.humann_bundles[params.humann_bundle], conf/humann_bundles.config)
- * and run in the bundle's own containers, so the DBs are always built by the
+ * and run in the bundle's HUMAnN container, so the DBs are always built by the
  * tool version that will read them. They are invoked only from DATABASES,
- * only when !skip_humann.
+ * only when !skip_humann. The bundle's MetaPhlAn index comes from
+ * install_metaphlan_db above.
  *
- * The MetaPhlAn index is keyed by index name (the same key as the main pass:
- * an identical index name is an identical database). ChocoPhlAn, UniRef and
- * utility mapping are keyed by *bundle*, not by database name, because the
- * same names ("full", "uniref90_ec_filtered_diamond") can mean different
- * content under different HUMAnN releases.
+ * ChocoPhlAn, UniRef and utility mapping are keyed by *bundle*, not by
+ * database name, because the same names ("full",
+ * "uniref90_ec_filtered_diamond") can mean different content under different
+ * HUMAnN releases.
  */
-
-process metaphlan_db_humann {
-    label 'db_setup'
-    label 'download_retry'
-
-    container { params.humann_bundles[params.humann_bundle].metaphlan_container }
-
-    cpus 4
-    memory { 8.GB * task.attempt }
-
-    storeDir "${params.store_dir}/metaphlan/${params.humann_bundles[params.humann_bundle].metaphlan_index}"
-
-    output:
-    path 'metaphlan', emit: metaphlan_db, type: 'dir'
-    path ".command*"
-    path "versions.yml"
-
-    stub:
-    """
-    mkdir -p metaphlan
-    touch metaphlan/db.fake
-    touch .command.run
-    touch versions.yml
-    """
-
-    script:
-    def bundle = params.humann_bundles[params.humann_bundle]
-    """
-    metaphlan --install --index ${bundle.metaphlan_index} ${bundle.metaphlan_db_option} ./metaphlan
-
-    cat <<-END_VERSIONS > versions.yml
-    versions:
-        metaphlan_humann: \$( echo \$(metaphlan --version 2>&1 ) | awk '{print \$3}')
-        bowtie2_humann: \$( echo \$(bowtie2 --version 2>&1 ) | awk '{print \$3}')
-    END_VERSIONS
-    """
-}
 
 process chocophlan_db {
     label 'db_setup'

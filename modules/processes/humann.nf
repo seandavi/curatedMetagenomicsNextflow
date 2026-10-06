@@ -1,13 +1,22 @@
 /*
- * HUMAnN functional profiling (ADR-0016)
+ * HUMAnN functional profiling (ADR-0016, amended by ADR-0018)
  *
- * Two per-sample processes, run on the full-depth host-decontaminated reads
- * only, driven by the selected bundle in conf/humann_bundles.config
+ * Per-sample processes, run on the full-depth host-decontaminated reads only,
+ * driven by the selected bundle in conf/humann_bundles.config
  * (params.humann_bundle):
  *
- *   metaphlan_for_humann  the bundle's own MetaPhlAn pass (version + index
- *                         HUMAnN can read; independent of the main taxonomy
- *                         pass) producing the --taxonomic-profile
+ *   metaphlan_for_humann  the bundle's own MetaPhlAn pass, in the container and
+ *                         with the CLI options of the bundle's MetaPhlAn profile
+ *                         (conf/metaphlan_profiles.config); independent of the
+ *                         main taxonomy pass; produces the --taxonomic-profile.
+ *                         Runs only when that profile differs from
+ *                         params.metaphlan_profile.
+ *   humann_reuse_metaphlan
+ *                         when the bundle's profile equals the main profile,
+ *                         the main pass's full-depth profile is the
+ *                         --taxonomic-profile; this publishes a copy under the
+ *                         same humann/<bundle>/metaphlan/ path so the
+ *                         provenance layout is the same either way
  *   humann                HUMAnN in the bundle's container, consuming it
  *
  * Containers, resources and maxForks are set in the process bodies (as in
@@ -20,8 +29,35 @@
  * stratification under <sample>/humann/<bundle>/metaphlan/.
  */
 
+process humann_reuse_metaphlan {
+    publishDir "${params.publish_dir ?: "${params.publish_base_dir}/${workflow.manifest.name}/${workflow.manifest.version}"}/${meta.sample}/humann/${params.humann_bundle}/metaphlan", pattern: "{*.tsv,.command*}", mode: "${params.publish_mode}"
+
+    tag "${meta.sample}"
+
+    cpus 1
+    memory { 1.GB * task.attempt }
+
+    input:
+    tuple val(meta), path(main_profile)
+
+    output:
+    tuple val(meta), path("metaphlan_rel_ab_w_read_stats.tsv"), emit: profile
+    path ".command*"
+
+    script:
+    """
+    cp -L ${main_profile} metaphlan_rel_ab_w_read_stats.tsv
+    """
+
+    stub:
+    """
+    touch metaphlan_rel_ab_w_read_stats.tsv
+    touch .command.run
+    """
+}
+
 process metaphlan_for_humann {
-    container { params.humann_bundles[params.humann_bundle].metaphlan_container }
+    container { params.metaphlan_profiles[params.humann_bundles[params.humann_bundle].metaphlan_profile].container }
 
     label 'profiling'
 
@@ -55,11 +91,11 @@ process metaphlan_for_humann {
     """
 
     script:
-    def bundle = params.humann_bundles[params.humann_bundle]
+    def profile = params.metaphlan_profiles[params.humann_bundles[params.humann_bundle].metaphlan_profile]
     """
     metaphlan --input_type fastq \\
-        --index ${bundle.metaphlan_index} \\
-        ${bundle.metaphlan_db_option} ${metaphlan_db} \\
+        --index ${profile.index} \\
+        ${profile.db_option} ${metaphlan_db} \\
         --nproc ${task.cpus} \\
         -t rel_ab_w_read_stats \\
         -o metaphlan_rel_ab_w_read_stats.tsv \\

@@ -9,6 +9,29 @@ workflow revision the orchestrator dispatches — keep all three in lockstep.
 
 ## [Unreleased]
 
+### Changed
+- **Named MetaPhlAn profiles replace `metaphlan_index`** (ADR-0018, #99).
+  `conf/metaphlan_profiles.config` registers pinned units of container,
+  MetaPhlAn version, index and version-specific CLI options (`--bowtie2db` /
+  `--bowtie2out` through 4.1.x, `--db_dir` / `--mapout` from 4.2):
+  `mpa4.2.2_vJan25` (the base image, unchanged), `mpa4.1.1_vJun23` and
+  `mpa4.1.1_vOct22`. **Breaking:** `--metaphlan_index` is removed (no alias);
+  use `--metaphlan_profile` (default `mpa4.2.2_vJan25`, same index as before).
+  An unknown profile fails at start-up listing the valid names. The manifest's
+  `parameters.metaphlan_index` is now `parameters.metaphlan_profile`, and
+  `humann_metaphlan_index` is now `humann_metaphlan_profile`.
+- HUMAnN bundles name a profile (`metaphlan_profile`) instead of carrying
+  `metaphlan_container` / `metaphlan_version` / `metaphlan_index` /
+  `metaphlan_db_option`. When a bundle's profile equals `metaphlan_profile`,
+  HUMAnN reuses the main full-branch profile: no `metaphlan_for_humann` task and
+  no second index install, and a copy is published under
+  `humann/<bundle>/metaphlan/` as before. Neither current bundle reuses the main
+  pass. The main pass's published outputs are unchanged.
+- One `install_metaphlan_db` process installs any profile's index (the HUMAnN
+  side calls it as `metaphlan_db_humann`, only when it needs a different
+  profile). Cache paths stay `store_dir/metaphlan/<index>/`, so existing stores
+  are reused.
+
 ### Fixed
 - The HUMAnN-side MetaPhlAn steps (`metaphlan_db_humann`,
   `metaphlan_for_humann`) passed `--db_dir`, which MetaPhlAn 4.1.x rejects

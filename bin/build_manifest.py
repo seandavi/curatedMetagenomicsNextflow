@@ -137,14 +137,14 @@ def main():
     p.add_argument("--start-time", default="")
     p.add_argument("--input-mode", default="")
     p.add_argument("--input-ids", default="", help="comma-separated accessions or paths")
-    p.add_argument("--metaphlan-index", default="")
+    p.add_argument("--metaphlan-profile", default="")
     p.add_argument("--store-dir", default="")
     p.add_argument("--skip-rarefied", default="false")
     p.add_argument("--rarefy-reads", type=int, default=0)
     p.add_argument("--rarefy-seed", type=int, default=0)
     p.add_argument("--skip-humann", default="true")
     p.add_argument("--humann-bundle", default="")
-    p.add_argument("--humann-metaphlan-index", default="")
+    p.add_argument("--humann-metaphlan-profile", default="")
     p.add_argument("--raw-fastq", required=True)
     p.add_argument("--kneaddata-fastq", required=True)
     p.add_argument("--output", default="manifest.json")
@@ -170,7 +170,7 @@ def main():
             "input_ids": [x for x in args.input_ids.split(",") if x],
         },
         "parameters": {
-            "metaphlan_index": none_if_blank(args.metaphlan_index),
+            "metaphlan_profile": none_if_blank(args.metaphlan_profile),
             "store_dir": none_if_blank(args.store_dir),
             "skip_humann": as_bool(args.skip_humann),
             "skip_rarefied": as_bool(args.skip_rarefied),
@@ -180,12 +180,13 @@ def main():
     }
 
     if not as_bool(args.skip_humann):
-        # HUMAnN ran with its own bundle-pinned MetaPhlAn pass; record which
-        # bundle and index so the functional profiles can be tied to the
-        # taxonomy that drove them (the main pass is parameters.metaphlan_index).
+        # HUMAnN ran on a bundle-pinned MetaPhlAn profile; record which bundle
+        # and profile so the functional profiles can be tied to the taxonomy
+        # that drove them (the main pass is parameters.metaphlan_profile; the
+        # two are equal when HUMAnN reused the main pass).
         manifest["parameters"]["humann_bundle"] = none_if_blank(args.humann_bundle)
-        manifest["parameters"]["humann_metaphlan_index"] = none_if_blank(
-            args.humann_metaphlan_index
+        manifest["parameters"]["humann_metaphlan_profile"] = none_if_blank(
+            args.humann_metaphlan_profile
         )
 
     if not as_bool(args.skip_rarefied):

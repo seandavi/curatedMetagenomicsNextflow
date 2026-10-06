@@ -67,20 +67,37 @@ def generate_sample_metadata_single_sample(sample_id, run_ids) {
 }
 
 /*
- * Fail fast on an unknown HUMAnN bundle, listing the valid names. Only called
+ * Fail fast on an unknown MetaPhlAn profile, listing the valid names. Always
+ * called: the main taxonomy pass needs a profile whether or not HUMAnN runs.
+ * Profiles are defined in conf/metaphlan_profiles.config.
+ */
+def validate_metaphlan_profile(profile, profiles) {
+    if (!profiles.containsKey(profile)) {
+        error "Unknown metaphlan_profile '${profile}'. Valid profiles: ${profiles.keySet().join(', ')}"
+    }
+}
+
+/*
+ * Fail fast on an unknown HUMAnN bundle, listing the valid names, and on a
+ * bundle that names a MetaPhlAn profile that is not registered. Only called
  * when HUMAnN is enabled, so a stale humann_bundle never blocks runs that skip
  * HUMAnN. Bundles are defined in conf/humann_bundles.config.
  */
-def validate_humann_bundle(bundle, bundles) {
+def validate_humann_bundle(bundle, bundles, profiles) {
     if (!bundles.containsKey(bundle)) {
         error "Unknown humann_bundle '${bundle}'. Valid bundles: ${bundles.keySet().join(', ')}"
+    }
+    def bundle_profile = bundles[bundle].metaphlan_profile
+    if (!profiles.containsKey(bundle_profile)) {
+        error "humann_bundle '${bundle}' names unknown metaphlan_profile '${bundle_profile}'. Valid profiles: ${profiles.keySet().join(', ')}"
     }
 }
 
 workflow {
 
+    validate_metaphlan_profile(params.metaphlan_profile, params.metaphlan_profiles)
     if (!params.skip_humann) {
-        validate_humann_bundle(params.humann_bundle, params.humann_bundles)
+        validate_humann_bundle(params.humann_bundle, params.humann_bundles, params.metaphlan_profiles)
     }
 
     /*
@@ -260,15 +277,20 @@ workflow {
     }
 
     /*
-     * Optional HUMAnN branch (full-depth data only; ADR-0016). A self-contained
-     * subworkflow with its own bundle-pinned MetaPhlAn pass and databases.
-     * Invoked here — ahead of the manifest — so its tool versions are captured
-     * in software_versions.
+     * Optional HUMAnN branch (full-depth data only; ADR-0016, ADR-0018). A
+     * self-contained subworkflow: it runs the bundle's own MetaPhlAn pass, or,
+     * when the bundle names the main metaphlan_profile, reuses the main
+     * full-branch profile. Invoked here — ahead of the manifest — so its tool
+     * versions are captured in software_versions.
      */
     if (!params.skip_humann) {
+        main_profile_ch = metaphlan_markers_full.out.meta
+            .merge(metaphlan_markers_full.out.marker_rel_ab_w_read_stats)
+
         HUMANN(
             full_meta_ch,
             kneaddata.out.fastq,
+            main_profile_ch,
             DATABASES.out.metaphlan_humann_db,
             DATABASES.out.chocophlan_db,
             DATABASES.out.uniref_db,

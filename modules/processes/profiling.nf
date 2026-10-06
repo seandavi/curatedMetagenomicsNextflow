@@ -61,6 +61,8 @@ process kneaddata {
 }
 
 process metaphlan_unknown_viruses_lists {
+    container { params.metaphlan_profiles[params.metaphlan_profile].container }
+
     label 'profiling'
 
     publishDir "${params.publish_dir ?: "${params.publish_base_dir}/${workflow.manifest.name}/${workflow.manifest.version}"}/${meta.sample}/${meta.branch ? meta.branch + '/' : ''}metaphlan_lists", pattern: "{*tsv.gz,.command*}", mode: "${params.publish_mode}"
@@ -101,12 +103,13 @@ process metaphlan_unknown_viruses_lists {
 
 
     script:
+    def profile = params.metaphlan_profiles[params.metaphlan_profile]
     """
     find .
     metaphlan --input_type fastq \
-        --index ${params.metaphlan_index} \
-        --db_dir ${metaphlan_db} \
-        --mapout bowtie2.out \
+        --index ${profile.index} \
+        ${profile.db_option} ${metaphlan_db} \
+        ${profile.map_option} bowtie2.out \
         --nproc ${task.cpus} \
         --profile_vsc \
         -s metaphlan.sam \
@@ -128,6 +131,8 @@ process metaphlan_unknown_viruses_lists {
 }
 
 process metaphlan_unknown_list {
+    container { params.metaphlan_profiles[params.metaphlan_profile].container }
+
     label 'profiling'
 
     publishDir "${params.publish_dir ?: "${params.publish_base_dir}/${workflow.manifest.name}/${workflow.manifest.version}"}/${meta.sample}/${meta.branch ? meta.branch + '/' : ''}metaphlan_lists", pattern: "{*tsv.gz,.command*}", mode: "${params.publish_mode}"
@@ -160,11 +165,12 @@ process metaphlan_unknown_list {
 
 
     script:
+    def profile = params.metaphlan_profiles[params.metaphlan_profile]
     """
     metaphlan \
-        --input_type mapout \
-        --index ${params.metaphlan_index} \
-        --db_dir ${metaphlan_db} \
+        --input_type ${profile.map_input_type} \
+        --index ${profile.index} \
+        ${profile.db_option} ${metaphlan_db} \
         --nproc ${task.cpus} \
         -o metaphlan_unknown_list.tsv \
         <( gunzip -c ${metaphlan_bt2} )
@@ -180,6 +186,8 @@ process metaphlan_unknown_list {
 }
 
 process metaphlan_markers {
+    container { params.metaphlan_profiles[params.metaphlan_profile].container }
+
     label 'profiling'
 
     publishDir "${params.publish_dir ?: "${params.publish_base_dir}/${workflow.manifest.name}/${workflow.manifest.version}"}/${meta.sample}/${meta.branch ? meta.branch + '/' : ''}metaphlan_markers/", pattern: "{*tsv.gz,.command*}", mode: "${params.publish_mode}"
@@ -214,24 +222,25 @@ process metaphlan_markers {
     """
 
     script:
+    def profile = params.metaphlan_profiles[params.metaphlan_profile]
     """
-    metaphlan --input_type mapout \
-        --index ${params.metaphlan_index} \
-        --db_dir ${metaphlan_db} \
+    metaphlan --input_type ${profile.map_input_type} \
+        --index ${profile.index} \
+        ${profile.db_option} ${metaphlan_db} \
         -t marker_pres_table \
         --nproc ${task.cpus} \
         -o marker_presence.tsv \
         <( gunzip -c ${metaphlan_bt2} )
-    metaphlan --input_type mapout \
-        --index ${params.metaphlan_index} \
-        --db_dir ${metaphlan_db} \
+    metaphlan --input_type ${profile.map_input_type} \
+        --index ${profile.index} \
+        ${profile.db_option} ${metaphlan_db} \
         --nproc ${task.cpus} \
         -t marker_ab_table \
         -o marker_abundance.tsv \
         <( gunzip -c ${metaphlan_bt2} )
-    metaphlan --input_type mapout \
-        --index ${params.metaphlan_index} \
-        --db_dir ${metaphlan_db} \
+    metaphlan --input_type ${profile.map_input_type} \
+        --index ${profile.index} \
+        ${profile.db_option} ${metaphlan_db} \
         -t rel_ab_w_read_stats \
         --nproc ${task.cpus} \
         -o marker_rel_ab_w_read_stats.tsv \
@@ -248,6 +257,8 @@ process metaphlan_markers {
 }
 
 process sample_to_markers {
+    container { params.metaphlan_profiles[params.metaphlan_profile].container }
+
     label 'profiling'
 
     publishDir "${params.publish_dir ?: "${params.publish_base_dir}/${workflow.manifest.name}/${workflow.manifest.version}"}/${meta.sample}/${meta.branch ? meta.branch + '/' : ''}strainphlan_markers/", mode: "${params.publish_mode}"
@@ -276,11 +287,12 @@ process sample_to_markers {
     """
 
     script:
+    def profile = params.metaphlan_profiles[params.metaphlan_profile]
     """
     sample2markers.py \
         --input ${metaphlan_sam} \
         --input_format sam \
-        --database ${metaphlan_db}/${params.metaphlan_index}.pkl \
+        --database ${metaphlan_db}/${profile.index}.pkl \
         --nprocs ${task.cpus} \
         --output_dir .
 

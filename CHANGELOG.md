@@ -24,6 +24,12 @@ workflow revision the orchestrator dispatches — keep all three in lockstep.
   took the second word of the merged output. It now reads the `humann` line.
 
 ### Added
+- **`humann4.0.0a1` bundle** (#87): HUMAnN 4.0.0a1 with MetaPhlAn 4.1.1 and the
+  `mpa_vOct22_CHOCOPhlAnSGB_202403` index, plus the bundle's v4-alpha
+  ChocoPhlAn/UniRef/utility-mapping databases. HUMAnN 4.0.0a1 has no usable
+  upstream image, so `docker/humann4a/` is built and published to
+  `ghcr.io/seandavi/humann:4.0.0a1` by `.github/workflows/humann4a-image.yml`
+  (ADR-0017). `humann3.9` stays the default; `skip_humann` stays `true`.
 - **HUMAnN subworkflow driven by version-pinned bundles** (ADR-0016, #85).
   `--humann_bundle` (default `humann3.9`, registry in
   `conf/humann_bundles.config`) selects the HUMAnN and MetaPhlAn containers,

@@ -65,9 +65,10 @@
             "type": "string",
             "default": "full"
         },
-        "metaphlan_index": {
+        "metaphlan_profile": {
             "type": "string",
-            "default": "latest"
+            "default": "mpa4.2.2_vJan25",
+            "description": "Named MetaPhlAn profile (container, version, index, CLI options) for the main taxonomy pass; see conf/metaphlan_profiles.config."
         },
         "skip_gtdb": {
             "type": "boolean",
@@ -77,7 +78,7 @@
         "sgb2gtdb_url": {
             "type": "string",
             "default": "https://raw.githubusercontent.com/biobakery/MetaPhlAn/master/metaphlan/utils/mpa_vJan25_CHOCOPhlAnSGB_202503_SGB2GTDB.tsv",
-            "description": "URL of the SGB-to-GTDB assignment table; must match metaphlan_index."
+            "description": "URL of the SGB-to-GTDB assignment table; must match the index of metaphlan_profile."
         },
         "skip_kraken": {
             "type": "boolean",
@@ -156,7 +157,7 @@
         "google_project",
         "bucket",
         "metadata_tsv",
-        "metaphlan_index",
+        "metaphlan_profile",
         "chocophlan",
         "uniref"
     ]

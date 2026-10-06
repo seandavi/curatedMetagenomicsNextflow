@@ -63,5 +63,6 @@ other. This preserves the historical record rather than rewriting it.
 | [0013](0013-remove-gtdb-conversion.md) | Remove in-pipeline GTDB conversion (do it as post-processing) | Accepted |
 | [0014](0014-ena-first-read-acquisition.md) | Acquire reads ENA-first with SRA fallback | Accepted |
 | [0015](0015-r2-storage-profile.md) | Publish production outputs to Cloudflare R2 (`r2` profile) | Accepted |
-| [0016](0016-humann-bundles.md) | HUMAnN as a version-pinned bundle with its own MetaPhlAn pass | Accepted |
+| [0016](0016-humann-bundles.md) | HUMAnN as a version-pinned bundle with its own MetaPhlAn pass | Accepted (bundle field list amended by [0018](0018-metaphlan-profiles.md)) |
 | [0017](0017-self-built-images-on-ghcr.md) | Publish self-built tool images to GHCR from GitHub Actions | Accepted |
+| [0018](0018-metaphlan-profiles.md) | Named MetaPhlAn profiles; HUMAnN bundles reference them and reuse the main pass when they match | Accepted (amends [0016](0016-humann-bundles.md)) |

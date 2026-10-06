@@ -93,13 +93,13 @@ version that selects it, `<store_dir>/<db_name>/<version_key>/` (holding the
 
 | Cache path under `store_dir`                       | Version key                                        |
 | -------------------------------------------------- | -------------------------------------------------- |
-| `metaphlan/<metaphlan_index>/`                     | `metaphlan_index`                                  |
+| `metaphlan/<index>/`                               | the `index` of `metaphlan_profile` (and of a HUMAnN bundle's profile) |
 | `kraken_db/<key>/`                                 | `kraken_db_url` basename without archive extension |
 | `card_db/<key>/`, `card_kma_db/<key>/`             | `card_db_url` basename without archive extension   |
 | `chocophlan/<bundle>/`, `uniref/<bundle>/`, `utility_mapping/<bundle>/` | `humann_bundle` (the bundle pins the DB names) |
 | `human_genome/`, `mouse_C57BL/`                    | not versioned (no parameter selects a release)     |
 
-Changing `metaphlan_index`, `kraken_db_url` or `card_db_url` now creates a new
+Changing `metaphlan_profile` to one with a different index, `kraken_db_url` or `card_db_url` now creates a new
 directory beside the old one rather than silently reusing it. For example, the
 default Kraken2 URL `.../k2_pluspf_16_GB_20260226.tar.gz` caches to
 `kraken_db/k2_pluspf_16_GB_20260226/` and the default CARD URL
@@ -114,7 +114,7 @@ keyed location once, before the first run of this version. `storeDir` only
 hits when every declared output (including `.command*` and, where declared,
 `versions.yml`) is present in the keyed directory, so those are copied too.
 These commands assume the store was built with the default parameters (if a
-different `metaphlan_index` / `kraken_db_url` / `card_db_url` was used,
+different `metaphlan_profile` index / `kraken_db_url` / `card_db_url` was used,
 substitute that key); drop the block for any directory that does not exist.
 `human_genome/` and `mouse_C57BL/` need no change. The
 HUMAnN directories (`chocophlan/`, `uniref/`, `utility_mapping/`) are now keyed
@@ -203,8 +203,22 @@ single-branch layout (without the `full_data/` subdirectory prefix).
 
 | Parameter         | Description            | Default  |
 | ----------------- | ---------------------- | -------- |
-| `metaphlan_index` | MetaPhlAn index to use | `mpa_vJan25_CHOCOPhlAnSGB_202503` |
+| `metaphlan_profile` | Named MetaPhlAn profile for the main taxonomy pass (see below) | `mpa4.2.2_vJan25` |
 | `organism_database` | KneadData reference database | `human_genome` |
+
+A *profile* (defined in [`conf/metaphlan_profiles.config`](conf/metaphlan_profiles.config))
+is one pinned unit: container, MetaPhlAn version, index, and the options that
+differ between MetaPhlAn releases (`--bowtie2db`/`--bowtie2out` through 4.1.x,
+`--db_dir`/`--mapout` from 4.2). An unknown `metaphlan_profile` fails at
+start-up with the list of valid names. Profiles:
+
+| Profile | Container | Index |
+| ------- | --------- | ----- |
+| `mpa4.2.2_vJan25` (default) | `seandavi/curatedmetagenomics:metaphlan4.2.2` (the base image) | `mpa_vJan25_CHOCOPhlAnSGB_202503` |
+| `mpa4.1.1_vJun23` | `quay.io/biocontainers/metaphlan:4.1.1--pyhdfd78af_0` | `mpa_vJun23_CHOCOPhlAnSGB_202307` |
+| `mpa4.1.1_vOct22` | `quay.io/biocontainers/metaphlan:4.1.1--pyhdfd78af_0` | `mpa_vOct22_CHOCOPhlAnSGB_202403` |
+
+See [`docs/adr/0018-metaphlan-profiles.md`](docs/adr/0018-metaphlan-profiles.md).
 
 ### Kraken2 / Bracken Parameters
 
@@ -277,27 +291,34 @@ image, so no additional container is required. Per-sample only. See
 | `humann_maxforks` | Max concurrent `humann` tasks (shared-storage DB reads)  | `4`         |
 
 A *bundle* (defined in [`conf/humann_bundles.config`](conf/humann_bundles.config))
-pins the HUMAnN and MetaPhlAn containers, the MetaPhlAn version and index, and
+pins the HUMAnN container, the *name* of a MetaPhlAn profile (see above), and
 the ChocoPhlAn/UniRef/utility-mapping database names. There are no per-tool
-version parameters; an unknown `humann_bundle` fails at start-up with the list
-of valid names (checked only when `--skip_humann false`). Bundles:
+version parameters; an unknown `humann_bundle` (or a bundle naming an unknown
+profile) fails at start-up with the list of valid names (checked only when
+`--skip_humann false`). Bundles:
 
-| Bundle | HUMAnN image | MetaPhlAn / index |
+| Bundle | HUMAnN image | MetaPhlAn profile |
 | ------ | ------------ | ----------------- |
-| `humann3.9` (default) | `quay.io/biocontainers/humann:3.9--py312hdfd78af_0` | 4.1.1 / `mpa_vJun23_CHOCOPhlAnSGB_202307` (HUMAnN 3.9 rejects any other) |
-| `humann4.0.0a1` | `ghcr.io/seandavi/humann:4.0.0a1`, built from [`docker/humann4a`](docker/humann4a/Dockerfile) ([ADR-0017](docs/adr/0017-self-built-images-on-ghcr.md)) | 4.1.1 / `mpa_vOct22_CHOCOPhlAnSGB_202403` |
+| `humann3.9` (default) | `quay.io/biocontainers/humann:3.9--py312hdfd78af_0` | `mpa4.1.1_vJun23` (HUMAnN 3.9 rejects any other index) |
+| `humann4.0.0a1` | `ghcr.io/seandavi/humann:4.0.0a1`, built from [`docker/humann4a`](docker/humann4a/Dockerfile) ([ADR-0017](docs/adr/0017-self-built-images-on-ghcr.md)) | `mpa4.1.1_vOct22` |
 
 HUMAnN 4.0.0a1 is an alpha. Its native output names differ (`out_2_genefamilies`,
 `out_3_reactions`, `out_4_pathabundance`, `out_5_pathcoverage`) and it reports
 unmapped reads as `READS_UNMAPPED`.
 
-HUMAnN runs on the full-depth branch only, through its own MetaPhlAn pass, so
-the published MetaPhlAn 4.2.2 taxonomy is unaffected. Outputs are published
+HUMAnN runs on the full-depth branch only. When the bundle's MetaPhlAn profile
+differs from `metaphlan_profile` (both current bundles), HUMAnN runs its own
+MetaPhlAn pass, so the published MetaPhlAn 4.2.2 taxonomy is unaffected. When
+they are equal (a future HUMAnN release that accepts the main profile), HUMAnN
+reuses the main pass's full-depth profile and no second MetaPhlAn or index
+install runs. Outputs are published
 under `<sample>/humann/<humann_bundle>/` using HUMAnN's native filenames, with
-the profile that drove the stratification in `<sample>/humann/<humann_bundle>/metaphlan/`.
+the profile that drove the stratification (a copy of the main profile, on reuse)
+in `<sample>/humann/<humann_bundle>/metaphlan/`.
 Functional profiles are stratified by that bundle's taxonomy, not by the
 `metaphlan_lists`/`metaphlan_markers` profiles. See
-[`docs/adr/0016-humann-bundles.md`](docs/adr/0016-humann-bundles.md).
+[`docs/adr/0016-humann-bundles.md`](docs/adr/0016-humann-bundles.md) and
+[`docs/adr/0018-metaphlan-profiles.md`](docs/adr/0018-metaphlan-profiles.md).
 
 ## Input Format
 

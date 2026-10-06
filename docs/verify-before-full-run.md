@@ -44,8 +44,9 @@ runs.
 
 ## 2. Database URLs resolve
 
-- [ ] **MetaPhlAn index** `mpa_vJan25_CHOCOPhlAnSGB_202503` (`nextflow.config`
-      `metaphlan_index`) — installs via `metaphlan --install`; confirm the index
+- [ ] **MetaPhlAn index** `mpa_vJan25_CHOCOPhlAnSGB_202503` (profile
+      `mpa4.2.2_vJan25` in `conf/metaphlan_profiles.config`; selected by
+      `metaphlan_profile`) — installs via `metaphlan --install`; confirm the index
       name is still offered for the MetaPhlAn version in the base image.
 - [ ] **Kraken2 PlusPF DB** (`nextflow.config` `kraken_db_url`) — dated release;
       confirm it still resolves (Langmead index releases roll over time, see

@@ -108,7 +108,7 @@ Outputs follow the pattern: `<publish_base_dir>/<workflow_name>/<pipeline_versio
 
 ### Containers
 
-A single Docker image covers all tools. It is built via `docker/cloudbuild.yaml` (Google Cloud Build, manual trigger). The image tag is pinned in `nextflow.config` under `process.container`.
+The base image covers the core toolchain. It is built via `docker/cloudbuild.yaml` (Google Cloud Build, manual trigger), and its tag is pinned in `conf/base.config` under `process.container`. Newer tools run in pinned upstream biocontainers set in their process bodies (ADR-0001). When no usable upstream image exists, the image lives in `docker/<name>/` and a GitHub Actions workflow publishes it to `ghcr.io/seandavi/<name>` (ADR-0017); today that is `docker/humann4a` for the `humann4.0.0a1` bundle.
 
 ## Testing
 

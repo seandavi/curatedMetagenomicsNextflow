@@ -48,7 +48,7 @@ other. This preserves the historical record rather than rewriting it.
 | ADR | Title | Status |
 |-----|-------|--------|
 | [0000](0000-record-architecture-decisions.md) | Record architecture decisions | Accepted |
-| [0001](0001-container-strategy.md) | Single base image, per-process biocontainers for new tools | Accepted (HUMAnN-in-base-image amended by [0016](0016-humann-bundles.md)) |
+| [0001](0001-container-strategy.md) | Single base image, per-process biocontainers for new tools | Accepted (HUMAnN-in-base-image amended by [0016](0016-humann-bundles.md); self-built images by [0017](0017-self-built-images-on-ghcr.md)) |
 | [0002](0002-defer-humann.md) | Defer HUMAnN functional profiling pending version alignment | Superseded by [0016](0016-humann-bundles.md) |
 | [0003](0003-dual-branch-rarefied-profiling.md) | Dual-branch profiling: full depth + rarefied | Accepted |
 | [0004](0004-gtdb-conversion-vendored-mapping.md) | GTDB conversion via a vendored, store_dir-backed mapping table | Superseded by [0013](0013-remove-gtdb-conversion.md) |
@@ -64,3 +64,4 @@ other. This preserves the historical record rather than rewriting it.
 | [0014](0014-ena-first-read-acquisition.md) | Acquire reads ENA-first with SRA fallback | Accepted |
 | [0015](0015-r2-storage-profile.md) | Publish production outputs to Cloudflare R2 (`r2` profile) | Accepted |
 | [0016](0016-humann-bundles.md) | HUMAnN as a version-pinned bundle with its own MetaPhlAn pass | Accepted |
+| [0017](0017-self-built-images-on-ghcr.md) | Publish self-built tool images to GHCR from GitHub Actions | Accepted |

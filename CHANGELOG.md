@@ -10,8 +10,16 @@ workflow revision the orchestrator dispatches — keep all three in lockstep.
 ## [Unreleased]
 
 Unreleased changes on `main` (named MetaPhlAn profiles, HUMAnN bundles,
-`--databases_only`, ...) are **not** in 2.2.2, which is a patch cut from the
-`2.2.1` tag on `release/2.2.x`.
+`--databases_only`, ...) are **not** in 2.2.3, which is a patch cut on `release/2.2.x`.
+
+## [2.2.3] - 2026-10-08
+
+### Fixed
+- **`-profile <site>,r2` failed on the 2.2.x line: the `r2` profile only existed
+  on `main`.** The orchestrator dispatches every cluster with `r2` (ADR-0015;
+  seandavi/nextflow_telemetry ADR 0008), so runs claimed under 2.2.2 would stop
+  at config load. Backports `conf/profiles/r2.config` from `main` (#80)
+  unchanged. Outputs publish to `s3://cmgd-raw`; needs Nextflow >= 25.04.
 
 ## [2.2.2] - 2026-10-07
 
@@ -210,6 +218,7 @@ Baseline of the 2.x line. Core metagenomic pipeline, with decisions recorded in
 - HUMAnN functional profiling is deferred pending MetaPhlAn/HUMAnN version
   alignment (ADR-0002).
 
+[2.2.3]: https://github.com/seandavi/curatedMetagenomicsNextflow/compare/2.2.2...2.2.3
 [2.2.2]: https://github.com/seandavi/curatedMetagenomicsNextflow/compare/2.2.1...2.2.2
 [2.2.1]: https://github.com/seandavi/curatedMetagenomicsNextflow/compare/2.2.0...2.2.1
 [2.0.7]: https://github.com/seandavi/curatedMetagenomicsNextflow/compare/2.0.6...2.0.7

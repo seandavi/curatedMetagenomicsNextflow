@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 The version is the git tag, the `manifest.version` in `nextflow.config`, and the
 workflow revision the orchestrator dispatches — keep all three in lockstep.
 
+## [Unreleased]
+
+Unreleased changes on `main` (named MetaPhlAn profiles, HUMAnN bundles,
+`--databases_only`, ...) are **not** in 2.2.2, which is a patch cut from the
+`2.2.1` tag on `release/2.2.x`.
+
+## [2.2.2] - 2026-10-07
+
+### Fixed
+- **Telemetry still pointed at the v1 server.** The orchestrator moved to the v2
+  Cloudflare Worker, but the default `params.api_url` and `weblog.url` still
+  targeted v1 (`nf-telemetry.cancerdatasci.org`). Both now default to
+  `https://nf-telemetry.seandavi.workers.dev` (`/api` and `/telemetry`). The
+  `rollback` profile now points at v1 (retiring) instead of the decommissioned
+  Cloud Run URL. Task-log uploads require a nextflow_telemetry Worker at or
+  after the lane/worker-harden deploy (which exempts `POST /task-logs` from
+  bearer auth); against an older Worker they 401 and are dropped, without
+  failing the task (seandavi/nextflow_telemetry#194).
+- **Ad-hoc runs uploaded task logs under run name `"null"`, some with NUL
+  bytes the server rejected.** A null `params.run_name` interpolates to the
+  string `"null"` in the `afterScript`, so the upload guard never fired. The
+  upload is now skipped when `run_name` is empty or `"null"`, NUL bytes are
+  stripped from `.command.{sh,out,err}` before upload, and missing log files are
+  skipped. Uploads stay best-effort (`|| true`) (seandavi/nextflow_telemetry#194).
+
 ## [2.2.1] - 2026-07-04
 
 ### Fixed
@@ -185,6 +210,7 @@ Baseline of the 2.x line. Core metagenomic pipeline, with decisions recorded in
 - HUMAnN functional profiling is deferred pending MetaPhlAn/HUMAnN version
   alignment (ADR-0002).
 
+[2.2.2]: https://github.com/seandavi/curatedMetagenomicsNextflow/compare/2.2.1...2.2.2
 [2.2.1]: https://github.com/seandavi/curatedMetagenomicsNextflow/compare/2.2.0...2.2.1
 [2.0.7]: https://github.com/seandavi/curatedMetagenomicsNextflow/compare/2.0.6...2.0.7
 [2.0.6]: https://github.com/seandavi/curatedMetagenomicsNextflow/compare/2.0.5...2.0.6

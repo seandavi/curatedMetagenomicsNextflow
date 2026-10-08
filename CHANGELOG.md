@@ -31,8 +31,32 @@ workflow revision the orchestrator dispatches — keep all three in lockstep.
   side calls it as `metaphlan_db_humann`, only when it needs a different
   profile). Cache paths stay `store_dir/metaphlan/<index>/`, so existing stores
   are reused.
+- **Read acquisition is now ENA-first with an SRA fallback** (`fasterq_dump`).
+  A class of SRA runs is archived without a QUALITY column, which makes
+  `fasterq-dump` exit 3 (`the input data is missing the QUALITY-column`);
+  under the retry/`ignore` policy those samples were dropped and dead-lettered.
+  All 14 DLQ jobs in the 2.0.7 batch failed this way, yet the reads are
+  published and downloadable as FASTQ from EBI/ENA. The process now resolves
+  `fastq_ftp` via the ENA `filereport` API, downloads over HTTPS and verifies
+  `fastq_md5`, and falls back per run to the original `curl .sra + fasterq-dump`
+  path when ENA serves no FASTQ (ingestion lag, submitted-only, controlled
+  access). No container change; the downstream output contract is unchanged.
+  Note: ENA FASTQ for quality-less runs carries synthetic qualities, so the
+  quality-trim step is a no-op for those samples (curation caveat). See ADR-0014.
+  Output-neutral in practice: only affects which source serves the bytes, not
+  the profiling contract.
 
 ### Fixed
+- **`manifest.json` `software_versions` was incomplete.** It only listed the
+  three tools whose `versions.yml` `sample_manifest` staged (fasterq-dump/awscli/
+  fastqc from read acquisition, kneaddata/trimmomatic/bowtie2, metaphlan) and
+  silently omitted every step added since: `kraken2`, `bracken`, the resistome
+  `kma`, the post-decontamination `fastqc`, and `humann` when enabled. Each
+  step's `versions.yml` is now collated per sample (via `collectFile`) into the
+  single file `build_manifest.py` globs, so `software_versions` reflects every
+  tool that actually ran. Skipped optional steps contribute nothing (their
+  version channels start empty), and the HUMAnN invocation moved ahead of the
+  manifest so its versions are captured when that branch is on.
 - The HUMAnN-side MetaPhlAn steps (`metaphlan_db_humann`,
   `metaphlan_for_humann`) passed `--db_dir`, which MetaPhlAn 4.1.x rejects
   (`unrecognized arguments: --db_dir`; 4.1 calls it `--bowtie2db`). The option
@@ -136,7 +160,7 @@ cp -p .command.* versions.yml card_kma_db.new/broadstreet-v4.0.1/
 mv card_kma_db.new card_kma_db
 ```
 
-## [2.2.1] - 2026-07-04
+## [2.2.3] - 2026-10-08
 
 ### Added
 - **`r2` storage profile** publishes outputs to Cloudflare R2
@@ -148,33 +172,35 @@ mv card_kma_db.new card_kma_db
   25.10.8. Output contract unchanged: a test sample reproduced its GCS output
   file-for-file. See ADR-0015 and #79.
 
-### Changed
-- **Read acquisition is now ENA-first with an SRA fallback** (`fasterq_dump`).
-  A class of SRA runs is archived without a QUALITY column, which makes
-  `fasterq-dump` exit 3 (`the input data is missing the QUALITY-column`);
-  under the retry/`ignore` policy those samples were dropped and dead-lettered.
-  All 14 DLQ jobs in the 2.0.7 batch failed this way, yet the reads are
-  published and downloadable as FASTQ from EBI/ENA. The process now resolves
-  `fastq_ftp` via the ENA `filereport` API, downloads over HTTPS and verifies
-  `fastq_md5`, and falls back per run to the original `curl .sra + fasterq-dump`
-  path when ENA serves no FASTQ (ingestion lag, submitted-only, controlled
-  access). No container change; the downstream output contract is unchanged.
-  Note: ENA FASTQ for quality-less runs carries synthetic qualities, so the
-  quality-trim step is a no-op for those samples (curation caveat). See ADR-0014.
-  Output-neutral in practice: only affects which source serves the bytes, not
-  the profiling contract.
+### Fixed
+- **`-profile <site>,r2` failed on the 2.2.x line: the `r2` profile only existed
+  on `main`.** The orchestrator dispatches every cluster with `r2` (ADR-0015;
+  seandavi/nextflow_telemetry ADR 0008), so runs claimed under 2.2.2 would stop
+  at config load. Backports `conf/profiles/r2.config` from `main` (#80)
+  unchanged. Outputs publish to `s3://cmgd-raw`; needs Nextflow >= 25.04.
+
+## [2.2.2] - 2026-10-07
 
 ### Fixed
-- **`manifest.json` `software_versions` was incomplete.** It only listed the
-  three tools whose `versions.yml` `sample_manifest` staged (fasterq-dump/awscli/
-  fastqc from read acquisition, kneaddata/trimmomatic/bowtie2, metaphlan) and
-  silently omitted every step added since: `kraken2`, `bracken`, the resistome
-  `kma`, the post-decontamination `fastqc`, and `humann` when enabled. Each
-  step's `versions.yml` is now collated per sample (via `collectFile`) into the
-  single file `build_manifest.py` globs, so `software_versions` reflects every
-  tool that actually ran. Skipped optional steps contribute nothing (their
-  version channels start empty), and the HUMAnN invocation moved ahead of the
-  manifest so its versions are captured when that branch is on.
+- **Telemetry still pointed at the v1 server.** The orchestrator moved to the v2
+  Cloudflare Worker, but the default `params.api_url` and `weblog.url` still
+  targeted v1 (`nf-telemetry.cancerdatasci.org`). Both now default to
+  `https://nf-telemetry.seandavi.workers.dev` (`/api` and `/telemetry`). The
+  `rollback` profile now points at v1 (retiring) instead of the decommissioned
+  Cloud Run URL. Task-log uploads require a nextflow_telemetry Worker at or
+  after the lane/worker-harden deploy (which exempts `POST /task-logs` from
+  bearer auth); against an older Worker they 401 and are dropped, without
+  failing the task (seandavi/nextflow_telemetry#194).
+- **Ad-hoc runs uploaded task logs under run name `"null"`, some with NUL
+  bytes the server rejected.** A null `params.run_name` interpolates to the
+  string `"null"` in the `afterScript`, so the upload guard never fired. The
+  upload is now skipped when `run_name` is empty or `"null"`, NUL bytes are
+  stripped from `.command.{sh,out,err}` before upload, and missing log files are
+  skipped. Uploads stay best-effort (`|| true`) (seandavi/nextflow_telemetry#194).
+
+## [2.2.1] - 2026-07-04
+
+### Fixed
 - **Resistome KMA failed on 100% of runs (`Error: 2 (No such file or
   directory)`).** KMA writes scratch files under `$TMPDIR`, and the SLURM submit
   templates export `TMPDIR` to a per-job directory that is a sibling of — and not
@@ -349,6 +375,8 @@ Baseline of the 2.x line. Core metagenomic pipeline, with decisions recorded in
 - HUMAnN functional profiling is deferred pending MetaPhlAn/HUMAnN version
   alignment (ADR-0002).
 
+[2.2.3]: https://github.com/seandavi/curatedMetagenomicsNextflow/compare/2.2.2...2.2.3
+[2.2.2]: https://github.com/seandavi/curatedMetagenomicsNextflow/compare/2.2.1...2.2.2
 [2.2.1]: https://github.com/seandavi/curatedMetagenomicsNextflow/compare/2.2.0...2.2.1
 [2.0.7]: https://github.com/seandavi/curatedMetagenomicsNextflow/compare/2.0.6...2.0.7
 [2.0.6]: https://github.com/seandavi/curatedMetagenomicsNextflow/compare/2.0.5...2.0.6

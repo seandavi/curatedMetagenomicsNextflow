@@ -16,6 +16,62 @@ This pipeline processes raw sequencing data through multiple steps:
 Each sample also gets a `manifest.json` (provenance + read accounting) and a
 `MARK_COMPLETE` sentinel once all enabled branches finish.
 
+## Status and releases
+
+| Line | Where | What it is |
+| ---- | ----- | ---------- |
+| **2.2.x** | tags `2.2.1`–`2.2.3` on `release/2.2.x` | Current production code. `2.2.3` adds the `r2` storage profile; `2.2.2` points telemetry at the v2 orchestrator. Patch releases only. |
+| **2.3.0** (unreleased) | `main` | Next output epoch. Breaking: `--metaphlan_profile` replaces `--metaphlan_index`; version-pinned HUMAnN bundles; `--databases_only`. See [`CHANGELOG.md`](CHANGELOG.md). |
+
+The git tag, `manifest.version` in `nextflow.config` and the revision the
+orchestrator dispatches move in lockstep. `main` has not yet received the 2.2.2/2.2.3
+changes (telemetry URL, `r2` profile backport); they arrive when the release PR
+merging `release/2.2.x` into `main` lands.
+
+## How production runs
+
+Production runs are not launched by hand. The
+[nextflow_telemetry](https://github.com/seandavi/nextflow_telemetry) orchestrator
+keeps a daemon on each cluster's login node (CU Alpine, Purdue Anvil) that claims
+batches of samples and submits one Nextflow driver per batch, roughly:
+
+```bash
+nextflow run seandavi/curatedMetagenomicsNextflow -revision <tag> \
+  -profile <alpine|anvil>,r2 -c nextflow_override.config \
+  --metadata_tsv metadata.tsv --run_name <run> \
+  --publish_dir s3://cmgd-raw/<workflow_id>/<version> \
+  [-params-file params.json] -with-weblog <telemetry url>
+```
+
+- **A registration is one pipeline configuration** (nextflow_telemetry ADR-0010):
+  a `workflow_id` + `version` with pinned params, e.g. `cmgd_humann3.9 2.3.0`
+  (`skip_humann=false`, `humann_bundle=humann3.9`), `cmgd_humann4a1 2.3.0`
+  (pilot collections only) and `cmgd_mpa4.2 2.3.0` (`skip_humann=true`). The
+  current production registration is `cmgd_nextflow 2.2.1` running revision `2.2.3`.
+- **Results are keyed by registration, not by `manifest.version`**: the
+  orchestrator passes `--publish_dir <base>/<workflow_id>/<version>`, so a patch
+  revision keeps its registration's prefix and two bundles of one tag never share one.
+- **Sample folder names** are the `sample_id` the orchestrator writes into
+  `metadata.tsv`: a readset id (`RS.<digest>`, refget seqcol over the run
+  accessions; nextflow_telemetry ADR-0007) for registrations created from 2.3.0
+  on, the older md5 sample id for `cmgd_nextflow 2.2.1`.
+- Telemetry: `api_url` and the weblog URL point at the orchestrator; `run_name`
+  is injected by the orchestrator and is `null` in ad-hoc runs (from 2.2.2,
+  task-log uploads are then skipped).
+
+## Accessing results
+
+- **Per-sample outputs** are publicly readable (no listing) at
+  `https://cmgd-raw.cancerdatasci.org/<workflow_id>/<version>/<sample>/<path>`,
+  e.g. `…/cmgd_nextflow/2.2.1/<sample>/manifest.json`. HUMAnN gene families are
+  distributed this way, indexed per study in the public releases.
+- **Curated tables** (MetaPhlAn, Bracken, resistome, QC, markers, HUMAnN pathways)
+  are loaded into a DuckLake and published as versioned, read-only releases at
+  `https://cmgd-public.cancerdatasci.org` (DuckDB/Parquet over HTTPS, per-study
+  TSV/Parquet downloads). Consumer guide:
+  [nextflow_telemetry `docs/data-access.md`](https://github.com/seandavi/nextflow_telemetry/blob/main/docs/data-access.md);
+  R client for the cMD team: `cmgdr`.
+
 ## Repository Structure
 
 The pipeline is organized so that workflow orchestration and operational policy are easy to find:
@@ -78,7 +134,9 @@ runs no database task.
 | `local_input` | Interpret TSV `file_paths` instead of SRA accessions | `false` |
 | `databases_only` | Stage reference databases into `store_dir` and exit (no sample inputs needed) | `false` |
 | `publish_base_dir`  | Base directory prefix for published results (`r2` profile: `s3://cmgd-raw`; `gcs` profile: `gs://cmgd-data/results/cMDv4`) | `${launchDir}/results` |
-| `publish_dir`  | Optional full publish root override after workflow-name/version expansion | `null` |
+| `publish_dir`  | Full publish root, replacing `<publish_base_dir>/<manifest.name>/<manifest.version>`; the orchestrator sets it to `<base>/<workflow_id>/<version>` | `null` |
+| `api_url`      | Orchestrator API base for task-log uploads (paired with the `weblog` URL) | see `nextflow.config` |
+| `run_name`     | Orchestrator run name; `null` in ad-hoc runs | `null` |
 | `store_dir`    | Directory to store reference databases | `databases`   |
 | `cmgd_version` | Curated Metagenomic Data version       | `4`           |
 | `publish_mode` | `publishDir` mode for all published outputs | `copy` |
@@ -345,14 +403,16 @@ sample1      /data/sample1_R1.fastq.gz;/data/sample1_R2.fastq.gz
 
 ## Output
 
-Results will be organized by sample in the `publish_dir` directory.
+Results are organized by sample under the publish root: `publish_dir` when set
+(production: `<base>/<workflow_id>/<version>`), otherwise
+`<publish_base_dir>/<manifest.name>/<manifest.version>`, as in the trees below.
 
 ### Dual-branch layout (default, `skip_rarefied=false`)
 
 ```
 <publish_base_dir>/
 ├── cmgd_nextflow/
-│   ├── 2.2.0/
+│   ├── 2.3.0/
 │   │   ├── sample1/
 │   │   │   ├── manifest.json     (provenance + read accounting)
 │   │   │   ├── MARK_COMPLETE
@@ -364,6 +424,7 @@ Results will be organized by sample in the `publish_dir` directory.
 │   │   │   │   ├── strainphlan_markers/
 │   │   │   │   ├── kraken/       (only when --skip_kraken false)
 │   │   │   │   └── resistome/    (only when --skip_resistome false)
+│   │   │   ├── humann/<bundle>/  (only when --skip_humann false; full-depth reads; profile in metaphlan/)
 │   │   │   └── rarefied_data/
 │   │   │       ├── rarefaction/
 │   │   │       ├── metaphlan_lists/
@@ -380,7 +441,7 @@ Results will be organized by sample in the `publish_dir` directory.
 ```
 <publish_base_dir>/
 ├── cmgd_nextflow/
-│   ├── 2.2.0/
+│   ├── 2.3.0/
 │   │   ├── sample1/
 │   │   │   ├── manifest.json   (provenance + read accounting)
 │   │   │   ├── MARK_COMPLETE
@@ -422,18 +483,19 @@ task tags. That comes from `--sample_id` in single-sample mode or the
 
 The pipeline comes with several execution profiles:
 - `local`: For local execution
+- `alpine`: CU Boulder Alpine (SLURM) — production
+- `anvil`: Purdue Anvil (SLURM, ACCESS allocation) — production
 - `google`: For execution on Google Cloud Batch
-- `anvil`: For execution on AnVIL
-- `alpine`: For execution on Alpine HPC
 - `unitn`: For execution on UNITN PBS Pro
 
 Storage profiles (compose with a compute profile; they only change where outputs are published):
 - `r2`: Publish to Cloudflare R2 `s3://cmgd-raw` (production; needs Nextflow ≥ 25.04 and `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` in the environment; see ADR-0015)
 - `gcs`: Publish to GCS `gs://cmgd-data/results/cMDv4` (legacy; no new production writes)
 
-Example:
+Production composes a cluster with `r2`, e.g. `-profile alpine,r2` or
+`-profile anvil,r2`. Example:
 ```bash
-nextflow run main.nf -profile google --metadata_tsv samples.tsv
+nextflow run main.nf -profile alpine,r2 --metadata_tsv samples.tsv
 ```
 
 ## Resource And Retry Policy
@@ -558,5 +620,7 @@ The following are treated as compatibility constraints during refactoring:
 ## Dependencies
 
 This pipeline requires:
-- Nextflow 22.10.0 or later
-- Container support (Docker, Singularity, etc.)
+- Nextflow ≥ 25.04 for the `r2` profile (production runs 25.10.8), and < 26.04
+  until the pipeline passes Nextflow's strict syntax parser
+- Java 17+ (Anvil uses a user-space Temurin 21 JDK because its modules stop at Java 11)
+- Container support (Singularity/Apptainer on the HPC clusters, Docker locally)

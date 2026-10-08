@@ -67,7 +67,7 @@
         },
         "metaphlan_profile": {
             "type": "string",
-            "default": "mpa4.2.2_vJan25",
+            "default": "mpa4.2.6_vJan26",
             "description": "Named MetaPhlAn profile (container, version, index, CLI options) for the main taxonomy pass; see conf/metaphlan_profiles.config."
         },
         "skip_gtdb": {

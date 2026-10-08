@@ -39,6 +39,17 @@ jobs:
             nextflow config -profile "$profile" >/dev/null
           done
 
+      # ADR-0018: the default MetaPhlAn profile's container and process.container
+      # are two spellings of the base-image pin and must stay equal.
+      - name: Default MetaPhlAn profile runs in the base image
+        run: |
+          flat=$(nextflow config -flat)
+          base=$(grep '^process.container = ' <<<"$flat" | cut -d' ' -f3-)
+          profile=$(nextflow config -value params.metaphlan_profile)
+          mpa=$(grep -F "params.metaphlan_profiles.'$profile'.container = " <<<"$flat" | cut -d' ' -f3-)
+          echo "process.container=$base $profile.container=$mpa"
+          test -n "$base" && test "$base" = "$mpa"
+
       # The process scripts still target the v1 script grammar, so the stub run
       # pins NXF_SYNTAX_PARSER=v1 (see justfile). Migrating the modules to the
       # strict v2 script parser is separate, larger follow-up work.

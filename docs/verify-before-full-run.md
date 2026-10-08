@@ -20,11 +20,12 @@ full run and catches the failure modes stub tests cannot.
 Each image is pinned in code at the path shown. Confirm it pulls and the tool
 runs.
 
-- [ ] **Base image** — `docker://seandavi/curatedmetagenomics:metaphlan4.2.2`
-      (`conf/base.config`)
+- [ ] **Base image** — `docker://ghcr.io/seandavi/curatedmetagenomics:metaphlan4.2.6`
+      (`conf/base.config`; must be public on GHCR, ADR-0019). MetaPhlAn 4.2.6
+      prints `4.2.5`.
       ```sh
-      singularity exec docker://seandavi/curatedmetagenomics:metaphlan4.2.2 metaphlan --version
-      singularity exec docker://seandavi/curatedmetagenomics:metaphlan4.2.2 kneaddata --version
+      singularity exec docker://ghcr.io/seandavi/curatedmetagenomics:metaphlan4.2.6 metaphlan --version
+      singularity exec docker://ghcr.io/seandavi/curatedmetagenomics:metaphlan4.2.6 kneaddata --version
       ```
 - [ ] **Kraken2** — `docker://staphb/kraken2:2.1.3` (`modules/processes/kraken.nf`)
       ```sh
@@ -44,8 +45,8 @@ runs.
 
 ## 2. Database URLs resolve
 
-- [ ] **MetaPhlAn index** `mpa_vJan25_CHOCOPhlAnSGB_202503` (profile
-      `mpa4.2.2_vJan25` in `conf/metaphlan_profiles.config`; selected by
+- [ ] **MetaPhlAn index** `mpa_vJan26_CHOCOPhlAnSGB_202605` (profile
+      `mpa4.2.6_vJan26` in `conf/metaphlan_profiles.config`; selected by
       `metaphlan_profile`) — installs via `metaphlan --install`; confirm the index
       name is still offered for the MetaPhlAn version in the base image.
 - [ ] **Kraken2 PlusPF DB** (`nextflow.config` `kraken_db_url`) — dated release;

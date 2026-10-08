@@ -21,7 +21,7 @@ Each sample also gets a `manifest.json` (provenance + read accounting) and a
 | Line | Where | What it is |
 | ---- | ----- | ---------- |
 | **2.2.x** | tags `2.2.1`–`2.2.3` on `release/2.2.x` | Current production code. `2.2.3` adds the `r2` storage profile; `2.2.2` points telemetry at the v2 orchestrator. Patch releases only. |
-| **2.3.0** (unreleased) | `main` | Next output epoch. Breaking: `--metaphlan_profile` replaces `--metaphlan_index`; version-pinned HUMAnN bundles; `--databases_only`. See [`CHANGELOG.md`](CHANGELOG.md). |
+| **2.3.0** (unreleased) | `main` | Next output epoch, for the first full corpus run: MetaPhlAn 4.2.6 with the vJan26 index by default (`mpa4.2.6_vJan26`); HUMAnN only through version-pinned bundles (off by default; no HUMAnN in the base image). Breaking: `--metaphlan_profile` replaces `--metaphlan_index`. Also `--databases_only`, keyed database caches, ENA-first reads. See [`CHANGELOG.md`](CHANGELOG.md). |
 
 The git tag, `manifest.version` in `nextflow.config` and the revision the
 orchestrator dispatches move in lockstep. `release/2.2.x` is merged into `main`, so
@@ -158,6 +158,9 @@ version that selects it, `<store_dir>/<db_name>/<version_key>/` (holding the
 
 Changing `metaphlan_profile` to one with a different index, `kraken_db_url` or `card_db_url` now creates a new
 directory beside the old one rather than silently reusing it. For example, the
+2.3.0 default profile installs into `metaphlan/mpa_vJan26_CHOCOPhlAnSGB_202605/`
+(about 48 GB to download; stage it with `--databases_only`) next to the 2.2.x
+`metaphlan/mpa_vJan25_CHOCOPhlAnSGB_202503/`, and the
 default Kraken2 URL `.../k2_pluspf_16_GB_20260226.tar.gz` caches to
 `kraken_db/k2_pluspf_16_GB_20260226/` and the default CARD URL
 `.../broadstreet-v4.0.1.tar.bz2` to `card_db/broadstreet-v4.0.1/` and
@@ -260,7 +263,7 @@ single-branch layout (without the `full_data/` subdirectory prefix).
 
 | Parameter         | Description            | Default  |
 | ----------------- | ---------------------- | -------- |
-| `metaphlan_profile` | Named MetaPhlAn profile for the main taxonomy pass (see below) | `mpa4.2.2_vJan25` |
+| `metaphlan_profile` | Named MetaPhlAn profile for the main taxonomy pass (see below) | `mpa4.2.6_vJan26` |
 | `organism_database` | KneadData reference database | `human_genome` |
 
 A *profile* (defined in [`conf/metaphlan_profiles.config`](conf/metaphlan_profiles.config))
@@ -271,11 +274,20 @@ start-up with the list of valid names. Profiles:
 
 | Profile | Container | Index |
 | ------- | --------- | ----- |
-| `mpa4.2.2_vJan25` (default) | `seandavi/curatedmetagenomics:metaphlan4.2.2` (the base image) | `mpa_vJan25_CHOCOPhlAnSGB_202503` |
+| `mpa4.2.6_vJan26` (default) | `ghcr.io/seandavi/curatedmetagenomics:metaphlan4.2.6` (the base image) | `mpa_vJan26_CHOCOPhlAnSGB_202605` |
+| `mpa4.2.2_vJan25` (2.2.x main pass) | `seandavi/curatedmetagenomics:metaphlan4.2.2` (the 2.2.x base image) | `mpa_vJan25_CHOCOPhlAnSGB_202503` |
 | `mpa4.1.1_vJun23` | `quay.io/biocontainers/metaphlan:4.1.1--pyhdfd78af_0` | `mpa_vJun23_CHOCOPhlAnSGB_202307` |
 | `mpa4.1.1_vOct22` | `quay.io/biocontainers/metaphlan:4.1.1--pyhdfd78af_0` | `mpa_vOct22_CHOCOPhlAnSGB_202403` |
 
-See [`docs/adr/0018-metaphlan-profiles.md`](docs/adr/0018-metaphlan-profiles.md).
+MetaPhlAn 4.2.6 reports itself as `4.2.5` (`--version`; upstream did not bump
+it), so that is what `manifest.json` records for the default profile. The
+vJan26 SGB-to-GTDB (r226) mapping ships with MetaPhlAn 4.2.5+
+(`metaphlan/utils/mpa_vJan26_CHOCOPhlAnSGB_202605_SGB2GTDB_r226.tsv`); GTDB
+taxonomy is added in post-processing, not by the pipeline
+([ADR-0013](docs/adr/0013-remove-gtdb-conversion.md)).
+
+See [`docs/adr/0018-metaphlan-profiles.md`](docs/adr/0018-metaphlan-profiles.md)
+and [`docs/adr/0019-base-image-on-ghcr.md`](docs/adr/0019-base-image-on-ghcr.md).
 
 ### Kraken2 / Bracken Parameters
 
@@ -365,7 +377,7 @@ unmapped reads as `READS_UNMAPPED`.
 
 HUMAnN runs on the full-depth branch only. When the bundle's MetaPhlAn profile
 differs from `metaphlan_profile` (both current bundles), HUMAnN runs its own
-MetaPhlAn pass, so the published MetaPhlAn 4.2.2 taxonomy is unaffected. When
+MetaPhlAn pass, so the main-pass taxonomy (MetaPhlAn 4.2.6 / vJan26 by default) is unaffected. When
 they are equal (a future HUMAnN release that accepts the main profile), HUMAnN
 reuses the main pass's full-depth profile and no second MetaPhlAn or index
 install runs. Outputs are published

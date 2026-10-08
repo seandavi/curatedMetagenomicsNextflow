@@ -7,16 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 The version is the git tag, the `manifest.version` in `nextflow.config`, and the
 workflow revision the orchestrator dispatches — keep all three in lockstep.
 
-## [Unreleased]
+## [2.3.0] - unreleased
+
+First full-corpus output epoch: MetaPhlAn 4.2.6 with the vJan26 index by
+default, HUMAnN only through version-pinned bundles (still off by default).
+Includes everything from 2.2.1-2.2.3.
 
 ### Changed
+- **Default MetaPhlAn profile is `mpa4.2.6_vJan26`** (#105): MetaPhlAn 4.2.6
+  with the `mpa_vJan26_CHOCOPhlAnSGB_202605` index (about 72k SGBs, 13,669 more
+  than vJan25), `--db_dir`/`--mapout`. **This changes the published taxonomy**
+  (new SGBs and a new database version in every profile header), so 2.3.0 is
+  a new output epoch; `--metaphlan_profile mpa4.2.2_vJan25` reproduces the 2.2.x
+  main pass. 4.2.6, not 4.2.5: 4.2.5 rejects `--input_type mapout` without
+  `--mapout`/`--no_map`, which is how `metaphlan_unknown_list` and
+  `metaphlan_markers` read the map file back. MetaPhlAn 4.2.6's `--version`
+  still prints `4.2.5` (upstream did not bump it), so `manifest.json`
+  `software_versions.metaphlan` records `4.2.5` for this profile.
+- **Base image moved to GHCR, rebuilt with MetaPhlAn 4.2.6 and without HUMAnN**
+  (ADR-0019). `process.container` (and the default profile's container) is now
+  `ghcr.io/seandavi/curatedmetagenomics:metaphlan4.2.6`, built from
+  `docker/Dockerfile` and published by `.github/workflows/base-image.yml`
+  (replacing the manual Cloud Build). MetaPhlAn 4.2.6 is installed from its
+  GitHub release tarball, hash-pinned, because it is not on PyPI. The rest of
+  the toolchain is unchanged: KneadData 0.12.3, Trimmomatic 0.39, bowtie2
+  2.5.4, samtools 1.21, minimap2 2.30, FastQC 0.12.1, seqtk, sratoolkit 3.2.1
+  (now pinned by URL; NCBI's `current` moved past the hardcoded path), awscli,
+  pigz, pv, Java 17 on Debian 12 (`python:3.9-bookworm`).
 - **Named MetaPhlAn profiles replace `metaphlan_index`** (ADR-0018, #99).
   `conf/metaphlan_profiles.config` registers pinned units of container,
   MetaPhlAn version, index and version-specific CLI options (`--bowtie2db` /
   `--bowtie2out` through 4.1.x, `--db_dir` / `--mapout` from 4.2):
-  `mpa4.2.2_vJan25` (the base image, unchanged), `mpa4.1.1_vJun23` and
-  `mpa4.1.1_vOct22`. **Breaking:** `--metaphlan_index` is removed (no alias);
-  use `--metaphlan_profile` (default `mpa4.2.2_vJan25`, same index as before).
+  `mpa4.2.6_vJan26` (default, see above), `mpa4.2.2_vJan25` (the 2.2.x main
+  pass), `mpa4.1.1_vJun23` and `mpa4.1.1_vOct22`. **Breaking:**
+  `--metaphlan_index` is removed (no alias); use `--metaphlan_profile`.
   An unknown profile fails at start-up listing the valid names. The manifest's
   `parameters.metaphlan_index` is now `parameters.metaphlan_profile`, and
   `humann_metaphlan_index` is now `humann_metaphlan_profile`.
@@ -45,6 +69,54 @@ workflow revision the orchestrator dispatches — keep all three in lockstep.
   quality-trim step is a no-op for those samples (curation caveat). See ADR-0014.
   Output-neutral in practice: only affects which source serves the bytes, not
   the profiling contract.
+- **HUMAnN database caches are keyed by bundle** (`chocophlan/<bundle>/`,
+  `uniref/<bundle>/`, `utility_mapping/<bundle>/`) and the DB processes run in
+  the bundle's containers rather than the base image; previously cached
+  `chocophlan/full/` etc. are not reused (re-download once). ADR-0016
+  supersedes ADR-0002.
+- ChocoPhlAn, UniRef and utility-mapping databases are fetched only when
+  `skip_humann=false`; previously they ran on every run regardless.
+- **Reference-database cache (`storeDir`) paths are now keyed by version**
+  (#83). Previously every database lived at a fixed name (`metaphlan`,
+  `kraken_db`, `card_db`, `card_kma_db`, …), so changing `metaphlan_index`,
+  `kraken_db_url` or `card_db_url` silently reused whatever was cached. Layout
+  is now `<store_dir>/<db_name>/<version_key>/` (MetaPhlAn: the index; Kraken2
+  and CARD: URL basename without archive extension; `card_kma_db` shares the
+  CARD key; ChocoPhlAn/UniRef: their params; utility mapping: `full`). The
+  KneadData `human_genome`/`mouse_C57BL` paths are unchanged (no version
+  parameter selects them). See the `databases.nf` header and the README
+  "Reference Database Cache Layout".
+- `metaphlan_unknown_viruses_lists`, `metaphlan_unknown_list` and
+  `metaphlan_markers` now pass the staged `${metaphlan_db}` to `--db_dir`
+  instead of the hardcoded literal `metaphlan`.
+
+### Added
+- **`humann4.0.0a1` bundle** (#87): HUMAnN 4.0.0a1 with MetaPhlAn 4.1.1 and the
+  `mpa_vOct22_CHOCOPhlAnSGB_202403` index, plus the bundle's v4-alpha
+  ChocoPhlAn/UniRef/utility-mapping databases. HUMAnN 4.0.0a1 has no usable
+  upstream image, so `docker/humann4a/` is built and published to
+  `ghcr.io/seandavi/humann:4.0.0a1` by `.github/workflows/humann4a-image.yml`
+  (ADR-0017). `humann3.9` stays the default; `skip_humann` stays `true`.
+- **HUMAnN subworkflow driven by version-pinned bundles** (ADR-0016, #85).
+  `--humann_bundle` (default `humann3.9`, registry in
+  `conf/humann_bundles.config`) selects the HUMAnN and MetaPhlAn containers,
+  the MetaPhlAn version/index and the ChocoPhlAn/UniRef/utility-mapping DB
+  names as one unit; an unknown bundle fails at start-up listing the valid
+  names (only when `--skip_humann false`). The new `HUMANN` subworkflow runs
+  `metaphlan_for_humann` (MetaPhlAn 4.1.1, `mpa_vJun23_CHOCOPhlAnSGB_202307`)
+  then `humann` on the full-depth branch only, with its own databases staged
+  by `DATABASES` (so `--databases_only --skip_humann false` fetches them).
+  Output is published to `<sample>/humann/<bundle>/` with the profile in
+  `metaphlan/`; the main-pass taxonomy is unchanged.
+  `skip_humann` stays `true` by default. The manifest records the HUMAnN-pass
+  versions under `metaphlan_humann`, `bowtie2_humann` and `humann`, plus
+  `parameters.humann_bundle` and `humann_metaphlan_index`.
+- `humann_maxforks` (default 4) throttles concurrent `humann` tasks.
+- **`--databases_only`** pre-stages the reference databases into `store_dir`
+  without sample inputs or per-sample processes, so downloads no longer have
+  to happen inside a production batch. Database processes are now invoked
+  only from a `DATABASES` subworkflow (`modules/subworkflows/databases.nf`).
+  See #84.
 
 ### Fixed
 - **`manifest.json` `software_versions` was incomplete.** It only listed the
@@ -70,62 +142,34 @@ workflow revision the orchestrator dispatches — keep all three in lockstep.
   Python 3.12 `SyntaxWarning`s before `humann v3.9`, and the version capture
   took the second word of the merged output. It now reads the `humann` line.
 
-### Added
-- **`humann4.0.0a1` bundle** (#87): HUMAnN 4.0.0a1 with MetaPhlAn 4.1.1 and the
-  `mpa_vOct22_CHOCOPhlAnSGB_202403` index, plus the bundle's v4-alpha
-  ChocoPhlAn/UniRef/utility-mapping databases. HUMAnN 4.0.0a1 has no usable
-  upstream image, so `docker/humann4a/` is built and published to
-  `ghcr.io/seandavi/humann:4.0.0a1` by `.github/workflows/humann4a-image.yml`
-  (ADR-0017). `humann3.9` stays the default; `skip_humann` stays `true`.
-- **HUMAnN subworkflow driven by version-pinned bundles** (ADR-0016, #85).
-  `--humann_bundle` (default `humann3.9`, registry in
-  `conf/humann_bundles.config`) selects the HUMAnN and MetaPhlAn containers,
-  the MetaPhlAn version/index and the ChocoPhlAn/UniRef/utility-mapping DB
-  names as one unit; an unknown bundle fails at start-up listing the valid
-  names (only when `--skip_humann false`). The new `HUMANN` subworkflow runs
-  `metaphlan_for_humann` (MetaPhlAn 4.1.1, `mpa_vJun23_CHOCOPhlAnSGB_202307`)
-  then `humann` on the full-depth branch only, with its own databases staged
-  by `DATABASES` (so `--databases_only --skip_humann false` fetches them).
-  Output is published to `<sample>/humann/<bundle>/` with the profile in
-  `metaphlan/`; the published MetaPhlAn 4.2.2 taxonomy is unchanged.
-  `skip_humann` stays `true` by default. The manifest records the HUMAnN-pass
-  versions under `metaphlan_humann`, `bowtie2_humann` and `humann`, plus
-  `parameters.humann_bundle` and `humann_metaphlan_index`.
-- `humann_maxforks` (default 4) throttles concurrent `humann` tasks.
-- **`--databases_only`** pre-stages the reference databases into `store_dir`
-  without sample inputs or per-sample processes, so downloads no longer have
-  to happen inside a production batch. Database processes are now invoked
-  only from a `DATABASES` subworkflow (`modules/subworkflows/databases.nf`).
-  See #84.
-
 ### Removed
+- **HUMAnN is no longer in the base image** (#89). It was HUMAnN 4.0.0a1,
+  unused since HUMAnN moved to bundles, each of which brings its own container
+  (ADR-0016).
+- `docker/cloudbuild.yaml` and `docker/docker_build.sh` (the manual base-image
+  build; superseded by `.github/workflows/base-image.yml`).
 - The `chocophlan` and `uniref` parameters (now bundle fields) and the
   `withName` entries for `humann` and the HUMAnN DB processes in
   `conf/base.config` (resources are set in the process bodies).
 
-### Changed
-- **HUMAnN database caches are keyed by bundle** (`chocophlan/<bundle>/`,
-  `uniref/<bundle>/`, `utility_mapping/<bundle>/`) and the DB processes run in
-  the bundle's containers rather than the base image; previously cached
-  `chocophlan/full/` etc. are not reused (re-download once). ADR-0016
-  supersedes ADR-0002.
-- ChocoPhlAn, UniRef and utility-mapping databases are fetched only when
-  `skip_humann=false`; previously they ran on every run regardless.
-- **Reference-database cache (`storeDir`) paths are now keyed by version**
-  (#83). Previously every database lived at a fixed name (`metaphlan`,
-  `kraken_db`, `card_db`, `card_kma_db`, …), so changing `metaphlan_index`,
-  `kraken_db_url` or `card_db_url` silently reused whatever was cached. Layout
-  is now `<store_dir>/<db_name>/<version_key>/` (MetaPhlAn: the index; Kraken2
-  and CARD: URL basename without archive extension; `card_kma_db` shares the
-  CARD key; ChocoPhlAn/UniRef: their params; utility mapping: `full`). The
-  KneadData `human_genome`/`mouse_C57BL` paths are unchanged (no version
-  parameter selects them). See the `databases.nf` header and the README
-  "Reference Database Cache Layout".
-- `metaphlan_unknown_viruses_lists`, `metaphlan_unknown_list` and
-  `metaphlan_markers` now pass the staged `${metaphlan_db}` to `--db_dir`
-  instead of the hardcoded literal `metaphlan`.
-
 ### Migration (one-time, before the first run of this version)
+**MetaPhlAn vJan26 index.** The new default installs into a new cache
+directory, `<store_dir>/metaphlan/mpa_vJan26_CHOCOPhlAnSGB_202605/` (about
+48 GB to download: 41.7 GB bowtie2 index plus 6.0 GB of marker files; more once
+unpacked). The vJan25 directory is left alone and still serves
+`--metaphlan_profile mpa4.2.2_vJan25`. Pre-stage it with `--databases_only`
+before the first batch so the download does not happen inside one:
+
+```sh
+nextflow run seandavi/curatedMetagenomicsNextflow -revision 2.3.0 \
+  -profile alpine,r2 --databases_only --store_dir "$STORE"
+```
+
+The vJan26 SGB-to-GTDB r226 mapping ships with MetaPhlAn 4.2.5+
+(`metaphlan/utils/mpa_vJan26_CHOCOPhlAnSGB_202605_SGB2GTDB_r226.tsv`); GTDB
+conversion stays a post-processing step (ADR-0013).
+
+**Keyed store layout** (stores last used by 2.2.x).
 Existing stores must be moved into the keyed layout or the databases will be
 re-downloaded. Defaults assumed (substitute the key if a different
 index/URL was used; skip directories that do not exist). `.command.*` and

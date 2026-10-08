@@ -24,8 +24,10 @@ process kraken2 {
 
     tag "${meta.sample}"
 
+    // RSS is the Kraken2 DB (~15-16 GiB for k2_pluspf_16GB); re-measure if the DB changes.
     cpus 8
-    memory { 32.GB * task.attempt }
+    memory { 20.GB * task.attempt }
+    time { 2.h * task.attempt }
     maxForks params.kraken_maxforks
 
     input:
@@ -78,8 +80,9 @@ process bracken {
 
     tag "${meta.sample}"
 
-    cpus 2
-    memory { 4.GB * task.attempt }
+    cpus 1
+    memory { 1792.MB * task.attempt }
+    time { 1.h * task.attempt }
 
     input:
     val meta

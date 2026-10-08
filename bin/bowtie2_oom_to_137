@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# Usage: bowtie2_oom_to_137 <command> [args...]
+#
+# Runs a MetaPhlAn command that maps reads with bowtie2 and exits with its
+# status, except when bowtie2 was killed for memory. The cgroup OOM killer picks
+# bowtie2-align (it holds the index), bowtie2's wrapper reports it, and MetaPhlAn
+# exits 1, so the OOM retry in conf/base.config (exit 137..140, memory grows with
+# task.attempt) never fired (#107). Exit 137 instead.
+#
+# The wrapper reports the kill as "exited with value 137" when the aligner runs
+# under a shell (what a cgroup OOM kill looked like in testing) and as "died
+# with signal 9" when it runs directly.
+
+err=$(mktemp -p . .bowtie2_oom.XXXXXX)
+# stderr goes through tee (still streamed to the task log); stdout is untouched.
+{ "$@" 2>&1 1>&3 3>&- | tee "$err" >&2 3>&-; rc=${PIPESTATUS[0]}; } 3>&1
+
+if [ "$rc" -ne 0 ] && grep -qE 'bowtie2-align (exited with value 137|died with signal 9 )' "$err"; then
+    echo "bowtie2_oom_to_137: bowtie2 was killed for memory (exit $rc); exiting 137 so the OOM retry applies" >&2
+    rc=137
+fi
+rm -f "$err"
+exit "$rc"

@@ -14,11 +14,14 @@ process rarefy_fastq {
 
     // Set in-body (like the sibling qc processes) rather than via a
     // conf/base.config withName, so the directive holds even if this process
-    // is later imported under an alias. seqtk sample is light; the headroom is
-    // for large inputs. Memory escalates on retry (Alpine caps time at 24h, so
-    // no time escalation — memory only).
-    cpus 2
-    memory { 8.GB * task.attempt }
+    // is later imported under an alias. seqtk sample is single-threaded and
+    // light (peak RSS 0.66 GiB in 2.2.x traces); memory and time escalate on
+    // retry (1h x 4 attempts stays under Alpine's 24h cap). Sizes from
+    // nextflow_telemetry docs/research/resource-tuning-2.3.0.md, like every
+    // first-attempt request in this release.
+    cpus 1
+    memory { 1792.MB * task.attempt }
+    time { 1.h * task.attempt }
 
     input:
     val meta

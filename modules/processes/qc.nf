@@ -16,8 +16,9 @@ process fastqc {
 
     tag "${meta.sample}"
 
-    cpus 2
-    memory { 4.GB * task.attempt }
+    cpus 1
+    memory { 1792.MB * task.attempt }
+    time { 1.h * task.attempt }
 
     input:
     val meta

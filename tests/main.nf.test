@@ -329,7 +329,7 @@ nextflow_pipeline {
             assert workflow.failed
             def out = (workflow.stdout + workflow.stderr).join("\n")
             assert out.contains("Unknown metaphlan_profile 'no-such-profile'")
-            assert out.contains("Valid profiles: mpa4.2.2_vJan25, mpa4.1.1_vJun23, mpa4.1.1_vOct22")
+            assert out.contains("Valid profiles: mpa4.2.6_vJan26, mpa4.2.2_vJan25, mpa4.1.1_vJun23, mpa4.1.1_vOct22")
         }
     }
 
@@ -374,7 +374,7 @@ nextflow_pipeline {
             assert workflow.failed
             def out = (workflow.stdout + workflow.stderr).join("\n")
             assert out.contains("humann_bundle 'test-bad-profile' names unknown metaphlan_profile 'no-such-profile'")
-            assert out.contains("Valid profiles: mpa4.2.2_vJan25")
+            assert out.contains("Valid profiles: mpa4.2.6_vJan26")
         }
     }
 
@@ -392,7 +392,7 @@ nextflow_pipeline {
                 humann_bundles = [
                     "test-reuse": [
                         humann_container: "unused",
-                        metaphlan_profile: "mpa4.2.2_vJan25",
+                        metaphlan_profile: "mpa4.2.6_vJan26",
                         chocophlan: "full",
                         uniref: "uniref90_ec_filtered_diamond",
                         utility_mapping: "full",
@@ -431,7 +431,7 @@ nextflow_pipeline {
                 humann_bundles = [
                     "test-reuse": [
                         humann_container: "unused",
-                        metaphlan_profile: "mpa4.2.2_vJan25",
+                        metaphlan_profile: "mpa4.2.6_vJan26",
                         chocophlan: "full",
                         uniref: "uniref90_ec_filtered_diamond",
                         utility_mapping: "full",

@@ -1,4 +1,11 @@
-FROM python:3.9
+# Base image for every process without its own container, and the container
+# of the default MetaPhlAn profile (conf/metaphlan_profiles.config). Published
+# to ghcr.io/seandavi/curatedmetagenomics:metaphlan<version> by
+# .github/workflows/base-image.yml. No HUMAnN: bundles bring their own (#89).
+#
+# bookworm, not the floating python:3.9 tag (now trixie), keeps the OS
+# toolchain (Java 17, pigz, pv) the same as the metaphlan4.2.2 image.
+FROM python:3.9-bookworm
 
 ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update
@@ -11,7 +18,8 @@ RUN apt-get update && apt-get install -y procps pigz pv default-jre
 RUN mkdir /usr/local/ncbi
 WORKDIR /usr/local/ncbi
 
-RUN curl -o sratoolkit.tar.gz https://ftp-trace.ncbi.nlm.nih.gov/sra/sdk/current/sratoolkit.current-ubuntu64.tar.gz
+# Pinned: the PATH below names the version, and sdk/current has moved past it.
+RUN curl -o sratoolkit.tar.gz https://ftp-trace.ncbi.nlm.nih.gov/sra/sdk/3.2.1/sratoolkit.3.2.1-ubuntu64.tar.gz
 RUN tar -vxzf sratoolkit.tar.gz
 ENV PATH=/usr/local/ncbi/sratoolkit.3.2.1-ubuntu64/bin:$PATH
 
@@ -29,7 +37,9 @@ RUN wget https://github.com/BenLangmead/bowtie2/releases/download/v2.5.4/bowtie2
 ENV PATH=$PATH:/installed/bowtie2-2.5.4-linux-x86_64/
 
 ## install metaphlan
-RUN pip install metaphlan==4.2.2
+# 4.2.6 is a GitHub release only (not on PyPI); bioconda builds the same tarball.
+# Its --version still reports 4.2.5 (upstream did not bump __version__).
+RUN pip install "https://github.com/biobakery/MetaPhlAn/archive/refs/tags/4.2.6.tar.gz#sha256=b72991c2d7d47818c99959f51b4bc4137fe0bfbf8b3d76e1c2e895b499d6e54c"
 
 ## install awscli
 RUN pip install awscli
@@ -54,9 +64,6 @@ RUN pip install kneaddata==0.12.3 --install-option='--bypass-dependencies-instal
 ## install trimmomatic for kneaddata
 RUN wget http://www.usadellab.org/cms/uploads/supplementary/Trimmomatic/Trimmomatic-0.39.zip && unzip Trimmomatic-0.39.zip
 
-## install humann, metaphlan, and awscli
-RUN pip install humann==4.0.0a1
-
 WORKDIR /installed
 
 ## display versions
@@ -65,12 +72,9 @@ RUN echo 'fastq-dump' >> versions.txt
 RUN fastq-dump --version >> versions.txt
 RUN echo 'metaphlan' >> versions.txt
 RUN metaphlan --version >> versions.txt
-RUN echo 'humann' >> versions.txt
-RUN humann --version >> versions.txt
 
 ## root directory for databases
 ENV mpa_dir=/usr/local/miniconda3/lib/python3.7/site-packages/metaphlan
-ENV hnn_dir=/usr/local/miniconda3/lib/python3.7/site-packages/humann
 WORKDIR /root
 
 CMD ["/bin/bash"]

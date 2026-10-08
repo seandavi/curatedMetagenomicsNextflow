@@ -40,6 +40,11 @@ test-config-all:
 # The config parses under the current (v2) parser, but the process scripts
 # still target the v1 script grammar, so pin the parser for anything that
 # compiles main.nf/modules until that migration happens.
+# Unit test for bin/bowtie2_oom_to_137 (#107).
+[group('test')]
+test-bin:
+    bash tests/bowtie2_oom_to_137.test.sh
+
 [group('test')]
 test-stub:
     env NXF_DISABLE_CHECK_LATEST=true NXF_SYNTAX_PARSER=v1 nextflow run . \

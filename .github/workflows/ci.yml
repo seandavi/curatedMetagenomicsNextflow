@@ -50,6 +50,9 @@ jobs:
           echo "process.container=$base $profile.container=$mpa"
           test -n "$base" && test "$base" = "$mpa"
 
+      - name: bin/ script tests
+        run: bash tests/bowtie2_oom_to_137.test.sh
+
       # The process scripts still target the v1 script grammar, so the stub run
       # pins NXF_SYNTAX_PARSER=v1 (see justfile). Migrating the modules to the
       # strict v2 script parser is separate, larger follow-up work.

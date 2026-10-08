@@ -26,8 +26,9 @@ process resistome_kma {
 
     tag "${meta.sample}"
 
-    cpus 8
-    memory { 16.GB * task.attempt }
+    cpus 2
+    memory { 3584.MB * task.attempt }
+    time { 1.h * task.attempt }
 
     input:
     val meta

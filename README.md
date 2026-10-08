@@ -511,16 +511,25 @@ nextflow run main.nf -profile alpine,r2 --metadata_tsv samples.tsv
 
 ## Resource And Retry Policy
 
-The baseline CPU and memory requests are defined per process in `conf/base.config`.
-Attempt 1 preserves the original resource baselines from the pipeline. For retries,
-memory is scaled linearly by retry attempt:
+The baseline CPU, memory and time requests are defined per process in
+`conf/base.config` (and, for processes imported under aliases, in the process
+body). From 2.3.0 they are sized from real 2.2.x traces
+([nextflow_telemetry `docs/research/resource-tuning-2.3.0.md`](https://github.com/seandavi/nextflow_telemetry/blob/main/docs/research/resource-tuning-2.3.0.md)):
+memory is set close to each step's measured peak plus headroom, and
+single-threaded steps get 1-2 cpus. MetaPhlAn gets 55 GiB, an estimate for the
+vJan26 index that the rehearsal should re-measure. On Anvil, the full-branch
+MetaPhlAn also gets 30 cpus, which its memory already pays for there. For
+retries, memory and time are scaled linearly by retry attempt:
 
 ```text
 effective_memory = baseline_memory * task.attempt
+effective_time   = baseline_time * task.attempt
 ```
 
-This allows failed tasks to request more memory on later attempts without changing
-the initial scheduling footprint.
+Exit codes 137-140 (OOM or scheduler kill) are retried up to 4 times with that
+growth. When the OOM killer takes bowtie2 inside MetaPhlAn, MetaPhlAn itself
+exits 1. `bin/bowtie2_oom_to_137` wraps the MetaPhlAn steps that run bowtie2 and
+turns that case into 137, so the OOM retry applies (#107).
 
 Process labels in `main.nf` and `modules/processes/*.nf` are semantic rather than
 prescriptive. They are intended to make the pipeline easier to read and to support

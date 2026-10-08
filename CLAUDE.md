@@ -98,7 +98,7 @@ The default `publish_base_dir` is `${launchDir}/results`. The `r2` profile overr
 
 ### Resource / retry policy (`conf/base.config`)
 
-Memory scales with retries: `effective_memory = baseline × task.attempt`. Exit codes 137–140 (OOM/kill) trigger up to 3 retries. Process labels (`qc`, `profiling`, `db_setup`) map to resource tiers.
+Memory and time scale with retries: `effective_memory = baseline × task.attempt` (same for `time`); first-attempt sizes come from real traces (nextflow_telemetry `docs/research/resource-tuning-2.3.0.md`). Exit codes 137–140 (OOM/kill) trigger up to 4 retries; MetaPhlAn steps that run bowtie2 are wrapped in `bin/bowtie2_oom_to_137` because MetaPhlAn exits 1 when bowtie2 is OOM-killed (#107). A site profile that tweaks one directive of a `withName` block must use the dotted form (`process.'withName:x'.cpus = 30`); a `withName` block in a profile replaces the base.config block for that selector. Process labels (`qc`, `profiling`, `db_setup`) map to resource tiers.
 
 ### Input modes
 

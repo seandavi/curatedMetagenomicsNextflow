@@ -93,7 +93,8 @@ process metaphlan_for_humann {
     script:
     def profile = params.metaphlan_profiles[params.humann_bundles[params.humann_bundle].metaphlan_profile]
     """
-    metaphlan --input_type fastq \\
+    # OOM kills of bowtie2 exit 137, not 1 (bin/bowtie2_oom_to_137, #107).
+    bowtie2_oom_to_137 metaphlan --input_type fastq \\
         --index ${profile.index} \\
         ${profile.db_option} ${metaphlan_db} \\
         --nproc ${task.cpus} \\

@@ -14,6 +14,19 @@ default, HUMAnN only through version-pinned bundles (still off by default).
 Includes everything from 2.2.1-2.2.3.
 
 ### Changed
+- **Resource requests sized from real traces** (nextflow_telemetry
+  `docs/research/resource-tuning-2.3.0.md`; 1,678 tasks from 121 samples on
+  2.2.x). First-attempt cpus / memory / time: `fasterq_dump` 4 / 6 GiB / 6 h,
+  `kneaddata` 8 / 8 GiB / 3 h, `metaphlan_unknown_viruses_lists` 16 / **55 GiB**
+  (was 47) / 6 h full and 2 h rarefied, `metaphlan_markers` 2 / 16 GiB / 2 h,
+  `sample_to_markers` 2 / 20 GiB / 2 h, `kraken2` 8 / 20 GiB / 2 h,
+  `resistome_kma` 2 / 3.5 GiB / 1 h, and `fastqc`, `rarefy_fastq`, `bracken`,
+  `sample_manifest`, `MARK_COMPLETE` 1 / 1792 MiB / 1 h. Memory and now time
+  scale with `task.attempt`. On Anvil the full-branch MetaPhlAn gets 30 cpus,
+  which 55 GiB already bills for there (`MaxMemPerCPU=1896M`). The doc estimates
+  29% fewer allocated CPU-hours and 20% fewer Anvil SUs per sample than 2.3.0
+  with only the MetaPhlAn memory raised. The MetaPhlAn sizes are vJan26
+  estimates; re-measure them in the rehearsal batch.
 - **Default MetaPhlAn profile is `mpa4.2.6_vJan26`** (#105): MetaPhlAn 4.2.6
   with the `mpa_vJan26_CHOCOPhlAnSGB_202605` index (about 72k SGBs, 13,669 more
   than vJan25), `--db_dir`/`--mapout`. **This changes the published taxonomy**
@@ -119,6 +132,15 @@ Includes everything from 2.2.1-2.2.3.
   See #84.
 
 ### Fixed
+- **An OOM kill of bowtie2 inside MetaPhlAn exited 1, so the OOM retry never
+  fired** (#107). The cgroup OOM killer takes `bowtie2-align`, bowtie2's wrapper
+  reports `bowtie2-align exited with value 137` (or `died with signal 9`), and
+  MetaPhlAn exits 1. The task then got the generic single retry, and a sample
+  that OOMed twice was dropped. `bin/bowtie2_oom_to_137` wraps the MetaPhlAn
+  steps that run bowtie2 (`metaphlan_unknown_viruses_lists`,
+  `metaphlan_for_humann`) and exits 137 in that case, so the 137..140 policy
+  (up to 4 attempts, memory × attempt) applies. Reproduced with MetaPhlAn 4.2.6
+  under a memory-capped container: exit 1 before, 137 after.
 - **`manifest.json` `software_versions` was incomplete.** It only listed the
   three tools whose `versions.yml` `sample_manifest` staged (fasterq-dump/awscli/
   fastqc from read acquisition, kneaddata/trimmomatic/bowtie2, metaphlan) and

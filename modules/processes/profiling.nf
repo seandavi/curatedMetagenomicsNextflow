@@ -106,7 +106,9 @@ process metaphlan_unknown_viruses_lists {
     def profile = params.metaphlan_profiles[params.metaphlan_profile]
     """
     find .
-    metaphlan --input_type fastq \
+    # bowtie2 runs inside MetaPhlAn; an OOM kill of bowtie2 exits 1 unless
+    # mapped to 137, so the OOM retry applies (bin/bowtie2_oom_to_137, #107).
+    bowtie2_oom_to_137 metaphlan --input_type fastq \
         --index ${profile.index} \
         ${profile.db_option} ${metaphlan_db} \
         ${profile.map_option} bowtie2.out \

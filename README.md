@@ -24,9 +24,8 @@ Each sample also gets a `manifest.json` (provenance + read accounting) and a
 | **2.3.0** (unreleased) | `main` | Next output epoch. Breaking: `--metaphlan_profile` replaces `--metaphlan_index`; version-pinned HUMAnN bundles; `--databases_only`. See [`CHANGELOG.md`](CHANGELOG.md). |
 
 The git tag, `manifest.version` in `nextflow.config` and the revision the
-orchestrator dispatches move in lockstep. `main` has not yet received the 2.2.2/2.2.3
-changes (telemetry URL, `r2` profile backport); they arrive when the release PR
-merging `release/2.2.x` into `main` lands.
+orchestrator dispatches move in lockstep. `release/2.2.x` is merged into `main`, so
+`main` carries the 2.2.2/2.2.3 changes (telemetry URL, `r2` profile).
 
 ## How production runs
 

@@ -7,9 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 The version is the git tag, the `manifest.version` in `nextflow.config`, and the
 workflow revision the orchestrator dispatches — keep all three in lockstep.
 
-## [2.3.0] - unreleased
+## [2.3.1] - 2026-10-13
 
-### Fixed (post-rehearsal)
+### Fixed
 
 - **A sample's completion no longer waits on every other sample in its run.**
   `sample_manifest` collated version files with `collectFile`, which emits only
@@ -20,6 +20,17 @@ workflow revision the orchestrator dispatches — keep all three in lockstep.
   sample with `groupTuple(size: n)`. Verified with a two-sample stub run where
   one sample's MetaPhlAn is delayed 90 s: before, both `MARK_COMPLETE`s finish
   together; after, the fast sample finishes ~90 s earlier.
+- **Retries are capped at 220 GiB / 24 h on Alpine and Anvil** (`process.resourceLimits`).
+  Memory is `baseline x task.attempt` and the policy allows attempt 5 (275 GiB), which
+  no default-partition node can hold (Alpine `acpu` 240 GiB nodes; Anvil `shared`
+  237 GiB per job). Attempts 1-4 (55/110/165/220 GiB for MetaPhlAn) are unchanged.
+- **Alpine `process.queueSize` 200 -> 100.** The `cpu-normal` QOS allows 1000 submitted
+  jobs per user across all runs; at 10 concurrent runs, 100 each stays under it.
+
+No output changes: per nextflow_telemetry ADR-0004 this is a revision bump on the registered
+`cmgd_mpa4.2 2.3.0`, not a new version.
+
+## [2.3.0] - unreleased
 
 First full-corpus output epoch: MetaPhlAn 4.2.6 with the vJan26 index by
 default, HUMAnN only through version-pinned bundles (still off by default).
@@ -456,6 +467,7 @@ Baseline of the 2.x line. Core metagenomic pipeline, with decisions recorded in
 [2.2.3]: https://github.com/seandavi/curatedMetagenomicsNextflow/compare/2.2.2...2.2.3
 [2.2.2]: https://github.com/seandavi/curatedMetagenomicsNextflow/compare/2.2.1...2.2.2
 [2.2.1]: https://github.com/seandavi/curatedMetagenomicsNextflow/compare/2.2.0...2.2.1
+[2.3.1]: https://github.com/seandavi/curatedMetagenomicsNextflow/compare/793996b...2.3.1
 [2.0.7]: https://github.com/seandavi/curatedMetagenomicsNextflow/compare/2.0.6...2.0.7
 [2.0.6]: https://github.com/seandavi/curatedMetagenomicsNextflow/compare/2.0.5...2.0.6
 [2.0.5]: https://github.com/seandavi/curatedMetagenomicsNextflow/compare/2.0.4...2.0.5

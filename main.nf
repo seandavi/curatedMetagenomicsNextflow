@@ -40,6 +40,7 @@ include {
 } from './modules/processes/resistome'
 include { fastqc } from './modules/processes/qc'
 include { HUMANN } from './modules/subworkflows/humann'
+include { humann_reuses_main_metaphlan } from './modules/lib/metaphlan_profiles'
 include { sample_manifest } from './modules/processes/manifest'
 include { MARK_COMPLETE } from './modules/processes/finalize'
 
@@ -317,6 +318,19 @@ workflow {
         .merge(kneaddata.out.fastq)
         .map { m, fq -> tuple(m.sample, fq) }
 
+    // Every source below emits exactly one (sample, versions.yml) per sample, so
+    // each sample's group is complete as soon as its own tasks have run. Do NOT
+    // use collectFile here: it emits only when the whole channel closes, which
+    // holds every sample's manifest (and MARK_COMPLETE) until the slowest
+    // sample in the run has finished MetaPhlAn, retries included.
+    // kraken2 + bracken => 2; HUMAnN => itself plus its own MetaPhlAn pass,
+    // unless the bundle reuses the main profile.
+    def versions_per_sample = 3 +
+        (params.skip_kraken ? 0 : 2) +
+        (params.skip_resistome ? 0 : 1) +
+        (params.skip_fastqc ? 0 : 1) +
+        (params.skip_humann ? 0 : (humann_reuses_main_metaphlan() ? 1 : 2))
+
     collated_versions_ch = raw_meta_ch
         .merge(raw_versions_ch)
         .map { m, ver -> tuple(m.sample, ver) }
@@ -330,8 +344,9 @@ workflow {
         .mix(resistome_versions_ch)
         .mix(fastqc_versions_ch)
         .mix(humann_versions_ch)
-        .collectFile { sample, ver -> [ "${sample}.yml", ver ] }
-        .map { f -> tuple(f.baseName, f) }
+        .map { sample, ver -> tuple(groupKey(sample, versions_per_sample), ver) }
+        .groupTuple()
+        .map { key, vers -> tuple(key.toString(), vers) }
 
     manifest_input = raw_for_manifest
         .join(kneaddata_for_manifest)

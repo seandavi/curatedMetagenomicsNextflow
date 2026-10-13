@@ -9,6 +9,18 @@ workflow revision the orchestrator dispatches — keep all three in lockstep.
 
 ## [2.3.0] - unreleased
 
+### Fixed (post-rehearsal)
+
+- **A sample's completion no longer waits on every other sample in its run.**
+  `sample_manifest` collated version files with `collectFile`, which emits only
+  when its whole input channel closes, so every sample's manifest (and
+  `MARK_COMPLETE`, which gates on it) waited for the slowest sample's MetaPhlAn,
+  retries included. Observed in the 2.3.0 pilot: 11 finished samples held for
+  11+ hours behind one 165 GiB attempt-3 retry. Versions are now grouped per
+  sample with `groupTuple(size: n)`. Verified with a two-sample stub run where
+  one sample's MetaPhlAn is delayed 90 s: before, both `MARK_COMPLETE`s finish
+  together; after, the fast sample finishes ~90 s earlier.
+
 First full-corpus output epoch: MetaPhlAn 4.2.6 with the vJan26 index by
 default, HUMAnN only through version-pinned bundles (still off by default).
 Includes everything from 2.2.1-2.2.3.

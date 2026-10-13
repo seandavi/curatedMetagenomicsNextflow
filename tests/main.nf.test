@@ -491,18 +491,20 @@ nextflow_pipeline {
             // on the real collated versions the stubbed pipeline produced (which
             // carry the HUMAnN-pass keys) plus a main-pass versions file, in the
             // order the pipeline's glob would merge them.
+            // sample_manifest stages each source's versions file as versions_<n>.yml
+            // (process outputs are plain versions.yml, so this matches only the staged ones).
             def found = []
             new File("$launchDir/work").eachFileRecurse(groovy.io.FileType.FILES) {
-                if (it.name == "versions_collated.yml") found << it
+                if (it.name ==~ /versions_\d+\.yml/) found << it
             }
-            assert found.size() == 1
+            assert found.size() >= 1
 
             def dir = new File("$outputDir/manifest_check")
             dir.mkdirs()
             // 'versions_a_main.yml' sorts before the collated file, so a naive
             // last-file-wins merge would let a colliding key be overwritten.
             new File(dir, "versions_a_main.yml").text = "versions:\n    metaphlan: 4.2.2\n    bowtie2: 2.5.4\n"
-            new File(dir, "versions_z_collated.yml").text = found[0].text
+            new File(dir, "versions_z_collated.yml").text = found.collect { it.text }.join("\n")
             new File(dir, "reads.fastq").text = "@r1\nACGT\n+\nIIII\n"
 
             def proc = ["python3", "${projectDir}/bin/build_manifest.py",

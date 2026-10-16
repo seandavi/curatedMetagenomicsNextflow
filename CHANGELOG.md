@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 The version is the git tag, the `manifest.version` in `nextflow.config`, and the
 workflow revision the orchestrator dispatches — keep all three in lockstep.
 
+## [2.3.2] - 2026-10-14
+
+### Added
+
+- **`-profile bridges2` for PSC Bridges-2 (RM-shared).** RM-shared rejects jobs
+  above 2000 MB per core and caps a job at 64 cores and 3 days. The
+  nextflow_telemetry submit template raises each task's cores to fit its memory,
+  so `resourceLimits` caps memory at 120 GiB (62 cores) and time at 24 h.
+
+No output changes: per nextflow_telemetry ADR-0004 this is a revision bump on the
+registered workflow, not a new workflow id.
+
 ## [2.3.1] - 2026-10-13
 
 ### Fixed
@@ -467,6 +479,7 @@ Baseline of the 2.x line. Core metagenomic pipeline, with decisions recorded in
 [2.2.3]: https://github.com/seandavi/curatedMetagenomicsNextflow/compare/2.2.2...2.2.3
 [2.2.2]: https://github.com/seandavi/curatedMetagenomicsNextflow/compare/2.2.1...2.2.2
 [2.2.1]: https://github.com/seandavi/curatedMetagenomicsNextflow/compare/2.2.0...2.2.1
+[2.3.2]: https://github.com/seandavi/curatedMetagenomicsNextflow/compare/2.3.1...2.3.2
 [2.3.1]: https://github.com/seandavi/curatedMetagenomicsNextflow/compare/793996b...2.3.1
 [2.0.7]: https://github.com/seandavi/curatedMetagenomicsNextflow/compare/2.0.6...2.0.7
 [2.0.6]: https://github.com/seandavi/curatedMetagenomicsNextflow/compare/2.0.5...2.0.6

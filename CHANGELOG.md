@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 The version is the git tag, the `manifest.version` in `nextflow.config`, and the
 workflow revision the orchestrator dispatches — keep all three in lockstep.
 
+## [2.4.2] - 2026-10-17
+
+### Fixed
+
+- **BAQLaVa translated search failed (exit 1).** HUMAnN 4.0.0a2 exits on any
+  protein database file whose name lacks its UniRef version (`2019_06`), and
+  BAQLaVa's DIAMOND database has no such tag. The `baqlava` task now links
+  those files into `protdb/` with `_2019_06` appended. BAQLaVa passes HUMAnN
+  only the folder, and DIAMOND reads the linked file unchanged.
+
 ## [2.4.1] - 2026-10-17
 
 ### Fixed

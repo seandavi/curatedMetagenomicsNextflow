@@ -50,6 +50,9 @@ process kneaddata {
     cat out_kneaddata.fastq | sed 's/^+.RR.*/+/g' > out.fastq
     rm out_kneaddata.fastq
     wc -l * | grep fastq > kneaddata_fastq_linecounts.txt
+    # KneadData's intermediates (decompressed input, reformatted reads, trimmed
+    # and contaminant reads) are dead once counted; keep only the outputs (#126).
+    find . -maxdepth 1 -type f ! -name out.fastq ! -name kneaddata_fastq_linecounts.txt ! -name out_kneaddata.log -delete
     cd ..
 
     cat <<-END_VERSIONS > versions.yml

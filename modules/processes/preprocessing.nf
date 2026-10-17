@@ -75,7 +75,9 @@ process fasterq_dump {
         acc=\$1
         echo "  SRA \$acc"
         curl -sf --max-time 3600 -o \$acc.sra https://sra-pub-run-odp.s3.amazonaws.com/sra/\$acc/\$acc || return 1
-        fasterq-dump --threads ${task.cpus} --skip-technical --force --split-files \$acc.sra
+        fasterq-dump --threads ${task.cpus} --skip-technical --force --split-files \$acc.sra || return 1
+        # The .sra is dead once converted (#126).
+        rm -f \$acc.sra
     }
 
     echo "starting read acquisition (ENA-first, SRA fallback)"
@@ -96,6 +98,8 @@ process fasterq_dump {
 
     echo "combining fastq files and gzipping"
     cat *.fastq | pv | pigz -p ${task.cpus} > out.fastq.gz
+    # Uncompressed reads are dead once compressed and line-counted (#126).
+    rm -f *.fastq
 
     echo "running fastqc"
     fastqc --extract out.fastq.gz
@@ -165,6 +169,8 @@ process local_fastqc {
 
     echo "combining fastq files and gzipping"
     cat *.fastq | pv | pigz -p ${task.cpus} > out.fastq.gz
+    # Uncompressed reads are dead once compressed and line-counted (#126).
+    rm -f *.fastq
 
     echo "running fastqc"
     fastqc --extract out.fastq.gz

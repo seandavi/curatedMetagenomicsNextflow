@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 The version is the git tag, the `manifest.version` in `nextflow.config`, and the
 workflow revision the orchestrator dispatches — keep all three in lockstep.
 
+## [2.4.3] - 2026-10-17
+
+### Changed
+
+- **Read intermediates are deleted as soon as nothing needs them (#126).**
+  Work directories had held about 60–90 GB per sample of dead files until the
+  run ended (618 GB for one 10-sample Bridges-2 run). Now:
+  - `fasterq_dump` deletes the `.sra` after conversion, and the uncompressed
+    FASTQs once `out.fastq.gz` is written; `local_fastqc` does the same for
+    its copied FASTQs.
+  - `kneaddata` keeps only `out.fastq`, the line counts and the log.
+  - `humann` keeps only `out_bowtie2_unaligned.fa` (BAQLaVa's input) and its
+    log from `out_humann_temp/`.
+
+  Every deletion happens after all outputs and published files are written,
+  including the line-count files that count the intermediates, so results are
+  unchanged. The SRA conversion is not streamed.
+
 ## [2.4.2] - 2026-10-17
 
 ### Fixed

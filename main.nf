@@ -40,6 +40,7 @@ include {
 } from './modules/processes/resistome'
 include { fastqc } from './modules/processes/qc'
 include { HUMANN } from './modules/subworkflows/humann'
+include { baqlava } from './modules/processes/baqlava'
 include { humann_reuses_main_metaphlan } from './modules/lib/metaphlan_profiles'
 include { sample_manifest } from './modules/processes/manifest'
 include { MARK_COMPLETE } from './modules/processes/finalize'
@@ -94,11 +95,29 @@ def validate_humann_bundle(bundle, bundles, profiles) {
     }
 }
 
+/*
+ * Fail fast when BAQLaVa is enabled without what it runs on: the bundle's
+ * HUMAnN (its input is HUMAnN's unaligned reads) and a bundle that pins a
+ * BAQLaVa image. Called after validate_humann_bundle, so the bundle exists.
+ */
+def validate_baqlava(skip_humann, bundle, bundles) {
+    def ok = bundles.findAll { name, b -> b.baqlava_container }.keySet()
+    if (skip_humann) {
+        error "skip_baqlava=false needs HUMAnN: set skip_humann=false and humann_bundle to one of: ${ok.join(', ')}"
+    }
+    if (!bundles[bundle].baqlava_container) {
+        error "humann_bundle '${bundle}' has no BAQLaVa image (baqlava_container). With skip_baqlava=false use one of: ${ok.join(', ')}"
+    }
+}
+
 workflow {
 
     validate_metaphlan_profile(params.metaphlan_profile, params.metaphlan_profiles)
     if (!params.skip_humann) {
         validate_humann_bundle(params.humann_bundle, params.humann_bundles, params.metaphlan_profiles)
+    }
+    if (!params.skip_baqlava) {
+        validate_baqlava(params.skip_humann, params.humann_bundle, params.humann_bundles)
     }
 
     /*
@@ -223,6 +242,7 @@ workflow {
     resistome_versions_ch = Channel.empty()
     fastqc_versions_ch = Channel.empty()
     humann_versions_ch = Channel.empty()
+    baqlava_versions_ch = Channel.empty()
 
     /*
      * Complementary read-based profiling (Kraken2 + Bracken) on the full-depth
@@ -301,6 +321,20 @@ workflow {
     }
 
     /*
+     * Optional BAQLaVa viral profiling (ADR-0020) on the reads HUMAnN left
+     * unaligned. Validation guarantees HUMANN ran.
+     */
+    if (!params.skip_baqlava) {
+        baqlava(
+            HUMANN.out.unaligned,
+            DATABASES.out.baqlava_db.collect())
+
+        baqlava_versions_ch = baqlava.out.meta
+            .merge(baqlava.out.versions)
+            .map { m, ver -> tuple(m.sample, ver) }
+    }
+
+    /*
      * Per-sample manifest
      *
      * Join (by sample) the raw reads, the host-decontaminated reads, and a
@@ -324,12 +358,13 @@ workflow {
     // holds every sample's manifest (and MARK_COMPLETE) until the slowest
     // sample in the run has finished MetaPhlAn, retries included.
     // kraken2 + bracken => 2; HUMAnN => itself plus its own MetaPhlAn pass,
-    // unless the bundle reuses the main profile.
+    // unless the bundle reuses the main profile; baqlava => 1.
     def versions_per_sample = 3 +
         (params.skip_kraken ? 0 : 2) +
         (params.skip_resistome ? 0 : 1) +
         (params.skip_fastqc ? 0 : 1) +
-        (params.skip_humann ? 0 : (humann_reuses_main_metaphlan() ? 1 : 2))
+        (params.skip_humann ? 0 : (humann_reuses_main_metaphlan() ? 1 : 2)) +
+        (params.skip_baqlava ? 0 : 1)
 
     collated_versions_ch = raw_meta_ch
         .merge(raw_versions_ch)
@@ -344,6 +379,7 @@ workflow {
         .mix(resistome_versions_ch)
         .mix(fastqc_versions_ch)
         .mix(humann_versions_ch)
+        .mix(baqlava_versions_ch)
         .map { sample, ver -> tuple(groupKey(sample, versions_per_sample), ver) }
         .groupTuple()
         .map { key, vers -> tuple(key.toString(), vers) }
@@ -413,6 +449,7 @@ workflow {
      * Rarefied branch (when enabled): also join metaphlan_markers_rarefied and
      * sample_to_markers_rarefied.
      * HUMAnN branch (when enabled): additionally gate on the HUMANN subworkflow.
+     * BAQLaVa (when enabled): additionally gate on baqlava.
      */
     finished_ch = metaphlan_markers_full.out.meta
         .map { meta -> tuple(meta.sample, meta) }
@@ -460,6 +497,17 @@ workflow {
         finished_ch = finished_ch
             .map { meta -> tuple(meta.sample, meta) }
             .join(HUMANN.out.meta.map { meta -> tuple(meta.sample, meta) })
+            .map { sample_id, meta1, meta2 -> meta1 }
+    }
+
+    if (!params.skip_baqlava) {
+        // A sample is not complete without its viral profile. A failure is
+        // retried, then ignored (base.config), so the sample never reaches
+        // MARK_COMPLETE and the orchestrator re-runs / dead-letters it, the
+        // same as a HUMAnN failure (ADR-0020).
+        finished_ch = finished_ch
+            .map { meta -> tuple(meta.sample, meta) }
+            .join(baqlava.out.meta.map { meta -> tuple(meta.sample, meta) })
             .map { sample_id, meta1, meta2 -> meta1 }
     }
 

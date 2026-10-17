@@ -458,7 +458,7 @@ nextflow_pipeline {
                 sample_id = "TEST_SAMPLE"
                 run_ids = "SRR000001"
                 skip_humann = false
-                humann_bundle = "humann4.0.0a1"
+                humann_bundle = "humann4.0.0a2"
             }
         }
 
@@ -525,6 +525,86 @@ nextflow_pipeline {
             assert m.parameters.humann_bundle == "humann3.9"
             assert m.parameters.metaphlan_profile == "mpa4.2.2_vJan25"
             assert m.parameters.humann_metaphlan_profile == "mpa4.1.1_vJun23"
+        }
+    }
+
+    test("BAQLaVa runs on HUMAnN's unaligned reads, publishes the sample-named profile and gates MARK_COMPLETE") {
+
+        when {
+            params {
+                sample_id = "TEST_SAMPLE"
+                run_ids = "SRR000001"
+                skip_humann = false
+                humann_bundle = "humann4.0.0a2"
+                metaphlan_profile = "mpa4.1.1_vOct22"
+                skip_baqlava = false
+                publish_dir = "$outputDir/pub"
+            }
+        }
+
+        then {
+            assert workflow.success
+            def names = workflow.stdout.findAll { it.startsWith("[PROCESS ") }
+                .collect { it.replaceFirst(/^\[PROCESS [^\]]*\]\s*/, "") }
+            assert names.count { it.startsWith("baqlava ") } == 1
+            assert names.any { it.contains("MARK_COMPLETE") }
+            def root = "$outputDir/pub/TEST_SAMPLE"
+            assert file("$root/baqlava/TEST_SAMPLE_BAQLaVa_profile.txt").exists()
+            assert file("$root/MARK_COMPLETE").exists()
+        }
+    }
+
+    test("databases_only stages the BAQLaVa database only when skip_baqlava is false") {
+
+        when {
+            params {
+                databases_only = true
+                skip_humann = false
+                humann_bundle = "humann4.0.0a2"
+                skip_baqlava = false
+            }
+        }
+
+        then {
+            assert workflow.success
+            def names = workflow.stdout.findAll { it.startsWith("[PROCESS ") }
+                .collect { it.replaceFirst(/^\[PROCESS [^\]]*\]\s*/, "") }
+            assert names.any { it.startsWith("DATABASES:baqlava_db") }
+        }
+    }
+
+    test("skip_baqlava=false without HUMAnN fails fast") {
+
+        when {
+            params {
+                sample_id = "TEST_SAMPLE"
+                run_ids = "SRR000001"
+                skip_humann = true
+                skip_baqlava = false
+            }
+        }
+
+        then {
+            assert workflow.failed
+            assert (workflow.stdout + workflow.stderr).join("\n").contains("skip_baqlava=false needs HUMAnN")
+        }
+    }
+
+    test("skip_baqlava=false with a bundle that has no BAQLaVa image fails fast") {
+
+        when {
+            params {
+                sample_id = "TEST_SAMPLE"
+                run_ids = "SRR000001"
+                skip_humann = false
+                humann_bundle = "humann3.9"
+                skip_baqlava = false
+            }
+        }
+
+        then {
+            assert workflow.failed
+            assert (workflow.stdout + workflow.stderr).join("\n").contains("humann_bundle 'humann3.9' has no BAQLaVa image")
         }
     }
 }

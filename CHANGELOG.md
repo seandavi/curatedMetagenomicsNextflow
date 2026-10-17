@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 The version is the git tag, the `manifest.version` in `nextflow.config`, and the
 workflow revision the orchestrator dispatches — keep all three in lockstep.
 
+## [2.4.0] - unreleased
+
+### Added
+
+- **Optional BAQLaVa viral profiling (`skip_baqlava`, default `true`; #119,
+  ADR-0020).** With `--skip_baqlava false` (which requires
+  `--skip_humann false --humann_bundle humann4.0.0a2`, or the run fails at
+  start-up), BAQLaVa 1.2.0 profiles the reads the bundle's HUMAnN left
+  unaligned (`--humann-depleted-fasta`). That avoids a second MetaPhlAn or
+  ChocoPhlAn pass, and also avoids BAQLaVa's own depletion step, which would
+  run against HUMAnN's bundled demo database. Publishes
+  `<sample>/baqlava/<sample>_BAQLaVa_profile.txt`. Adds `baqlava` and
+  `baqlava_image` to the manifest's `software_versions`. `MARK_COMPLETE` waits
+  for the step.
+- **`baqlava_db` database process (#118):** the BAQLaVa nucleotide (bowtie2)
+  and protein (DIAMOND) databases, ~1.9 GB, cached as `baqlava_db/<bundle>/`.
+  Staged by `--databases_only` when `skip_baqlava` is false.
+- **`baqlava_container` bundle field.** `humann4.0.0a2` sets it to
+  `ghcr.io/seandavi/humann-baqlava:4.0.0a2-1.2.0` (`docker/humann4a-baqlava`,
+  #117); `humann3.9` has none.
+
+### Changed
+
+- `humann` also emits its `out_humann_temp/out_bowtie2_unaligned.fa` (not
+  published). When HUMAnN selects no species and so writes no such file, the
+  input reads stand in for it.
+
 ## [2.3.2] - 2026-10-14
 
 ### Added

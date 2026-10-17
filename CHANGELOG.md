@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 The version is the git tag, the `manifest.version` in `nextflow.config`, and the
 workflow revision the orchestrator dispatches — keep all three in lockstep.
 
-## [2.4.0] - unreleased
+## [2.4.0] - 2026-10-17
 
 ### Added
 
@@ -24,6 +24,10 @@ workflow revision the orchestrator dispatches — keep all three in lockstep.
 - **`baqlava_db` database process (#118):** the BAQLaVa nucleotide (bowtie2)
   and protein (DIAMOND) databases, ~1.9 GB, cached as `baqlava_db/<bundle>/`.
   Staged by `--databases_only` when `skip_baqlava` is false.
+- **`humann4.0.0a2` HUMAnN bundle.** Same `mpa4.1.1_vOct22` profile and HUMAnN
+  databases as `humann4.0.0a1` (HUMAnN 4.0.0a2 only changes its version
+  checks), in `ghcr.io/seandavi/humann-baqlava:4.0.0a2-1.2.0`. The pairing
+  BAQLaVa 1.2.0 is tested with; the only bundle that offers BAQLaVa.
 - **`baqlava_container` bundle field.** `humann4.0.0a2` sets it to
   `ghcr.io/seandavi/humann-baqlava:4.0.0a2-1.2.0` (`docker/humann4a-baqlava`,
   #117); `humann3.9` has none.
@@ -506,6 +510,7 @@ Baseline of the 2.x line. Core metagenomic pipeline, with decisions recorded in
 [2.2.3]: https://github.com/seandavi/curatedMetagenomicsNextflow/compare/2.2.2...2.2.3
 [2.2.2]: https://github.com/seandavi/curatedMetagenomicsNextflow/compare/2.2.1...2.2.2
 [2.2.1]: https://github.com/seandavi/curatedMetagenomicsNextflow/compare/2.2.0...2.2.1
+[2.4.0]: https://github.com/seandavi/curatedMetagenomicsNextflow/compare/2.3.2...2.4.0
 [2.3.2]: https://github.com/seandavi/curatedMetagenomicsNextflow/compare/2.3.1...2.3.2
 [2.3.1]: https://github.com/seandavi/curatedMetagenomicsNextflow/compare/793996b...2.3.1
 [2.0.7]: https://github.com/seandavi/curatedMetagenomicsNextflow/compare/2.0.6...2.0.7

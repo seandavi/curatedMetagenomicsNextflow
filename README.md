@@ -154,6 +154,7 @@ version that selects it, `<store_dir>/<db_name>/<version_key>/` (holding the
 | `kraken_db/<key>/`                                 | `kraken_db_url` basename without archive extension |
 | `card_db/<key>/`, `card_kma_db/<key>/`             | `card_db_url` basename without archive extension   |
 | `chocophlan/<bundle>/`, `uniref/<bundle>/`, `utility_mapping/<bundle>/` | `humann_bundle` (the bundle pins the DB names) |
+| `baqlava_db/<bundle>/`                             | `humann_bundle` (the bundle pins the BAQLaVa image, which names its DB build) |
 | `human_genome/`, `mouse_C57BL/`                    | not versioned (no parameter selects a release)     |
 
 Changing `metaphlan_profile` to one with a different index, `kraken_db_url` or `card_db_url` now creates a new
@@ -226,6 +227,7 @@ Alpine/Anvil stores.
 | `skip_kraken`    | Skip Kraken2 + Bracken read-based profiling | `false` |
 | `skip_resistome` | Skip KMA/CARD resistome profiling (both branches) | `false` |
 | `skip_fastqc`    | Skip FastQC on the host-decontaminated reads | `false` |
+| `skip_baqlava`   | Skip BAQLaVa viral profiling (needs HUMAnN; see below) | `true` |
 
 `skip_humann=true` is the default. With `--skip_humann false`, HUMAnN runs on the
 full-depth reads in its own version-matched subworkflow (see
@@ -388,6 +390,20 @@ Functional profiles are stratified by that bundle's taxonomy, not by the
 `metaphlan_lists`/`metaphlan_markers` profiles. See
 [`docs/adr/0016-humann-bundles.md`](docs/adr/0016-humann-bundles.md) and
 [`docs/adr/0018-metaphlan-profiles.md`](docs/adr/0018-metaphlan-profiles.md).
+
+### BAQLaVa viral profiling
+
+`--skip_baqlava false` runs [BAQLaVa](https://github.com/biobakery/baqlava)
+1.2.0 on the full-depth branch. It needs `--skip_humann false` and a bundle
+with a BAQLaVa image (today only `humann4.0.0a1`, image
+`ghcr.io/seandavi/humann-baqlava:4.0.0a1-1.2.0` from
+[`docker/humann4a-baqlava`](docker/humann4a-baqlava/Dockerfile)); otherwise the
+run fails at start-up. BAQLaVa profiles the reads the bundle's HUMAnN left
+unaligned (`--humann-depleted-fasta`), so it adds no MetaPhlAn or ChocoPhlAn
+pass. Its databases (~1.9 GB) are cached under `baqlava_db/<bundle>/`. Only the
+profile is published, as `<sample>/baqlava/<sample>_BAQLaVa_profile.txt`, and
+`MARK_COMPLETE` waits for it. See
+[`docs/adr/0020-baqlava-on-humann-unaligned-reads.md`](docs/adr/0020-baqlava-on-humann-unaligned-reads.md).
 
 ## Input Format
 

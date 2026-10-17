@@ -44,9 +44,10 @@ nextflow run main.nf -profile local --metadata_tsv samples.tsv
 | `manifest.nf` | `sample_manifest` (per-sample provenance + read-accounting `manifest.json`) |
 | `databases.nf` | Reference database downloads (MetaPhlAn, KneadData, HUMAnN, Kraken2, CARD DBs) |
 | `humann.nf` | `metaphlan_for_humann` + `humann` in the selected bundle's containers (disabled by default); wired by the `HUMANN` subworkflow, `modules/subworkflows/humann.nf` |
+| `baqlava.nf` | `baqlava` viral profiling on the reads `humann` left unaligned (disabled by default; ADR-0020) |
 | `finalize.nf` | `MARK_COMPLETE` sentinel |
 
-DB processes are invoked only from the `DATABASES` subworkflow (`modules/subworkflows/databases.nf`), which gates them per feature (Kraken2 unless `skip_kraken`, CARD/KMA unless `skip_resistome`, HUMAnN DBs only when `!skip_humann`) and emits the DB channels `main.nf` consumes. HUMAnN DBs (bundle-pinned MetaPhlAn index, ChocoPhlAn, UniRef, utility mapping) run in the selected bundle's containers. `--databases_only` (`params.databases_only`) runs just `DATABASES` — no input contract, no per-sample process — to pre-stage `store_dir`.
+DB processes are invoked only from the `DATABASES` subworkflow (`modules/subworkflows/databases.nf`), which gates them per feature (Kraken2 unless `skip_kraken`, CARD/KMA unless `skip_resistome`, HUMAnN DBs only when `!skip_humann`, BAQLaVa DB only when `!skip_baqlava`) and emits the DB channels `main.nf` consumes. HUMAnN DBs (bundle-pinned MetaPhlAn index, ChocoPhlAn, UniRef, utility mapping) run in the selected bundle's containers. `--databases_only` (`params.databases_only`) runs just `DATABASES` — no input contract, no per-sample process — to pre-stage `store_dir`.
 
 `sample_manifest` writes one `manifest.json` at each sample's published root via `bin/build_manifest.py` (pure Python, no extra container). It compiles provenance, raw-vs-decontaminated read accounting, rarefaction parameters, and the consolidated per-process `versions.yml`. `MARK_COMPLETE` is gated on it so a sample directory is never marked complete before its manifest exists.
 

@@ -26,6 +26,9 @@
  *                      params.humann_bundle (the database names are bundle
  *                      fields, and the same name can differ across HUMAnN
  *                      releases, so the bundle is the version)
+ *     baqlava_db       params.humann_bundle (the bundle pins the BAQLaVa
+ *                      image, and `baqlava_database` fetches the one database
+ *                      build that BAQLaVa release names)
  *     kraken_db        basename of params.kraken_db_url without archive extension
  *     card_db          basename of params.card_db_url without archive extension
  *     card_kma_db      the same key as card_db (the KMA index is built from it)
@@ -217,6 +220,52 @@ process uniref_db {
     cat <<-END_VERSIONS > versions.yml
     versions:
         humann: \$( humann --version 2>&1 | awk '\$1 == "humann" {print \$2; exit}' )
+    END_VERSIONS
+    """
+}
+
+/*
+ * BAQLaVa nucleotide (bowtie2, ~1.6 GB) and protein (DIAMOND, ~0.3 GB)
+ * databases. Upstream ships both in one tarball, so one process fetches both
+ * into baqlava_db/; `baqlava` finds each by its index files, so the tarball's
+ * internal layout does not matter. Only invoked when !skip_baqlava.
+ */
+process baqlava_db {
+    label 'db_setup'
+    label 'download_retry'
+
+    container { params.humann_bundles[params.humann_bundle].baqlava_container }
+
+    cpus 1
+    memory { 1.GB * task.attempt }
+
+    storeDir "${params.store_dir}/baqlava_db/${params.humann_bundle}"
+
+    output:
+    path "baqlava_db", emit: baqlava_db, type: 'dir'
+    path ".command*"
+    path "versions.yml"
+
+    stub:
+    """
+    mkdir -p baqlava_db
+    touch baqlava_db/db.fake
+    touch .command.run
+    touch versions.yml
+    """
+
+    script:
+    """
+    mkdir -p baqlava_db
+    baqlava_database --download database baqlava-db baqlava_db
+
+    # Fail here, not in every sample, if the tarball lacks either database.
+    find baqlava_db -name '*.1.bt2' | grep -q . || { echo "no bowtie2 index in baqlava_db" >&2; exit 1; }
+    find baqlava_db -name '*.dmnd' | grep -q . || { echo "no DIAMOND database in baqlava_db" >&2; exit 1; }
+
+    cat <<-END_VERSIONS > versions.yml
+    versions:
+        baqlava: \$( baqlava --version 2>&1 | awk '{print \$2; exit}' )
     END_VERSIONS
     """
 }

@@ -15,6 +15,7 @@
  *   - The bundle's MetaPhlAn index: only when !skip_humann and the bundle's
  *     metaphlan_profile differs from params.metaphlan_profile (otherwise the
  *     main index is reused; ADR-0018)
+ *   - BAQLaVa nucleotide + protein databases: only when !skip_baqlava
  *
  * Channels for gated-off databases are empty; the main workflow only consumes
  * them under the same flag, so they are never read.
@@ -27,6 +28,7 @@ include {
     chocophlan_db
     utility_mapping_db
     uniref_db
+    baqlava_db
     kneaddata_human_database
     kneaddata_mouse_database
     kraken_db
@@ -77,6 +79,12 @@ workflow DATABASES {
         utility_mapping_ch = utility_mapping_db.out.utility_mapping_db
     }
 
+    baqlava_ch = Channel.empty()
+    if (!params.skip_baqlava) {
+        baqlava_db()
+        baqlava_ch = baqlava_db.out.baqlava_db
+    }
+
     emit:
     metaphlan_db       = install_metaphlan_db.out.metaphlan_db
     kd_genome          = kneaddata_human_database.out.kd_genome
@@ -88,4 +96,5 @@ workflow DATABASES {
     chocophlan_db      = chocophlan_ch
     uniref_db          = uniref_ch
     utility_mapping_db = utility_mapping_ch
+    baqlava_db         = baqlava_ch
 }

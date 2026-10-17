@@ -64,6 +64,7 @@ workflow HUMANN {
 
     emit:
     meta     = humann.out.meta
+    unaligned = humann.out.unaligned   // tuple(meta, reads HUMAnN left unaligned); BAQLaVa input
     versions = metaphlan_versions_ch
         .mix(humann.out.meta
             .merge(humann.out.versions)

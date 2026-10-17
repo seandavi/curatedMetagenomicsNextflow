@@ -17,7 +17,10 @@
  *                         --taxonomic-profile; this publishes a copy under the
  *                         same humann/<bundle>/metaphlan/ path so the
  *                         provenance layout is the same either way
- *   humann                HUMAnN in the bundle's container, consuming it
+ *   humann                HUMAnN in the bundle's container, consuming it.
+ *                         Also emits (unpublished) the reads its nucleotide
+ *                         search left unaligned, which `baqlava` profiles
+ *                         (ADR-0020).
  *
  * Containers, resources and maxForks are set in the process bodies (as in
  * kraken.nf): the container is bundle-dependent, so it is a closure resolved
@@ -132,11 +135,14 @@ process humann {
     output:
     val(meta), emit: meta
     path "out_*.tsv.gz", emit: tables
+    tuple val(meta), path("out_humann_temp/out_bowtie2_unaligned.fa"), emit: unaligned
     path ".command*"
     path "versions.yml", emit: versions
 
     stub:
     """
+    mkdir -p out_humann_temp
+    touch out_humann_temp/out_bowtie2_unaligned.fa
     touch out_genefamilies.tsv.gz
     touch out_pathabundance.tsv.gz
     touch out_pathcoverage.tsv.gz
@@ -160,6 +166,16 @@ process humann {
         --protein-database ${uniref_db} \\
         ${utility_db} \\
         --threads ${task.cpus}
+
+    # With no species selected from the taxonomic profile HUMAnN skips the
+    # nucleotide search and writes no unaligned file; nothing was depleted, so
+    # the reads themselves stand in (FASTA, with the '|<length>' header field
+    # BAQLaVa strips from HUMAnN's own file).
+    unaligned=out_humann_temp/out_bowtie2_unaligned.fa
+    if [ ! -e \$unaligned ]; then
+        mkdir -p out_humann_temp
+        awk 'NR % 4 == 1 { print ">" substr(\$0, 2) "|0" } NR % 4 == 2' ${fastq} > \$unaligned
+    fi
 
     # Renormalize the gene-family and pathway-abundance tables whatever the
     # HUMAnN release named them (out_genefamilies, out_2_genefamilies, ...).

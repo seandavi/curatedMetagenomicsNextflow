@@ -1,8 +1,12 @@
-# HUMAnN 4.0.0a1 + BAQLaVa 1.2.0 for the optional baqlava step (#117, #119).
+# HUMAnN 4.0.0a2 + BAQLaVa 1.2.0 for the humann4.0.0a2 bundle and the optional
+# baqlava step (#117, #119).
 #
-# Built on the humann4.0.0a1 bundle image (docker/humann4a, ADR-0017) so the
-# HUMAnN that BAQLaVa drives for bacterial depletion and its searches is the
-# same one the bundle runs. BAQLaVa needs HUMAnN >= 4 (it checks only the major
+# Built on the humann4.0.0a1 image (docker/humann4a, ADR-0017) with HUMAnN
+# upgraded to 4.0.0a2, the release BAQLaVa 1.2.0 and bioBakery's own workflow
+# are tested with. a2 differs from a1 only in its version checks (it drops the
+# MetaPhlAn software-version check and verifies the database version instead);
+# both pin vOct22_CHOCOPhlAnSGB_202403 and the same HUMAnN databases. This one
+# image runs both the bundle's humann step and baqlava. BAQLaVa needs HUMAnN >= 4 (it checks only the major
 # version), AnADAMA2 >= 0.10.0 and Python >= 3.10 (the base has 3.11).
 #
 # BAQLaVa 1.2.0 is not on PyPI (it stops at 0.5) and has no `v1.2.0` tag: there
@@ -21,7 +25,7 @@
 # 2.1). Databases are not baked in; the pipeline downloads them with
 # `baqlava_database` into store_dir.
 #
-# Published to ghcr.io/seandavi/humann-baqlava:4.0.0a1-1.2.0 by
+# Published to ghcr.io/seandavi/humann-baqlava:4.0.0a2-1.2.0 by
 # .github/workflows/humann4a-baqlava-image.yml.
 FROM ghcr.io/seandavi/humann:4.0.0a1
 
@@ -34,6 +38,8 @@ RUN micromamba install -y -n base -c conda-forge -c bioconda \
     && micromamba clean -a -y
 
 ARG MAMBA_DOCKERFILE_ACTIVATE=1
+RUN pip install --no-cache-dir --no-deps --no-binary humann humann==4.0.0a2 packaging \
+    && humann --version | grep -q 'alpha.2'
 ARG BAQLAVA_COMMIT=9a458b1c3f88153be56f167cb85ebe828f15f6ba
 RUN cd /tmp \
     && python -c "import urllib.request as u; u.urlretrieve('https://github.com/biobakery/baqlava/archive/${BAQLAVA_COMMIT}.tar.gz', 'baqlava.tar.gz')" \

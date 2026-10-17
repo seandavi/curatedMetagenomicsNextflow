@@ -112,7 +112,7 @@ Outputs follow the pattern: `<publish_base_dir>/<workflow_name>/<pipeline_versio
 
 ### Containers
 
-The base image covers the core toolchain (KneadData, MetaPhlAn, FastQC, sratoolkit, seqtk; no HUMAnN). `.github/workflows/base-image.yml` builds `docker/Dockerfile` and publishes it to `ghcr.io/seandavi/curatedmetagenomics:metaphlan<version>` on merge to `main` (ADR-0019), and its tag is pinned in `conf/base.config` under `process.container`. Newer tools run in pinned upstream biocontainers set in their process bodies (ADR-0001). When no usable upstream image exists, the image lives in `docker/<name>/` and a GitHub Actions workflow publishes it to `ghcr.io/seandavi/<name>` (ADR-0017); today that is `docker/humann4a` for the `humann4.0.0a1` bundle and `docker/humann4a-baqlava` (that image plus BAQLaVa) for the `baqlava` step.
+The base image covers the core toolchain (KneadData, MetaPhlAn, FastQC, sratoolkit, seqtk; no HUMAnN). `.github/workflows/base-image.yml` builds `docker/Dockerfile` and publishes it to `ghcr.io/seandavi/curatedmetagenomics:metaphlan<version>` on merge to `main` (ADR-0019), and its tag is pinned in `conf/base.config` under `process.container`. Newer tools run in pinned upstream biocontainers set in their process bodies (ADR-0001). When no usable upstream image exists, the image lives in `docker/<name>/` and a GitHub Actions workflow publishes it to `ghcr.io/seandavi/<name>` (ADR-0017); today that is `docker/humann4a` for the `humann4.0.0a1` bundle and `docker/humann4a-baqlava` (that image upgraded to HUMAnN 4.0.0a2, plus BAQLaVa) for the `humann4.0.0a2` bundle and its `baqlava` step.
 
 ## Testing
 

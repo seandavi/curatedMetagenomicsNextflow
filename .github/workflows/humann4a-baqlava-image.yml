@@ -1,7 +1,7 @@
 name: humann4a-baqlava image
 
 # Builds docker/humann4a-baqlava and publishes
-# ghcr.io/seandavi/humann-baqlava:4.0.0a1-1.2.0 (ADR-0017). Pull requests build
+# ghcr.io/seandavi/humann-baqlava:4.0.0a2-1.2.0 (ADR-0017). Pull requests build
 # and smoke-test without pushing; pushes to main (and manual runs) publish. The
 # OCI source label links the package to this repository so GITHUB_TOKEN can
 # write to it; making the package public is a one-time manual step (as for
@@ -31,7 +31,7 @@ concurrency:
 
 env:
   IMAGE: ghcr.io/seandavi/humann-baqlava
-  VERSION: 4.0.0a1-1.2.0
+  VERSION: 4.0.0a2-1.2.0
   # Must match BAQLAVA_COMMIT in the Dockerfile; used only to fetch the demo.
   BAQLAVA_COMMIT: 9a458b1c3f88153be56f167cb85ebe828f15f6ba
 
@@ -97,5 +97,5 @@ jobs:
             ${{ env.IMAGE }}:${{ env.VERSION }}-${{ github.sha }}
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
-            org.opencontainers.image.description=HUMAnN 4.0.0a1 + BAQLaVa 1.2.0 for the curatedMetagenomicsNextflow baqlava step
+            org.opencontainers.image.description=HUMAnN 4.0.0a2 + BAQLaVa 1.2.0 for the curatedMetagenomicsNextflow baqlava step
           cache-from: type=gha

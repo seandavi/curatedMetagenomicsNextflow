@@ -67,4 +67,4 @@ other. This preserves the historical record rather than rewriting it.
 | [0017](0017-self-built-images-on-ghcr.md) | Publish self-built tool images to GHCR from GitHub Actions | Accepted (extended to the base image by [0019](0019-base-image-on-ghcr.md)) |
 | [0018](0018-metaphlan-profiles.md) | Named MetaPhlAn profiles; HUMAnN bundles reference them and reuse the main pass when they match | Accepted (amends [0016](0016-humann-bundles.md); default profile and base image moved by [0019](0019-base-image-on-ghcr.md)) |
 | [0019](0019-base-image-on-ghcr.md) | Build the base image in GitHub Actions, publish to GHCR, drop HUMAnN from it | Accepted (amends [0001](0001-container-strategy.md), [0017](0017-self-built-images-on-ghcr.md)) |
-| [0020](0020-baqlava-on-humann-unaligned-reads.md) | BAQLaVa profiles the reads the bundle's HUMAnN left unaligned | Proposed |
+| [0020](0020-baqlava-on-humann-unaligned-reads.md) | BAQLaVa profiles the reads the bundle's HUMAnN left unaligned | Accepted |

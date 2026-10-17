@@ -458,7 +458,7 @@ nextflow_pipeline {
                 sample_id = "TEST_SAMPLE"
                 run_ids = "SRR000001"
                 skip_humann = false
-                humann_bundle = "humann4.0.0a1"
+                humann_bundle = "humann4.0.0a2"
             }
         }
 
@@ -535,7 +535,7 @@ nextflow_pipeline {
                 sample_id = "TEST_SAMPLE"
                 run_ids = "SRR000001"
                 skip_humann = false
-                humann_bundle = "humann4.0.0a1"
+                humann_bundle = "humann4.0.0a2"
                 metaphlan_profile = "mpa4.1.1_vOct22"
                 skip_baqlava = false
                 publish_dir = "$outputDir/pub"
@@ -560,7 +560,7 @@ nextflow_pipeline {
             params {
                 databases_only = true
                 skip_humann = false
-                humann_bundle = "humann4.0.0a1"
+                humann_bundle = "humann4.0.0a2"
                 skip_baqlava = false
             }
         }

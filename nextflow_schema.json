@@ -128,7 +128,7 @@
         "skip_baqlava": {
             "type": "boolean",
             "default": true,
-            "description": "Skip BAQLaVa viral profiling. When false, needs skip_humann=false and a humann_bundle with a baqlava_container (humann4.0.0a1)."
+            "description": "Skip BAQLaVa viral profiling. When false, needs skip_humann=false and a humann_bundle with a baqlava_container (humann4.0.0a2)."
         },
         "metadata_tsv": {
             "type": "string",

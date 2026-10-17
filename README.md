@@ -395,8 +395,8 @@ Functional profiles are stratified by that bundle's taxonomy, not by the
 
 `--skip_baqlava false` runs [BAQLaVa](https://github.com/biobakery/baqlava)
 1.2.0 on the full-depth branch. It needs `--skip_humann false` and a bundle
-with a BAQLaVa image (today only `humann4.0.0a1`, image
-`ghcr.io/seandavi/humann-baqlava:4.0.0a1-1.2.0` from
+with a BAQLaVa image (today only `humann4.0.0a2`, image
+`ghcr.io/seandavi/humann-baqlava:4.0.0a2-1.2.0` from
 [`docker/humann4a-baqlava`](docker/humann4a-baqlava/Dockerfile)); otherwise the
 run fails at start-up. BAQLaVa profiles the reads the bundle's HUMAnN left
 unaligned (`--humann-depleted-fasta`), so it adds no MetaPhlAn or ChocoPhlAn

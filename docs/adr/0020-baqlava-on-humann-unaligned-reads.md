@@ -1,6 +1,6 @@
 # 0020. Run BAQLaVa on the reads the bundle's HUMAnN left unaligned
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-17
 - **Deciders:** Sean Davis
 
@@ -31,7 +31,7 @@ unpublished `unaligned` output of `humann`) and runs
 `baqlava --humann-depleted-fasta`. BAQLaVa's own depletion step does not run.
 BAQLaVa therefore needs HUMAnN. `skip_baqlava=false` fails at start-up unless
 `skip_humann=false` and the bundle sets `baqlava_container`, a new bundle field
-(today only `humann4.0.0a1`).
+(today only `humann4.0.0a2`).
 
 When HUMAnN selects no species from the profile it skips the nucleotide search
 and writes no unaligned file. `humann` then writes the input reads in that

@@ -327,7 +327,8 @@ workflow {
     if (!params.skip_baqlava) {
         baqlava(
             HUMANN.out.unaligned,
-            DATABASES.out.baqlava_db.collect())
+            DATABASES.out.baqlava_db.collect(),
+            DATABASES.out.utility_mapping_db.collect())
 
         baqlava_versions_ch = baqlava.out.meta
             .merge(baqlava.out.versions)

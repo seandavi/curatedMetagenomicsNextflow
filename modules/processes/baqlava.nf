@@ -11,6 +11,12 @@
  * HUMAnN without --nucleotide-database, so in the image it would deplete
  * against HUMAnN's bundled DEMO database.
  *
+ * BAQLaVa's own HUMAnN calls take HUMAnN's default utility database, which
+ * in the image is utility_DEMO, and HUMAnN refuses a non-demo input against
+ * it. So the bundle's real utility mapping database is appended to both
+ * passthrough parameter sets, after BAQLaVa's own defaults (configs/baqlava.cfg
+ * at the pinned commit), which passing the option replaces.
+ *
  * The input is linked as <sample>_bowtie2_unaligned.fa because BAQLaVa names
  * its outputs after the input file (minus that suffix), so the published file
  * is <sample>/baqlava/<sample>_BAQLaVa_profile.txt. The intermediates
@@ -37,6 +43,7 @@ process baqlava {
     input:
     tuple val(meta), path(unaligned)
     path baqlava_db
+    path utility_mapping_db
 
     output:
     val(meta), emit: meta
@@ -67,7 +74,9 @@ process baqlava {
         -o . \\
         --nucdb "\$nucdb" \\
         --protdb "\$protdb" \\
-        --threads ${task.cpus}
+        --threads ${task.cpus} \\
+        --humann-passthrough-parameters-nucleotide='--bowtie-options="--very-sensitive" --nucleotide-identity-threshold 0.0 --nucleotide-query-coverage-threshold 90.0 --utility-database ${utility_mapping_db}' \\
+        --humann-passthrough-parameters-translated='--diamond-options="--top 1 --outfmt 6" --evalue 1.0 --translated-alignment diamond --translated-identity-threshold 80.0 --translated-query-coverage-threshold 90.0 --utility-database ${utility_mapping_db}'
 
     # BAQLaVa reports its config version (1.2.0-devel); the image tag pins
     # the build that actually ran (#117).

@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 The version is the git tag, the `manifest.version` in `nextflow.config`, and the
 workflow revision the orchestrator dispatches — keep all three in lockstep.
 
+## [2.4.1] - 2026-10-17
+
+### Fixed
+
+- **BAQLaVa failed on every real sample (exit 1).** Its internal HUMAnN calls
+  used HUMAnN's default utility database, `utility_DEMO` in the image, and
+  HUMAnN refuses a non-demo input against it. The `baqlava` task now takes the
+  bundle's utility mapping database and appends `--utility-database` to both
+  BAQLaVa passthrough parameter sets, after BAQLaVa's own defaults.
+
 ## [2.4.0] - 2026-10-17
 
 ### Added

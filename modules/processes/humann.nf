@@ -177,6 +177,14 @@ process humann {
 
     gzip out_*.tsv
 
+    # The temp folder (SAM, alignments, per-sample index, DIAMOND files) is
+    # dead once the tables are written; keep only the unaligned reads and
+    # HUMAnN's log (#126).
+    if [ -d out_humann_temp ]; then
+        find out_humann_temp -type f ! -name out_bowtie2_unaligned.fa ! -name '*.log' -delete
+        find out_humann_temp -mindepth 1 -type d -empty -delete
+    fi
+
     cat <<-END_VERSIONS > versions.yml
     versions:
         humann: \$( humann --version 2>&1 | awk '\$1 == "humann" {print \$2; exit}' )

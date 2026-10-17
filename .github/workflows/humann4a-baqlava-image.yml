@@ -68,7 +68,7 @@ jobs:
           chmod -R a+rwX baqlava-src/examples
           docker run --rm -v "$PWD/baqlava-src/examples:/w" -w /w humann4a-baqlava:ci bash -c '
             set -euo pipefail
-            humann --version 2>&1 | grep -q "v4.0.0.alpha.1"
+            humann --version 2>&1 | grep -q "v4.0.0.alpha.2"
             baqlava --version 2>&1 | grep -q "v1.2.0"
             diamond --version
             bowtie2 --version | head -1

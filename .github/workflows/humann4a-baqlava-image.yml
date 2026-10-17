@@ -1,0 +1,101 @@
+name: humann4a-baqlava image
+
+# Builds docker/humann4a-baqlava and publishes
+# ghcr.io/seandavi/humann-baqlava:4.0.0a1-1.2.0 (ADR-0017). Pull requests build
+# and smoke-test without pushing; pushes to main (and manual runs) publish. The
+# OCI source label links the package to this repository so GITHUB_TOKEN can
+# write to it; making the package public is a one-time manual step (as for
+# humann, #97).
+#
+# The image is FROM ghcr.io/seandavi/humann:4.0.0a1, so rebuild it (manual run)
+# after that image is republished.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docker/humann4a-baqlava/**'
+      - '.github/workflows/humann4a-baqlava-image.yml'
+  pull_request:
+    paths:
+      - 'docker/humann4a-baqlava/**'
+      - '.github/workflows/humann4a-baqlava-image.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: humann4a-baqlava-image-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  IMAGE: ghcr.io/seandavi/humann-baqlava
+  VERSION: 4.0.0a1-1.2.0
+  # Must match BAQLAVA_COMMIT in the Dockerfile; used only to fetch the demo.
+  BAQLAVA_COMMIT: 9a458b1c3f88153be56f167cb85ebe828f15f6ba
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build (load locally for the smoke test)
+        uses: docker/build-push-action@v6
+        with:
+          context: docker/humann4a-baqlava
+          load: true
+          tags: humann4a-baqlava:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # The demo reads and demo databases live in the BAQLaVa repo, not the
+      # package, so they are checked out at the pinned commit. Depletion is
+      # bypassed: without a taxonomic profile HUMAnN would run MetaPhlAn, which
+      # starts downloading its ~20 GB index (the pipeline always supplies the
+      # depleted reads; see modules/processes/baqlava.nf).
+      - uses: actions/checkout@v4
+        with:
+          repository: biobakery/baqlava
+          ref: ${{ env.BAQLAVA_COMMIT }}
+          path: baqlava-src
+
+      - name: Smoke test
+        run: |
+          chmod -R a+rwX baqlava-src/examples
+          docker run --rm -v "$PWD/baqlava-src/examples:/w" -w /w humann4a-baqlava:ci bash -c '
+            set -euo pipefail
+            humann --version 2>&1 | grep -q "v4.0.0.alpha.1"
+            baqlava --version 2>&1 | grep -q "v1.2.0"
+            diamond --version
+            bowtie2 --version | head -1
+            baqlava -i demo.fq -o out \
+              --nucdb BAQLaVa.V0.5.nucleotide/ --protdb BAQLaVa.V0.5.protein/ --threads 2 \
+              --bypass-bacterial-depletion
+            cat out/demo_BAQLaVa_profile.txt
+            grep -q "^VGB_1593\b" out/demo_BAQLaVa_profile.txt'
+
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push
+        if: github.event_name != 'pull_request'
+        uses: docker/build-push-action@v6
+        with:
+          context: docker/humann4a-baqlava
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:${{ env.VERSION }}
+            ${{ env.IMAGE }}:${{ env.VERSION }}-${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.description=HUMAnN 4.0.0a1 + BAQLaVa 1.2.0 for the curatedMetagenomicsNextflow baqlava step
+          cache-from: type=gha

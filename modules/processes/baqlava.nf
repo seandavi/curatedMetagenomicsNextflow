@@ -22,10 +22,12 @@
  * database is not UniRef and its name carries no such tag, so its files are
  * linked into protdb/ with the tag appended; BAQLaVa passes only the folder.
  *
- * The input is linked as <sample>_bowtie2_unaligned.fa because BAQLaVa names
- * its outputs after the input file (minus that suffix), so the published file
- * is <sample>/baqlava/<sample>_BAQLaVa_profile.txt. The intermediates
- * (_tempfile_*, logs) are not published.
+ * BAQLaVa picks a file's reader by substring on the whole path ("gz"/"fq"
+ * anywhere, baqlava#4), and random sample ids contain those by chance. So the
+ * input is linked under a neutral name, and BAQLaVa, which names its outputs
+ * after the input, writes baqlava_input_BAQLaVa_profile.txt. That is renamed
+ * to <sample>_BAQLaVa_profile.txt with the sample in its header, as before.
+ * The intermediates (_tempfile_*, logs) are not published.
  *
  * Container and resources are in the process body, as for humann.
  */
@@ -78,8 +80,8 @@ process baqlava {
         ln -s "\$(readlink -f "\$f")" "protdb/\${b%.*}_2019_06.\${b##*.}"
     done
 
-    ln -s ${unaligned} ${meta.sample}_bowtie2_unaligned.fa
-    baqlava -i ${meta.sample}_bowtie2_unaligned.fa \\
+    ln -s ${unaligned} baqlava_input_bowtie2_unaligned.fa
+    baqlava -i baqlava_input_bowtie2_unaligned.fa \\
         --humann-depleted-fasta \\
         -o . \\
         --nucdb "\$nucdb" \\
@@ -87,6 +89,8 @@ process baqlava {
         --threads ${task.cpus} \\
         --humann-passthrough-parameters-nucleotide='--bowtie-options="--very-sensitive" --nucleotide-identity-threshold 0.0 --nucleotide-query-coverage-threshold 90.0 --utility-database ${utility_mapping_db}' \\
         --humann-passthrough-parameters-translated='--diamond-options="--top 1 --outfmt 6" --evalue 1.0 --translated-alignment diamond --translated-identity-threshold 80.0 --translated-query-coverage-threshold 90.0 --utility-database ${utility_mapping_db}'
+    sed '1s/\tbaqlava_input\t/\t${meta.sample}\t/' baqlava_input_BAQLaVa_profile.txt > ${meta.sample}_BAQLaVa_profile.txt
+    rm baqlava_input_BAQLaVa_profile.txt
 
     # BAQLaVa reports its config version (1.2.0-devel); the image tag pins
     # the build that actually ran (#117).

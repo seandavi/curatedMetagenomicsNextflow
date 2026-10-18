@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 The version is the git tag, the `manifest.version` in `nextflow.config`, and the
 workflow revision the orchestrator dispatches — keep all three in lockstep.
 
+## [2.4.4] - 2026-10-18
+
+### Fixed
+
+- **BAQLaVa no longer fails on sample ids containing `gz` or `fq`.** BAQLaVa
+  chooses a reader by substring on the whole input path (biobakery/baqlava#4),
+  so a sample whose random id contained `gz` was opened as gzip and one with
+  `fq` was parsed as FASTQ, failing every retry. The input is now linked as
+  `baqlava_input_bowtie2_unaligned.fa` and the profile renamed back to
+  `<sample>_BAQLaVa_profile.txt`, header included. Output paths and contents
+  are unchanged.
+
 ## [2.4.3] - 2026-10-17
 
 ### Changed

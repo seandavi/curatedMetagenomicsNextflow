@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 The version is the git tag, the `manifest.version` in `nextflow.config`, and the
 workflow revision the orchestrator dispatches — keep all three in lockstep.
 
+## [2.3.4] - 2026-11-05
+
+### Added
+
+- **`fasrc` profile for Harvard FASRC (Cannon).** SLURM, 24 h per task, memory
+  capped at 180 GB and 48 cores so every retry fits both `hsph` and `shared`
+  nodes. The nextflow_telemetry submit template supplies partitions, workDir,
+  store_dir and the store bind. Profile-only: no process, parameter or output
+  changes, so results are identical to 2.3.3.
+
 ## [2.3.3] - 2026-10-17
 
 ### Changed
